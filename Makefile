@@ -14,7 +14,7 @@ APPDIR   := $(PREFIX)/share/applications
 ICONDIR  := $(PREFIX)/share/icons/hicolor/scalable/apps
 BIN      := whatsapp-tui
 
-.PHONY: build install uninstall test clean
+.PHONY: build install uninstall test clean omarchy-install omarchy-watch
 
 build:
 	go build -o $(BIN) .
@@ -47,3 +47,10 @@ test:
 
 clean:
 	rm -f $(BIN)
+
+# Local Omarchy workflow: build this checkout and refresh its app launcher.
+omarchy-install:
+	./scripts/omarchy-install.sh
+
+omarchy-watch:
+	./scripts/omarchy-watch.sh

@@ -6,19 +6,21 @@ Rosé Pine colours. Built on [whatsmeow](https://github.com/tulir/whatsmeow).
 
 ## Install
 
-You need **Go 1.21+** (it fetches the right toolchain itself) and a **C
-compiler** (for SQLite).
+You need the **Go version declared in `go.mod`** (Go can fetch the required
+toolchain) and a **C compiler** (for SQLite).
 
 ```bash
-git clone https://github.com/Srindot/whatsapp-tui
+git clone git@github.com:sambuaneesh/whatsapp-tui.git
 cd whatsapp-tui
 make install            # installs to ~/.local/bin + a launcher entry (rofi, app menus)
 whatsapp-tui            # scan the QR code: WhatsApp → Settings → Linked devices
 ```
 
 `~/.local/bin` needs to be on your `PATH` (`make install` tells you if it
-isn't). For all users: `sudo make install PREFIX=/usr/local`. Or
-`go install github.com/Srindot/whatsapp-tui@latest` (into `~/go/bin`).
+isn't). For all users: `sudo make install PREFIX=/usr/local`.
+
+On Omarchy, use the fork's [local development workflow](LOCAL_DEV.md) to keep
+the app launcher updated as you change the source.
 
 ### Dependencies
 
