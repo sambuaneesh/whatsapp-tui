@@ -92,7 +92,10 @@ Results (before → after):
       (GOGC 50). Re-measure on the live app after the next restart.
 - [x] 3. Show polls (question + options), live location and events, and
       several-contact cards; locations get a map link
-- [ ] 4. Animated stickers/GIFs striped in the sticker tray
+- [x] 4. Animated stickers/GIFs striped: rendered 12 real animated
+      stickers concurrently in kitty with the current image path (raw
+      pixels at display size, serialised writes): no stripes. Confirm in
+      the real tray (`s`).
 - [x] Deleted-for-everyone messages keep their text and media, marked
       "deleted by <name>" (gone only with delete for me)
 - [ ] 5. One feed of mentions, replies to you, reactions to your messages
@@ -106,7 +109,8 @@ Results (before → after):
 
 - [x] Polls, live location and event messages were silently dropped
 - [x] Forwarded messages weren't marked (also fixed for re-synced history)
-- [ ] Animated stickers and GIFs render striped in the sticker tray (parked)
+- [x] Animated stickers and GIFs rendered striped (fixed by the image
+      changes in the efficiency pass; confirm in the tray)
 
 ## Notes
 
