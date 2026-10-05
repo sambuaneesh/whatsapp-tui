@@ -212,22 +212,24 @@ func (m Model) handleVisual(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.openPrivate(sel)
 	case "r":
-		m.picker = true
-		m.cmdline.Prompt = "react: "
-		m.cmdline.SetValue("")
-		return m, m.cmdline.Focus()
+		return m, m.openPicker()
+	case "w": // who reacted
+		return m.openReactors(sel, "")
 	case "e":
 		return m.startEdit(sel)
 	case "f":
 		return m, m.openForward(sel)
 	case "y":
-		return m, m.copyMessage(sel)
+		cmd := m.copyMessage(sel)
+		return m, tea.Batch(cmd, m.trackDownload(sel))
 	case "s":
-		return m, m.downloadMessage(sel)
+		cmd := m.downloadMessage(sel)
+		return m, tea.Batch(cmd, m.trackDownload(sel))
 	case "d":
 		m.askDeleteMessage(sel)
 	case "o":
-		return m, m.openMessage(sel)
+		cmd := m.openMessage(sel)
+		return m, tea.Batch(cmd, m.trackDownload(sel))
 	case " ", "space":
 		return m, m.viewMedia(sel)
 	case "R":
@@ -423,55 +425,6 @@ func (m *Model) cancelReply() {
 }
 
 // ---------- reactions ----------
-
-func (m Model) handlePicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	key := msg.String()
-	sel, _ := m.selected()
-	send := func(emoji string) (tea.Model, tea.Cmd) {
-		m.picker = false
-		m.cmdline.Blur()
-		m.cmdline.Prompt = ":"
-		if m.actions == nil {
-			return m, nil
-		}
-		a := m.actions
-		label := "Reacted " + emoji
-		if emoji == "" {
-			label = "Reaction removed"
-		}
-		return m, m.action(label, func(ctx context.Context) (string, error) {
-			return "", a.SendReaction(ctx, sel, emoji)
-		})
-	}
-	switch {
-	case key == "esc":
-		m.picker = false
-		m.cmdline.Blur()
-		m.cmdline.Prompt = ":"
-		return m, nil
-	case m.cmdline.Value() == "" && len(key) == 1 && key >= "1" && key <= "6":
-		return send(quickReactions[key[0]-'1'])
-	case m.cmdline.Value() == "" && key == "x":
-		return send("")
-	case key == "enter":
-		if v := strings.TrimSpace(m.cmdline.Value()); v != "" {
-			return send(v)
-		}
-		return m, nil
-	}
-	var cmd tea.Cmd
-	m.cmdline, cmd = m.cmdline.Update(msg)
-	return m, cmd
-}
-
-func (m Model) renderPicker() string {
-	var b strings.Builder
-	for i, e := range quickReactions {
-		fmt.Fprintf(&b, "%s %s  ", styleFilter.Render(fmt.Sprint(i+1)), e)
-	}
-	b.WriteString(styleFilter.Render("x") + styleDim.Render(" remove  ·  or type an emoji: "))
-	return b.String() + m.cmdline.View()
-}
 
 // ---------- copy / download / open ----------
 

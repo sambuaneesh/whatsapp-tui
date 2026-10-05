@@ -109,7 +109,7 @@ func TestKittyShow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := regexp.MustCompile(`^\x1b_Ga=T,t=t,f=100,U=1,q=2,i=(\d+),c=3,r=2;([A-Za-z0-9+/=]+)\x1b\\$`).FindStringSubmatch(out.String())
+	m := regexp.MustCompile(`^\x1b_Ga=T,t=t,f=32,s=8,v=8,U=1,q=2,i=(\d+),c=3,r=2;([A-Za-z0-9+/=]+)\x1b\\$`).FindStringSubmatch(out.String())
 	if m == nil {
 		t.Fatalf("unexpected escape %q", out.String())
 	}
@@ -117,8 +117,10 @@ func TestKittyShow(t *testing.T) {
 	if !strings.Contains(string(path), "tty-graphics-protocol") {
 		t.Fatalf("temp path %q won't be cleaned up by kitty", path)
 	}
-	if _, err := os.Stat(string(path)); err != nil {
-		t.Fatalf("png not written: %v", err)
+	// raw RGBA, as many bytes as pixels × 4
+	raw, err := os.ReadFile(string(path))
+	if err != nil || len(raw) != 8*8*4 || raw[0] != 9 || raw[3] != 255 {
+		t.Fatalf("pixels not written: %d bytes, %v", len(raw), err)
 	}
 	if strings.Count(p, "\n") != 1 || lipgloss.Width(strings.Split(p, "\n")[0]) != 3 {
 		t.Fatalf("placeholder shape wrong: %q", p)
@@ -216,8 +218,8 @@ func TestKittyShowFramesAnimates(t *testing.T) {
 	s := out.String()
 	id := regexp.MustCompile(`a=T,[^;]*i=(\d+)`).FindStringSubmatch(s)[1]
 	for _, want := range []string{
-		"a=f,t=t,f=100,X=1,q=2,i=" + id + ",z=70;",
-		"a=f,t=t,f=100,X=1,q=2,i=" + id + ",z=90;",
+		"a=f,t=t,f=32,s=4,v=4,X=1,q=2,i=" + id + ",z=70;",
+		"a=f,t=t,f=32,s=4,v=4,X=1,q=2,i=" + id + ",z=90;",
 		"a=a,q=2,i=" + id + ",r=1,z=50",
 		"a=a,q=2,i=" + id + ",s=3,v=1",
 	} {
@@ -232,5 +234,32 @@ func TestKittyShowFramesAnimates(t *testing.T) {
 	}
 	if strings.Contains(out.String(), "a=a") || strings.Contains(out.String(), "a=f") {
 		t.Fatalf("still image sent animation codes: %q", out.String())
+	}
+}
+
+func TestFitPixels(t *testing.T) {
+	big := solid(1200, 800, color.NRGBA{1, 2, 3, 255})
+	if b := FitPixels(big, 320, 224).Bounds(); b.Dx() != 320 || b.Dy() != 213 {
+		t.Fatalf("fit %v", b)
+	}
+	small := solid(100, 50, color.NRGBA{1, 2, 3, 255})
+	if FitPixels(small, 320, 224) != small {
+		t.Fatal("small image was scaled up")
+	}
+}
+
+func TestPlaceholderIDAndDelete(t *testing.T) {
+	if id, ok := PlaceholderID(Placeholder(0xABCDEF, 3, 2)); !ok || id != 0xABCDEF {
+		t.Fatalf("id %x %v", id, ok)
+	}
+	if _, ok := PlaceholderID("▀▀ half blocks"); ok {
+		t.Fatal("blocks parsed as a placeholder")
+	}
+	var out bytes.Buffer
+	k, _ := NewKitty(&out)
+	defer k.Close()
+	k.Delete(42)
+	if out.String() != "\x1b_Ga=d,d=I,i=42,q=2\x1b\\" {
+		t.Fatalf("delete %q", out.String())
 	}
 }

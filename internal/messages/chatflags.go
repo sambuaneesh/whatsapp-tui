@@ -87,3 +87,24 @@ func (sm *SessionManager) scheduleListPush() {
 		sm.uiHandler.UpdateChatList(list)
 	})
 }
+
+// renameChat records a group's new name (renamed on any device).
+func (sm *SessionManager) renameChat(jid types.JID, name string) {
+	if name == "" {
+		return
+	}
+	key := jid.ToNonAD().String()
+	sm.mu.Lock()
+	conv := sm.convByJID[key]
+	if conv == nil || conv.Name == name {
+		sm.mu.Unlock()
+		return
+	}
+	conv.Name = name
+	c := *conv
+	sm.mu.Unlock()
+	if err := sm.db.UpsertConversation(c); err != nil {
+		sm.debugf("save name of %s: %v", key, err)
+	}
+	sm.scheduleListPush()
+}

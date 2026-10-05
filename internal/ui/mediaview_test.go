@@ -156,3 +156,55 @@ func mustRead(t *testing.T, p string) []byte {
 	}
 	return b
 }
+
+func TestVoiceNotePlays(t *testing.T) {
+	b, err := proto.Marshal(&waE2E.Message{AudioMessage: &waE2E.AudioMessage{PTT: proto.Bool(true), Seconds: proto.Uint32(12)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	voice := messages.Message{Id: "v1", ChatId: groupJID, ContactId: "91111@s.whatsapp.net", ContactShort: "Arjun",
+		Timestamp: 1700000000, Text: "[VOICE NOTE] 12s", MediaType: messages.MediaAudio, Media: b}
+	a := &viewActions{path: "/tmp/voice.ogg"}
+	m := viewerModel(t, a, voice)
+	if !strings.Contains(stripANSI(m.View()), "▶ 🎤 Voice note 12s") {
+		t.Fatalf("voice note not marked playable:\n%s", stripANSI(m.View()))
+	}
+
+	ready := func(cmd tea.Cmd) videoReadyMsg {
+		t.Helper()
+		if cmd == nil {
+			t.Fatal("nothing to play")
+		}
+		var r videoReadyMsg
+		ok := false
+		msgs := []tea.Msg{cmd()}
+		for len(msgs) > 0 {
+			switch x := msgs[0].(type) {
+			case tea.BatchMsg:
+				for _, c := range x {
+					if c != nil {
+						msgs = append(msgs, c())
+					}
+				}
+			case videoReadyMsg:
+				r, ok = x, true
+			}
+			msgs = msgs[1:]
+		}
+		if !ok || !r.audio || r.path != "/tmp/voice.ogg" || r.err != nil {
+			t.Fatalf("got %+v", r)
+		}
+		return r
+	}
+	// space in visual mode
+	_, cmds := keys(t, m, "v", " ")
+	ready(cmds[len(cmds)-1])
+
+	// a click on the voice note
+	x, y := findLast(t, m, "Voice note")
+	m2, cmd := click(t, m, x, y)
+	ready(cmd)
+	if m2.view != nil {
+		t.Fatal("audio opened the picture viewer")
+	}
+}

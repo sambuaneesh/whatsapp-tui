@@ -45,11 +45,36 @@ func TestInit_CreatesTables(t *testing.T) {
 		t.Errorf("messages table not created: %v", err)
 	}
 
-	// Verify index exists
-	row := md.db.QueryRow("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_messages_chat_id'")
-	var indexName string
-	if err := row.Scan(&indexName); err != nil {
-		t.Errorf("idx_messages_chat_id index not created: %v", err)
+	// Verify the indexes exist (and the redundant one is gone)
+	for _, name := range []string{"idx_messages_chat_ts", "idx_messages_media_ts"} {
+		var indexName string
+		if err := md.db.QueryRow("SELECT name FROM sqlite_master WHERE type='index' AND name=?", name).Scan(&indexName); err != nil {
+			t.Errorf("%s index not created: %v", name, err)
+		}
+	}
+	var n int
+	md.db.QueryRow("SELECT count(*) FROM sqlite_master WHERE name='idx_messages_chat_id'").Scan(&n)
+	if n != 0 {
+		t.Error("redundant idx_messages_chat_id still there")
+	}
+}
+
+func TestAddMessagesBatchAndForwardedUpdate(t *testing.T) {
+	md := newTestDB(t)
+	msgs := []Message{{Id: "a", ChatId: "c", Text: "one", Timestamp: 1}, {Id: "b", ChatId: "c", Text: "two", Timestamp: 2}}
+	if failed, err := md.AddMessages(msgs); err != nil || failed != 0 {
+		t.Fatalf("failed %d, %v", failed, err)
+	}
+	// re-synced later as forwarded: the mark is filled in, the text kept
+	if _, err := md.AddMessages([]Message{{Id: "a", ChatId: "c", Text: "changed", Timestamp: 1, Forwarded: true}}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := md.GetMessage("a")
+	if err != nil || !got.Forwarded || got.Text != "one" {
+		t.Fatalf("got %+v, %v", got, err)
+	}
+	if b, _ := md.GetMessage("b"); b.Text != "two" {
+		t.Fatal("second message not stored")
 	}
 }
 

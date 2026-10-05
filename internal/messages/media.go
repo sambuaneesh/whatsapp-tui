@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"go.mau.fi/whatsmeow"
@@ -135,8 +137,11 @@ func (sm *SessionManager) DownloadMedia(ctx context.Context, msgID string) (stri
 	}
 	path := filepath.Join(dir, safeName(msgID))
 	if _, err := os.Stat(path); err == nil {
+		now := time.Now()
+		_ = os.Chtimes(path, now, now) // recently used: pruned last
 		return path, nil
 	}
+	defer sm.pruneMediaSoon()
 
 	msg, err := sm.db.GetMessage(msgID)
 	if err != nil {
@@ -154,20 +159,98 @@ func (sm *SessionManager) DownloadMedia(ctx context.Context, msgID string) (stri
 		return "", errors.New("not connected")
 	}
 
+	dl, total := downloadable(&pm)
+	state := &download{total: total}
+	sm.downloads.Store(msgID, state) // waiting for a download slot
+	defer sm.downloads.Delete(msgID)
+
 	defer acquire(sm.mediaSem)()
 
-	data, err := client.DownloadAny(ctx, &pm)
-	if err != nil {
-		return "", fmt.Errorf("download media: %w", err)
+	if dl == nil { // no file-backed download for this kind
+		data, err := client.DownloadAny(ctx, &pm)
+		if err != nil {
+			return "", fmt.Errorf("download media: %w", err)
+		}
+		tmp := path + ".part"
+		if err := os.WriteFile(tmp, data, 0o600); err != nil {
+			return "", fmt.Errorf("save media: %w", err)
+		}
+		return path, os.Rename(tmp, path)
 	}
-	tmp := path + ".part"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	// stream into a file, which DownloadProgress watches grow
+	f, err := os.CreateTemp(dir, safeName(msgID)+".*.part")
+	if err != nil {
 		return "", fmt.Errorf("save media: %w", err)
 	}
-	if err := os.Rename(tmp, path); err != nil {
+	state.setFile(f.Name())
+	err = client.DownloadToFile(ctx, dl, f)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		os.Remove(f.Name())
+		return "", fmt.Errorf("download media: %w", err)
+	}
+	if err := os.Rename(f.Name(), path); err != nil {
+		os.Remove(f.Name())
 		return "", fmt.Errorf("save media: %w", err)
 	}
 	return path, nil
+}
+
+// download is a media download in progress.
+type download struct {
+	total int64 // expected size in bytes, 0 if unknown
+	mu    sync.Mutex
+	file  string // where it's being written; "" while waiting for a slot
+}
+
+func (d *download) setFile(f string) {
+	d.mu.Lock()
+	d.file = f
+	d.mu.Unlock()
+}
+
+// DownloadProgress reports how far a message's media download has got: bytes
+// done and the total (0 if unknown). ok is false when it isn't downloading;
+// done is -1 while it waits for other downloads to finish.
+func (sm *SessionManager) DownloadProgress(msgID string) (done, total int64, ok bool) {
+	v, ok := sm.downloads.Load(msgID)
+	if !ok {
+		return 0, 0, false
+	}
+	d := v.(*download)
+	d.mu.Lock()
+	file := d.file
+	d.mu.Unlock()
+	if file == "" {
+		return -1, d.total, true
+	}
+	if st, err := os.Stat(file); err == nil {
+		done = st.Size()
+	}
+	if d.total > 0 && done > d.total {
+		done = d.total // the encrypted file is a little bigger
+	}
+	return done, d.total, true
+}
+
+// downloadable picks the downloadable part of a stored media message and its
+// size, or nil for kinds DownloadToFile doesn't take.
+func downloadable(pm *waE2E.Message) (whatsmeow.DownloadableMessage, int64) {
+	switch {
+	case pm.GetImageMessage() != nil:
+		return pm.GetImageMessage(), int64(pm.GetImageMessage().GetFileLength())
+	case pm.GetVideoMessage() != nil:
+		return pm.GetVideoMessage(), int64(pm.GetVideoMessage().GetFileLength())
+	case pm.GetAudioMessage() != nil:
+		return pm.GetAudioMessage(), int64(pm.GetAudioMessage().GetFileLength())
+	case pm.GetDocumentMessage() != nil:
+		return pm.GetDocumentMessage(), int64(pm.GetDocumentMessage().GetFileLength())
+	case pm.GetStickerMessage() != nil:
+		return pm.GetStickerMessage(), int64(pm.GetStickerMessage().GetFileLength())
+	}
+	return nil, 0
 }
 
 // acquire takes a slot of sem (a no-op for a nil sem) and returns its release.
@@ -305,4 +388,70 @@ func (sm *SessionManager) autoBackfill(chat string) {
 		delete(sm.backfilled, chat)
 		sm.mu.Unlock()
 	}
+}
+
+// MediaCacheLimit is how much downloaded media is kept (bytes); the least
+// recently used files go first. Set from the config.
+var MediaCacheLimit int64 = 1 << 30
+
+// pruneEvery spaces out cache pruning (it walks the directory).
+const pruneEvery = 10 * time.Minute
+
+// pruneMediaSoon prunes the media cache in the background, at most once per
+// pruneEvery.
+func (sm *SessionManager) pruneMediaSoon() {
+	sm.mu.Lock()
+	due := time.Since(sm.lastPrune) >= pruneEvery
+	if due {
+		sm.lastPrune = time.Now()
+	}
+	sm.mu.Unlock()
+	if due {
+		go func() {
+			if dir, err := cacheDir("media"); err == nil {
+				if n, err := pruneDir(dir, MediaCacheLimit); err != nil || n > 0 {
+					sm.debugf("media cache: removed %d files (%v)", n, err)
+				}
+			}
+		}()
+	}
+}
+
+// pruneDir deletes the least recently used files in dir until it holds at
+// most 80% of limit bytes (it only starts when over the limit). Unfinished
+// downloads are left alone.
+func pruneDir(dir string, limit int64) (removed int, err error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0, err
+	}
+	type file struct {
+		path string
+		size int64
+		used time.Time
+	}
+	var files []file
+	var total int64
+	for _, e := range entries {
+		info, err := e.Info()
+		if err != nil || !info.Mode().IsRegular() || strings.HasSuffix(e.Name(), ".part") {
+			continue
+		}
+		files = append(files, file{filepath.Join(dir, e.Name()), info.Size(), info.ModTime()})
+		total += info.Size()
+	}
+	if total <= limit {
+		return 0, nil
+	}
+	sort.Slice(files, func(i, j int) bool { return files[i].used.Before(files[j].used) })
+	for _, f := range files {
+		if total <= limit*8/10 {
+			break
+		}
+		if os.Remove(f.path) == nil {
+			total -= f.size
+			removed++
+		}
+	}
+	return removed, nil
 }

@@ -11,7 +11,7 @@ import (
 	"image/color"
 	_ "image/gif" // register decoders
 	_ "image/jpeg"
-	"image/png"
+	_ "image/png" // decoding PNGs
 	"io"
 	"math"
 	"math/rand"
@@ -140,6 +140,17 @@ func Shrink(img image.Image, max int) image.Image {
 	return Scale(img, int(float64(b.Dx())*s+0.5), int(float64(b.Dy())*s+0.5))
 }
 
+// FitPixels scales img down (never up) to fit within w×h pixels, keeping
+// its shape.
+func FitPixels(img image.Image, w, h int) image.Image {
+	b := img.Bounds()
+	if w <= 0 || h <= 0 || (b.Dx() <= w && b.Dy() <= h) {
+		return img
+	}
+	s := math.Min(float64(w)/float64(b.Dx()), float64(h)/float64(b.Dy()))
+	return Scale(img, max(int(float64(b.Dx())*s+0.5), 1), max(int(float64(b.Dy())*s+0.5), 1))
+}
+
 // Circle crops img to its centred square and makes everything outside the
 // inscribed circle transparent (WhatsApp-style avatars).
 func Circle(img image.Image, size int) *image.NRGBA {
@@ -205,22 +216,28 @@ func (k *Kitty) Show(img image.Image, cols, rows int) (string, error) {
 	return k.ShowFrames([]Frame{{Img: img}}, cols, rows)
 }
 
-// writeTemp saves img as a PNG in the temp dir and returns the base64 path
-// payload for a t=t transmission.
-func (k *Kitty) writeTemp(img image.Image, name string) (string, error) {
-	path := filepath.Join(k.dir, name+".png")
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
-	if err != nil {
-		return "", fmt.Errorf("write image: %w", err)
+// writeTemp saves img's raw RGBA pixels in the temp dir (no encoding: kitty
+// reads them as they are) and returns the base64 path payload for a t=t
+// transmission and the size.
+func (k *Kitty) writeTemp(img image.Image, name string) (payload string, w, h int, err error) {
+	px := nrgba(img)
+	w, h = px.Rect.Dx(), px.Rect.Dy()
+	path := filepath.Join(k.dir, name+".rgba")
+	if err := os.WriteFile(path, px.Pix, 0o600); err != nil {
+		return "", 0, 0, fmt.Errorf("write image: %w", err)
 	}
-	if err := png.Encode(f, img); err != nil {
-		f.Close()
-		return "", fmt.Errorf("encode image: %w", err)
+	return base64.StdEncoding.EncodeToString([]byte(path)), w, h, nil
+}
+
+// nrgba returns img as tightly packed, non-premultiplied RGBA pixels.
+func nrgba(img image.Image) *image.NRGBA {
+	if n, ok := img.(*image.NRGBA); ok && n.Rect.Min == (image.Point{}) && n.Stride == 4*n.Rect.Dx() {
+		return n
 	}
-	if err := f.Close(); err != nil {
-		return "", fmt.Errorf("write image: %w", err)
-	}
-	return base64.StdEncoding.EncodeToString([]byte(path)), nil
+	b := img.Bounds()
+	n := image.NewNRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
+	draw.Draw(n, n.Rect, img, b.Min, draw.Src)
+	return n
 }
 
 // ShowFrames is Show for animations: kitty receives every frame with its
@@ -232,19 +249,19 @@ func (k *Kitty) ShowFrames(frames []Frame, cols, rows int) (string, error) {
 	id := k.nextID.Add(1) & 0xFFFFFF
 	var seq strings.Builder
 	for i, fr := range frames {
-		payload, err := k.writeTemp(fr.Img, fmt.Sprintf("%d-%d", id, i))
+		payload, w, h, err := k.writeTemp(fr.Img, fmt.Sprintf("%d-%d", id, i))
 		if err != nil {
 			return "", err
 		}
 		if i == 0 {
 			// a=T transmit+place, t=t temp file (kitty deletes it after
-			// reading), f=100 PNG, U=1 virtual placement for Unicode
-			// placeholders, q=2 quiet.
-			fmt.Fprintf(&seq, "\x1b_Ga=T,t=t,f=100,U=1,q=2,i=%d,c=%d,r=%d;%s\x1b\\", id, cols, rows, payload)
+			// reading), f=32 raw RGBA of s×v pixels, U=1 virtual placement
+			// for Unicode placeholders, q=2 quiet.
+			fmt.Fprintf(&seq, "\x1b_Ga=T,t=t,f=32,s=%d,v=%d,U=1,q=2,i=%d,c=%d,r=%d;%s\x1b\\", w, h, id, cols, rows, payload)
 		} else {
 			// a=f adds a frame; X=1 replaces the canvas (frames are
 			// pre-composited); z is the gap before the next frame.
-			fmt.Fprintf(&seq, "\x1b_Ga=f,t=t,f=100,X=1,q=2,i=%d,z=%d;%s\x1b\\", id, ms(fr.Delay), payload)
+			fmt.Fprintf(&seq, "\x1b_Ga=f,t=t,f=32,s=%d,v=%d,X=1,q=2,i=%d,z=%d;%s\x1b\\", w, h, id, ms(fr.Delay), payload)
 		}
 	}
 	if len(frames) > 1 {
@@ -266,6 +283,28 @@ func ms(d time.Duration) int {
 		return n
 	}
 	return 100
+}
+
+// Delete removes one image from kitty (its placeholders go blank).
+func (k *Kitty) Delete(id uint32) {
+	k.mu.Lock()
+	for i, x := range k.ids {
+		if x == id {
+			k.ids = append(k.ids[:i], k.ids[i+1:]...)
+			break
+		}
+	}
+	k.mu.Unlock()
+	_, _ = fmt.Fprintf(k.out, "\x1b_Ga=d,d=I,i=%d,q=2\x1b\\", id)
+}
+
+// PlaceholderID is the kitty image ID a Placeholder text shows.
+func PlaceholderID(text string) (uint32, bool) {
+	var r, g, b uint32
+	if _, err := fmt.Sscanf(text, "\x1b[38;2;%d;%d;%dm", &r, &g, &b); err != nil || !strings.ContainsRune(text, 0x10EEEE) {
+		return 0, false
+	}
+	return r<<16 | g<<8 | b, true
 }
 
 // Close deletes all images this renderer transmitted and its temp dir.

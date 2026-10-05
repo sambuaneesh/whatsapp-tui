@@ -3,6 +3,9 @@ package messages
 
 type UiMessageHandler interface {
 	NewMessage(Message)
+	// Incoming reports a message just received in any chat, for
+	// notifications.
+	Incoming(msg Message, chatName string)
 	NewScreen([]Message)
 	SetChats([]Chat)
 	UpdateChatList([]*Conversation)

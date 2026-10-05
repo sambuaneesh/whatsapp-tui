@@ -183,6 +183,7 @@ func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
 		// --- Process individual messages ---
 		var latestPreview string
 		var latestMsgTs int64
+		var batch []Message // stored together: one transaction per chat
 
 		for _, histMsg := range conv.GetMessages() {
 			webMsg := histMsg.GetMessage()
@@ -258,10 +259,7 @@ func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
 				msg.Status = statusFromHistory(webMsg.GetStatus())
 			}
 
-			// AddMessage uses INSERT OR IGNORE, so duplicates are skipped
-			if err := sm.db.AddMessage(msg); err != nil {
-				addMsgErrors++
-			}
+			batch = append(batch, msg)
 
 			// Track the most recent message for the conversation preview
 			if int64(msgTimestamp) > latestMsgTs {
@@ -271,6 +269,11 @@ func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
 
 			totalMessages++
 			syncedChats[jidStr] = true
+		}
+		// existing rows are kept (see addMessageSQL)
+		if failed, err := sm.db.AddMessages(batch); err != nil || failed > 0 {
+			addMsgErrors += max(failed, 1)
+			sm.debugf("store history of %s: %d failed, %v", jidStr, failed, err)
 		}
 
 		// Use best available timestamp

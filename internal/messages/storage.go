@@ -17,7 +17,9 @@ type MessageDatabase struct {
 // Init initializes the message database with a file-based SQLite connection.
 func (md *MessageDatabase) Init() error {
 	dbPath := config.GetSessionFilePath() + "_meta.db"
-	db, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
+	// NORMAL sync is safe with WAL (a crash can lose the last commits, never
+	// corrupt the file) and saves an fsync per write
+	db, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL")
 	if err != nil {
 		return fmt.Errorf("failed to open metadata db: %w", err)
 	}
@@ -60,8 +62,8 @@ func (md *MessageDatabase) InitWithDB(db *sql.DB) error {
 		forwarded BOOLEAN,
 		text TEXT
 	);
-	CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id);
 	CREATE INDEX IF NOT EXISTS idx_messages_chat_ts ON messages(chat_id, timestamp);
+	DROP INDEX IF EXISTS idx_messages_chat_id; -- (chat_id, timestamp) covers it
 	`)
 	if err != nil {
 		return fmt.Errorf("failed to create messages table: %w", err)
@@ -77,6 +79,8 @@ func (md *MessageDatabase) InitWithDB(db *sql.DB) error {
 	md.db.Exec(`ALTER TABLE messages ADD COLUMN quoted_text TEXT DEFAULT ''`)
 	md.db.Exec(`ALTER TABLE messages ADD COLUMN status INTEGER DEFAULT 0`)
 	md.db.Exec(`ALTER TABLE messages ADD COLUMN edited BOOLEAN DEFAULT 0`)
+	// the sticker/GIF tray: newest of a kind
+	md.db.Exec(`CREATE INDEX IF NOT EXISTS idx_messages_media_ts ON messages(media_type, timestamp)`)
 
 	// One reaction per person per message; an empty emoji removes it.
 	if _, err := md.db.Exec(`
@@ -116,33 +120,66 @@ func (md *MessageDatabase) Close() error {
 	return nil
 }
 
-// AddMessage persists a message to SQLite.
-// Returns nil on success, or an error if the insert fails.
-func (md *MessageDatabase) AddMessage(msg Message) error {
-	if md.db == nil {
-		return fmt.Errorf("database not initialized")
-	}
-	// Existing rows are kept, except that media info is filled in when it was
-	// missing (e.g. messages stored before media support, re-fetched later).
-	_, err := md.db.Exec(`
+// addMessageSQL inserts a message. Existing rows are kept, except that
+// media info is filled in when it was missing (e.g. messages stored before
+// media support, re-fetched later), and the status and forwarded mark only
+// move forward.
+const addMessageSQL = `
 	INSERT INTO messages
 	(id, chat_id, contact_id, contact_name, contact_short, timestamp, from_me, forwarded, text, media_type, media,
 	 quoted_id, quoted_sender, quoted_text, status)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
 		status = MAX(COALESCE(messages.status, 0), excluded.status),
+		forwarded = MAX(COALESCE(messages.forwarded, 0), excluded.forwarded),
 		media_type = CASE WHEN messages.media IS NULL AND excluded.media IS NOT NULL
 			THEN excluded.media_type ELSE messages.media_type END,
 		media = COALESCE(messages.media, excluded.media),
 		quoted_id = CASE WHEN COALESCE(messages.quoted_id, '') = '' THEN excluded.quoted_id ELSE messages.quoted_id END,
 		quoted_sender = CASE WHEN COALESCE(messages.quoted_id, '') = '' THEN excluded.quoted_sender ELSE messages.quoted_sender END,
 		quoted_text = CASE WHEN COALESCE(messages.quoted_id, '') = '' THEN excluded.quoted_text ELSE messages.quoted_text END
-	`,
-		msg.Id, msg.ChatId, msg.ContactId, msg.ContactName,
+	`
+
+func addMessageArgs(msg Message) []any {
+	return []any{msg.Id, msg.ChatId, msg.ContactId, msg.ContactName,
 		msg.ContactShort, msg.Timestamp, msg.FromMe, msg.Forwarded, msg.Text,
-		msg.MediaType, nullBytes(msg.Media), msg.QuotedID, msg.QuotedSender, msg.QuotedText, msg.Status,
-	)
+		msg.MediaType, nullBytes(msg.Media), msg.QuotedID, msg.QuotedSender, msg.QuotedText, msg.Status}
+}
+
+// AddMessage persists a message to SQLite.
+func (md *MessageDatabase) AddMessage(msg Message) error {
+	if md.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+	_, err := md.db.Exec(addMessageSQL, addMessageArgs(msg)...)
 	return err
+}
+
+// AddMessages persists many messages in one transaction (one disk sync,
+// not one per message). It returns how many failed.
+func (md *MessageDatabase) AddMessages(msgs []Message) (failed int, err error) {
+	if md.db == nil {
+		return len(msgs), fmt.Errorf("database not initialized")
+	}
+	if len(msgs) == 0 {
+		return 0, nil
+	}
+	tx, err := md.db.Begin()
+	if err != nil {
+		return len(msgs), err
+	}
+	stmt, err := tx.Prepare(addMessageSQL)
+	if err != nil {
+		tx.Rollback()
+		return len(msgs), err
+	}
+	defer stmt.Close()
+	for _, msg := range msgs {
+		if _, err := stmt.Exec(addMessageArgs(msg)...); err != nil {
+			failed++
+		}
+	}
+	return failed, tx.Commit()
 }
 
 // UpsertConversation updates or inserts a conversation

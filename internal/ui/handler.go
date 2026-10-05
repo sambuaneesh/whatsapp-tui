@@ -25,8 +25,11 @@ type (
 		timeout int
 	}
 	clearMsg struct{}
-	helpMsg  struct{}
-	quitMsg  struct{}
+	// ReattachMsg tells the UI a new terminal window took over (background
+	// mode): everything is drawn again, images included.
+	ReattachMsg struct{}
+	helpMsg     struct{}
+	quitMsg     struct{}
 )
 
 // tviewTag matches the tview color tags the backend embeds in status text,
@@ -49,7 +52,10 @@ func NewHandler(send func(tea.Msg)) *Handler { return &Handler{send: send} }
 // SetSend sets the function used to deliver messages to the UI.
 func (h *Handler) SetSend(send func(tea.Msg)) { h.send = send }
 
-func (h *Handler) NewMessage(m messages.Message)   { h.send(newMessageMsg(m)) }
+func (h *Handler) NewMessage(m messages.Message) { h.send(newMessageMsg(m)) }
+func (h *Handler) Incoming(m messages.Message, chatName string) {
+	h.send(incomingMsg{msg: m, chatName: chatName})
+}
 func (h *Handler) NewScreen(ms []messages.Message) { h.send(screenMsg(ms)) }
 func (h *Handler) SetChats([]messages.Chat)        {}
 func (h *Handler) UpdateChatList(cs []*messages.Conversation) {

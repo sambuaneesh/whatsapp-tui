@@ -1,7 +1,11 @@
 package messages
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"google.golang.org/protobuf/proto"
@@ -119,5 +123,35 @@ func TestStorage_LatestAndOldest(t *testing.T) {
 	}
 	if _, err := md.GetOldestMessage("empty"); err == nil {
 		t.Fatal("expected error for empty chat")
+	}
+}
+
+func TestPruneDirRemovesLeastRecentlyUsed(t *testing.T) {
+	dir := t.TempDir()
+	now := time.Now()
+	for i := 0; i < 10; i++ { // 10 files of 100 bytes, f0 oldest
+		p := filepath.Join(dir, fmt.Sprint("f", i))
+		if err := os.WriteFile(p, make([]byte, 100), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		at := now.Add(time.Duration(i-10) * time.Hour)
+		_ = os.Chtimes(p, at, at)
+	}
+	_ = os.WriteFile(filepath.Join(dir, "x.part"), make([]byte, 5000), 0o600) // downloading
+	if n, err := pruneDir(dir, 2000); n != 0 || err != nil {
+		t.Fatalf("under the limit: removed %d, %v", n, err)
+	}
+	n, err := pruneDir(dir, 500) // over: down to 400 bytes
+	if err != nil || n != 6 {
+		t.Fatalf("removed %d, %v", n, err)
+	}
+	for i := 0; i < 10; i++ {
+		_, err := os.Stat(filepath.Join(dir, fmt.Sprint("f", i)))
+		if gone := os.IsNotExist(err); gone != (i < 6) {
+			t.Fatalf("f%d gone=%v", i, gone)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "x.part")); err != nil {
+		t.Fatal("removed a download in progress")
 	}
 }

@@ -22,7 +22,7 @@ func (m Model) renderHeader(title string, width int, focused bool) string {
 	if focused {
 		sep = sep.Foreground(colorBorderFocus)
 	}
-	return ansi.Truncate(title, width, "…") + "\n" + sep.Render(strings.Repeat("─", width))
+	return padLine(ansi.Truncate(title, width, "…"), width) + "\n" + sep.Render(strings.Repeat("─", width))
 }
 
 // listTitle shows "Chats" and "Archived" as tabs (the active one

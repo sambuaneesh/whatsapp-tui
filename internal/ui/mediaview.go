@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -37,19 +36,22 @@ type mediaViewMsg struct {
 
 // viewMedia opens the selected message's media full screen, or plays it.
 func (m *Model) viewMedia(sel messages.Message) tea.Cmd {
+	if playableAudio(sel) && m.actions != nil {
+		return tea.Batch(m.playVideo(sel, true), m.trackDownload(sel))
+	}
 	meta, ok := sel.MediaMeta()
 	if !ok || m.actions == nil {
-		m.notice, m.noticeErr = "nothing to view: select a photo, sticker, GIF or video", true
+		m.notice, m.noticeErr = "nothing to view: select a photo, sticker, GIF, video or voice note", true
 		return nil
 	}
 	if meta.Type == messages.MediaVideo {
-		m.notice, m.noticeErr = "Loading video…", false
-		return m.playVideo(sel)
+		return tea.Batch(m.playVideo(sel, false), m.trackDownload(sel))
 	}
 	m.view = &mediaView{msg: sel, loading: true}
+	track := m.trackDownload(sel)
 	a, im := m.actions, m.img
 	cols, rows := m.width-4, m.mainHeight()-4 // room for the caption lines
-	return func() tea.Msg {
+	load := func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 		out := mediaViewMsg{id: sel.Id, w: meta.Width, h: meta.Height}
@@ -97,6 +99,7 @@ func (m *Model) viewMedia(sel messages.Message) tea.Cmd {
 		out.text, out.err = im.renderFrames(frames, c, r)
 		return out
 	}
+	return tea.Batch(load, track)
 }
 
 func (m Model) applyMediaView(r mediaViewMsg) (tea.Model, tea.Cmd) {
@@ -126,6 +129,8 @@ func (m Model) renderMediaView(width, height int) string {
 	v := m.view
 	var body string
 	switch {
+	case v.loading && m.dl != nil:
+		body = styleDim.Render(m.dl.text)
 	case v.loading:
 		body = styleDim.Render("Loading…")
 	case v.err != nil:
@@ -168,35 +173,27 @@ func truncateWidth(s string, w int) string {
 
 // ---------- video ----------
 
-var (
-	mpvKittyOnce sync.Once
-	mpvKitty     bool
-)
-
-// mpvDrawsInKitty reports whether mpv can play inside kitty (mpv 0.36+).
-func mpvDrawsInKitty() bool {
-	mpvKittyOnce.Do(func() {
-		out, err := exec.Command("mpv", "--vo=help").Output()
-		mpvKitty = err == nil && strings.Contains(string(out), "kitty")
-	})
-	return mpvKitty
-}
-
 type videoReadyMsg struct {
-	path string
-	err  error
+	path  string
+	audio bool // a voice note or audio file
+	err   error
 }
 
-// playVideo downloads the video, then plays it: inside the terminal when
-// mpv can draw in kitty, otherwise in an mpv window (or the default app).
-func (m Model) playVideo(sel messages.Message) tea.Cmd {
+// playableAudio reports a voice note or audio message with stored media.
+func playableAudio(msg messages.Message) bool {
+	return msg.MediaType == messages.MediaAudio && len(msg.Media) > 0
+}
+
+// playVideo downloads the video (or audio), then plays it: video in an mpv
+// window (or the default app), audio in the terminal.
+func (m Model) playVideo(sel messages.Message, audio bool) tea.Cmd {
 	a := m.actions
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 		// saved with an extension so players recognise it
 		path, err := a.SaveMedia(ctx, sel.Id, os.TempDir())
-		return videoReadyMsg{path: path, err: err}
+		return videoReadyMsg{path: path, audio: audio, err: err}
 	}
 }
 
@@ -205,25 +202,48 @@ func (m Model) startVideo(r videoReadyMsg) (tea.Model, tea.Cmd) {
 		m.notice, m.noticeErr = r.err.Error(), true
 		return m, nil
 	}
-	mpv, err := exec.LookPath("mpv")
-	switch {
-	case err == nil && m.img != nil && m.img.mode == termimg.ModeKitty && mpvDrawsInKitty():
-		m.notice, m.noticeErr = "", false
-		cmd := exec.Command(mpv, "--vo=kitty", "--really-quiet", "--keep-open=no", r.path)
-		return m, tea.ExecProcess(cmd, func(err error) tea.Msg {
-			// mpv drew over the screen; redraw our images too
-			return videoDoneMsg{err: err}
-		})
-	case err == nil:
+	if r.audio {
+		return m.startAudio(r.path)
+	}
+	// in its own window: drawing video inside the terminal hangs when the
+	// app runs in the background (and blocks it while playing)
+	if mpv, err := exec.LookPath("mpv"); err == nil {
 		m.notice, m.noticeErr = "Playing in mpv", false
 		return m, func() tea.Msg {
-			return actionDoneMsg{err: exec.Command(mpv, "--force-window=yes", r.path).Start()}
+			cmd := exec.Command(mpv, "--force-window=yes", "--really-quiet", r.path)
+			cmd.SysProcAttr = detached()
+			if err := cmd.Start(); err != nil {
+				return actionDoneMsg{err: err}
+			}
+			go cmd.Wait() //nolint:errcheck // reap it when it closes
+			return nil
 		}
-	default:
-		return m, func() tea.Msg {
-			return actionDoneMsg{ok: "Opened the video", err: openURL(r.path)}
-		}
+	}
+	return m, func() tea.Msg {
+		return actionDoneMsg{ok: "Opened the video", err: openURL(r.path)}
 	}
 }
 
 type videoDoneMsg struct{ err error }
+
+// audioHint is printed above the player's progress line.
+const audioHint = "▶ Playing audio · space pause · ←/→ seek · q stop and go back"
+
+// startAudio plays audio in the terminal, mpv's (or ffplay's) progress line
+// in place of the app until it ends; without either, in the default app.
+func (m Model) startAudio(path string) (tea.Model, tea.Cmd) {
+	var player []string
+	if mpv, err := exec.LookPath("mpv"); err == nil {
+		player = []string{mpv, "--no-video", "--keep-open=no", "--msg-level=all=error,statusline=status", path}
+	} else if ffplay, err := exec.LookPath("ffplay"); err == nil {
+		player = []string{ffplay, "-nodisp", "-autoexit", "-hide_banner", "-loglevel", "error", "-stats", path}
+	} else {
+		return m, func() tea.Msg { return actionDoneMsg{ok: "Opened the audio", err: openURL(path)} }
+	}
+	m.notice, m.noticeErr = "", false
+	// the hint is printed once the app has handed over the terminal
+	cmd := exec.Command("sh", append([]string{"-c", `printf '\n  %s\n\n' "$0"; exec "$@"`, audioHint}, player...)...)
+	return m, tea.ExecProcess(cmd, func(err error) tea.Msg {
+		return videoDoneMsg{err: err} // redraws the screen and images
+	})
+}

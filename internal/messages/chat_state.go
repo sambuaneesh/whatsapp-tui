@@ -137,12 +137,20 @@ func (sm *SessionManager) snapshotPQ() []*Conversation {
 
 // getChatName returns the best display name for a chat.
 func (sm *SessionManager) getChatName(jid types.JID) string {
+	// For groups: the name we have (kept current by events.GroupInfo),
+	// else ask the server once
+	if jid.Server == "g.us" {
+		sm.mu.RLock()
+		conv := sm.convByJID[jid.String()]
+		sm.mu.RUnlock()
+		if conv != nil && conv.Name != "" && conv.Name != "Group Chat" {
+			return conv.Name
+		}
+	}
 	client := sm.getClient()
 	if client == nil {
 		return jid.User
 	}
-
-	// For groups, use the group name if available
 	if jid.Server == "g.us" {
 		groupInfo, err := client.GetGroupInfo(context.Background(), jid)
 		if err == nil && groupInfo.Name != "" {

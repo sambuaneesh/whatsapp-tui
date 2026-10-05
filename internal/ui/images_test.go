@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -314,5 +315,43 @@ func TestAnimatedStickerPlaysInKitty(t *testing.T) {
 	v := stripANSI(m.View())
 	if strings.Contains(v, "Sticker") || strings.Count(v, "╭") != 1 { // only the input box
 		t.Fatalf("sticker should render as an image without a bubble:\n%s", v)
+	}
+}
+
+func TestImageCacheEvictsOldOnes(t *testing.T) {
+	var out bytes.Buffer
+	k, err := termimg.NewKitty(&out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer k.Close()
+	im := newImages(termimg.ModeKitty, k, nil)
+	add := func(i int) imgKey {
+		key := imgKey{imgMessage, fmt.Sprint("m", i), 4, 2}
+		im.entries[key] = &imgEntry{state: imgLoading, pending: 1}
+		im.apply(imageReadyMsg{key: key, text: termimg.Placeholder(uint32(1000+i), 4, 2), full: true})
+		return key
+	}
+	for i := 0; i < maxImages; i++ {
+		add(i)
+	}
+	// a redraw shows the first ten
+	im.beginPass()
+	for i := 0; i < 10; i++ {
+		im.get(imgKey{imgMessage, fmt.Sprint("m", i), 4, 2})
+	}
+	out.Reset()
+	add(maxImages) // one too many
+	if len(im.entries) > maxImages*3/4+1 {
+		t.Fatalf("%d images kept", len(im.entries))
+	}
+	for i := 0; i < 10; i++ {
+		if im.entries[imgKey{imgMessage, fmt.Sprint("m", i), 4, 2}] == nil {
+			t.Fatalf("evicted m%d, which is on screen", i)
+		}
+	}
+	// every evicted image is deleted from kitty too
+	if n := strings.Count(out.String(), "a=d,d=I,"); n != maxImages+1-len(im.entries) {
+		t.Fatalf("%d deletes for %d evicted", n, maxImages+1-len(im.entries))
 	}
 }

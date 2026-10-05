@@ -246,29 +246,52 @@ func wrapSpans(spans []span, width int, base lipgloss.Style) []string {
 	var lines []string
 	var cur strings.Builder
 	curW := 0
+	// Text is styled in runs: consecutive pieces with the same style and
+	// link are rendered together (one call per run, not per word and space).
+	var run strings.Builder
+	var runStyle textStyle
+	runURL := ""
+	endRun := func() {
+		if run.Len() == 0 {
+			return
+		}
+		out := spanStyle(base, runStyle).Render(run.String())
+		if runURL != "" {
+			// OSC 8 hyperlink: each wrapped piece opens the whole link
+			out = "\x1b]8;;" + runURL + "\x1b\\" + out + "\x1b]8;;\x1b\\"
+		}
+		cur.WriteString(out)
+		run.Reset()
+	}
+	emit := func(text string, st textStyle, url string) {
+		if run.Len() > 0 && (st != runStyle || url != runURL) {
+			endRun()
+		}
+		runStyle, runURL = st, url
+		run.WriteString(text)
+	}
 	flush := func() {
+		endRun()
 		lines = append(lines, cur.String())
 		cur.Reset()
 		curW = 0
 	}
-	render := func(p span) string {
-		out := spanStyle(base, p.style).Render(p.text)
-		if p.url != "" {
-			// OSC 8 hyperlink: each wrapped piece opens the whole link
-			out = "\x1b]8;;" + p.url + "\x1b\\" + out + "\x1b]8;;\x1b\\"
-		}
-		return out
-	}
 	for _, w := range words {
 		if w.space {
 			if curW > 0 && curW+w.w <= width {
-				cur.WriteString(base.Render(w.pieces[0].text))
+				emit(w.pieces[0].text, 0, "")
 				curW += w.w
 			}
 			continue
 		}
 		if curW > 0 && curW+w.w > width {
 			// drop the trailing space before breaking
+			if runStyle == 0 && runURL == "" {
+				trimmed := strings.TrimRight(run.String(), " ")
+				run.Reset()
+				run.WriteString(trimmed)
+			}
+			endRun()
 			lines = append(lines, strings.TrimRight(cur.String(), " "))
 			cur.Reset()
 			curW = 0
@@ -286,15 +309,15 @@ func wrapSpans(spans []span, width int, base lipgloss.Style) []string {
 					// a wide character in a too-narrow line: put it there anyway
 					head, _, _, _ = uniseg.FirstGraphemeClusterInString(text, -1)
 				}
-				cur.WriteString(render(span{head, p.style, p.url}))
+				emit(head, p.style, p.url)
 				flush()
 				text = text[len(head):]
 			}
-			cur.WriteString(render(span{text, p.style, p.url}))
+			emit(text, p.style, p.url)
 			curW += ansi.StringWidth(text)
 		}
 	}
-	if cur.Len() > 0 || len(lines) == 0 {
+	if cur.Len() > 0 || run.Len() > 0 || len(lines) == 0 {
 		flush()
 	}
 	return lines

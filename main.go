@@ -3,15 +3,22 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/term"
+	"github.com/muesli/termenv"
 
 	"github.com/Srindot/whatsapp-tui/internal/config"
+	"github.com/Srindot/whatsapp-tui/internal/daemon"
 	"github.com/Srindot/whatsapp-tui/internal/messages"
+	"github.com/Srindot/whatsapp-tui/internal/notify"
 	"github.com/Srindot/whatsapp-tui/internal/termimg"
 	"github.com/Srindot/whatsapp-tui/internal/ui"
 )
@@ -39,10 +46,53 @@ func main() {
 
 func run() error {
 	debug := flag.Bool("debug", false, "write WhatsApp protocol logs to "+debugLogPath())
+	foreground := flag.Bool("foreground", false, "run in this terminal only, not in the background")
+	stop := flag.Bool("stop", false, "quit the app running in the background")
+	server := flag.Bool("server", false, "run as the background app (started by whatsapp-tui itself)")
 	flag.Parse()
 
 	if err := config.InitConfig(); err != nil {
 		return fmt.Errorf("config: %w", err)
+	}
+	if *stop {
+		return daemon.Stop()
+	}
+	if mb := config.Config.General.MediaCacheMb; mb > 0 {
+		messages.MediaCacheLimit = int64(mb) << 20
+	}
+	if !*server && !*foreground && config.Config.General.Background && term.IsTerminal(os.Stdin.Fd()) {
+		// attach this window to the one app, starting it if needed
+		var args []string
+		if *debug {
+			args = append(args, "--debug")
+		}
+		return daemon.Attach(args, serverLogPath())
+	}
+
+	if !*server && daemon.Running() {
+		// two copies would fight over the same WhatsApp session
+		return errors.New("it's already running in the background: run whatsapp-tui without --foreground to open it, or whatsapp-tui --stop first")
+	}
+	var srv *daemon.Server
+	if *server {
+		var err error
+		if srv, err = daemon.Listen(); err != nil {
+			if errors.Is(err, daemon.ErrRunning) {
+				return nil // another launch got there first
+			}
+			return fmt.Errorf("background: %w", err)
+		}
+		// deferred first so it runs last: the lock is held until WhatsApp
+		// has shut down and a new server can safely start
+		defer srv.Close()
+		// the app runs on the server's terminal, which attached windows show
+		os.Stdin, os.Stdout = srv.TTY(), srv.TTY()
+		// the colour support was guessed when the program loaded, from the
+		// log file it writes to then: plain text. Use the terminal's
+		// (TERM/COLORTERM come from the window that started us), and don't
+		// ask the terminal for its background: no window may be attached.
+		lipgloss.SetColorProfile(termenv.NewOutput(srv.TTY()).EnvColorProfile())
+		lipgloss.SetHasDarkBackground(!strings.Contains(config.Config.Ui.Theme, "dawn"))
 	}
 
 	// The handler forwards backend events into the program; the program
@@ -83,8 +133,10 @@ func run() error {
 		Pictures:        sm,
 		Deleter:         sm,
 	}
+	// the screen and the images share the terminal; writes go out whole
+	out := termimg.NewOutput(os.Stdout)
 	if opts.Images == termimg.ModeKitty {
-		kitty, err := termimg.NewKitty(os.Stdout)
+		kitty, err := termimg.NewKitty(out)
 		if err != nil {
 			opts.Images = termimg.ModeBlocks
 		} else {
@@ -92,33 +144,64 @@ func run() error {
 			defer kitty.Close()
 		}
 	}
+	if srv != nil {
+		opts.Detach = srv.Detach
+		opts.NotifyLog = os.Stderr // the background app's log
+	}
+	opts.Mouse = config.Config.Ui.Mouse
+	opts.Notifications, opts.Notifier = config.NotificationMode(), notify.System{}
 	model := ui.New(sm.CommandChannel, sm.Conversations(), opts)
-	progOpts := []tea.ProgramOption{tea.WithAltScreen(), tea.WithReportFocus()} // focus: only mark chats read while you look
+	progOpts := []tea.ProgramOption{tea.WithAltScreen(), tea.WithReportFocus(), tea.WithOutput(out)} // focus: only mark chats read while you look
 	if config.Config.Ui.Mouse {
 		progOpts = append(progOpts, tea.WithMouseCellMotion())
 	}
 	p := tea.NewProgram(model, progOpts...)
 	handler.SetSend(p.Send)
 
-	if err := sm.StartManager(); err != nil {
-		return fmt.Errorf("start: %w", err)
-	}
 	// Mark this kitty window so kitty.conf can pass keys it normally handles
-	// itself (ctrl+v, shift+enter) to us; see the README.
+	// itself (ctrl+v, shift+enter) to us; see the README. Also see-through
+	// highlights over a see-through window.
+	var hello, bye string
 	if termimg.Detect("auto") == termimg.ModeKitty {
-		fmt.Fprint(os.Stdout, "\x1b]1337;SetUserVar=whatsapp_tui=MQ==\x07")
-		defer fmt.Fprint(os.Stdout, "\x1b]1337;SetUserVar=whatsapp_tui\x07")
-		// see-through highlights over a see-through window
+		hello, bye = "\x1b]1337;SetUserVar=whatsapp_tui=MQ==\x07", "\x1b]1337;SetUserVar=whatsapp_tui\x07"
 		if !config.Config.Ui.PaintBackground {
 			on, off := ui.KittyTransparency(config.Config.Ui.Theme, config.Config.Ui.HighlightOpacity)
-			fmt.Fprint(os.Stdout, on)
-			defer fmt.Fprint(os.Stdout, off)
+			hello, bye = hello+on, bye+off
 		}
+	}
+	if srv != nil {
+		// every window that attaches gets the marks, and its own redraw
+		mouse := ""
+		if config.Config.Ui.Mouse {
+			mouse = "\x1b[?1002h\x1b[?1006h"
+		}
+		srv.Serve(daemon.Hooks{
+			Prelude: func() string { return mouse + hello },
+			Goodbye: func() string { return bye },
+			Attach: func(z daemon.Size) {
+				p.Send(ui.ReattachMsg{})
+				p.Send(tea.WindowSizeMsg{Width: int(z.Cols), Height: int(z.Rows)})
+				p.Send(tea.FocusMsg{})
+			},
+			Resize: func(z daemon.Size) { p.Send(tea.WindowSizeMsg{Width: int(z.Cols), Height: int(z.Rows)}) },
+			Detach: func() { p.Send(tea.BlurMsg{}) }, // nobody's looking: notify for every chat
+			Quit:   p.Quit,
+		})
+		srv.WaitFirst() // start with the first window's size and terminal
+	} else {
+		fmt.Fprint(out, hello)
+		defer fmt.Fprint(out, bye)
+	}
+
+	if err := sm.StartManager(); err != nil {
+		return fmt.Errorf("start: %w", err)
 	}
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("ui: %w", err)
 	}
 	return nil
 }
+
+func serverLogPath() string { return filepath.Join(config.GetCacheDir(), "server.log") }
 
 func debugLogPath() string { return filepath.Join(config.GetCacheDir(), "debug.log") }

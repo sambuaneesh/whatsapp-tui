@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/color"
 	"os"
+	"sort"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -45,6 +46,7 @@ const (
 )
 
 type imgEntry struct {
+	used    uint64 // when last drawn (images.tick)
 	state   imgState
 	text    string // placeholder or half-block text, rows joined by "\n"
 	full    bool   // text shows the full image (not just the thumbnail)
@@ -68,7 +70,13 @@ type images struct {
 	src          MediaSource
 	cellW, cellH int
 	entries      map[imgKey]*imgEntry
+	tick         uint64 // counts draws, for least-recently-used eviction
+	passStart    uint64 // tick when the latest redraw began
 }
+
+// maxImages bounds the images kept (in memory, and in kitty's image store);
+// the least recently drawn go first.
+const maxImages = 300
 
 func newImages(mode termimg.Mode, kitty *termimg.Kitty, src MediaSource) *images {
 	if mode == termimg.ModeKitty && kitty == nil {
@@ -90,19 +98,72 @@ func (im *images) get(k imgKey) *imgEntry {
 	if im == nil {
 		return nil
 	}
-	return im.entries[k]
+	e := im.entries[k]
+	if e != nil {
+		im.tick++
+		e.used = im.tick
+	}
+	return e
+}
+
+// beginPass marks the start of a redraw: images drawn from now on are on
+// screen (or about to be) and are never evicted.
+func (im *images) beginPass() {
+	if im != nil {
+		im.passStart = im.tick
+	}
+}
+
+// evict drops the least recently drawn images beyond maxImages, but never
+// one drawn in the latest redraw.
+func (im *images) evict() {
+	if len(im.entries) <= maxImages {
+		return
+	}
+	type old struct {
+		k    imgKey
+		used uint64
+	}
+	var olds []old
+	for k, e := range im.entries {
+		if e.used <= im.passStart && e.pending <= 0 {
+			olds = append(olds, old{k, e.used})
+		}
+	}
+	sort.Slice(olds, func(i, j int) bool { return olds[i].used < olds[j].used })
+	for _, o := range olds[:min(len(olds), len(im.entries)-maxImages*3/4)] {
+		im.forget(im.entries[o.k].text)
+		delete(im.entries, o.k)
+	}
+}
+
+// forget deletes a drawn image from kitty.
+func (im *images) forget(text string) {
+	if im.mode != termimg.ModeKitty || im.kitty == nil {
+		return
+	}
+	if id, ok := termimg.PlaceholderID(text); ok {
+		im.kitty.Delete(id)
+	}
 }
 
 // render draws img into cols×rows cells with the active mode. Called from
 // loader goroutines; Kitty is safe for concurrent use.
 func (im *images) render(img image.Image, cols, rows int) (string, error) {
-	return im.renderFrames([]termimg.Frame{{Img: termimg.Shrink(img, 1024)}}, cols, rows)
+	return im.renderFrames([]termimg.Frame{{Img: img}}, cols, rows)
 }
 
 // renderFrames draws a (possibly animated) image; only kitty animates.
+// kitty gets the pixels at the size they're shown (the cells' pixels), not
+// the original's: less to copy, and less of kitty's image memory.
 func (im *images) renderFrames(frames []termimg.Frame, cols, rows int) (string, error) {
 	if im.mode == termimg.ModeKitty {
-		return im.kitty.ShowFrames(frames, cols, rows)
+		w, h := cols*im.cellW, rows*im.cellH
+		fit := make([]termimg.Frame, len(frames))
+		for i, f := range frames {
+			fit[i] = termimg.Frame{Img: termimg.FitPixels(f.Img, w, h), Delay: f.Delay}
+		}
+		return im.kitty.ShowFrames(fit, cols, rows)
 	}
 	return termimg.Blocks(frames[0].Img, cols, rows), nil
 }
@@ -257,13 +318,19 @@ func (im *images) apply(msg imageReadyMsg) bool {
 	// Take the result unless it's a late thumbnail after the full image.
 	// A failed full download keeps the thumbnail if there is one.
 	if msg.err == nil && !(e.full && !msg.full) {
+		if e.text != msg.text {
+			im.forget(e.text) // the thumbnail it replaces
+		}
 		e.state, e.text, e.full = imgReady, msg.text, msg.full
 		changed = true
+	} else if msg.err == nil {
+		im.forget(msg.text) // a late thumbnail nobody will show
 	}
 	if e.pending <= 0 && e.state == imgLoading {
 		e.state = imgFailed
 		changed = true
 	}
+	im.evict()
 	return changed
 }
 

@@ -15,6 +15,7 @@ type MockUiHandler struct {
 	ChatSets    [][]Chat
 	Screens     [][]Message
 	Messages    []Message
+	Incomings   []Message // messages reported for notifications
 	HelpCalled  int
 	ClearCalled int
 	QuitCalled  int
@@ -27,6 +28,9 @@ func NewMockUiHandler() *MockUiHandler {
 }
 
 func (m *MockUiHandler) NewMessage(msg Message) { m.Messages = append(m.Messages, msg) }
+func (m *MockUiHandler) Incoming(msg Message, _ string) {
+	m.Incomings = append(m.Incomings, msg)
+}
 func (m *MockUiHandler) NewScreen(msgs []Message) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

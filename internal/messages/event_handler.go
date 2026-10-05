@@ -8,7 +8,6 @@ import (
 	"container/heap"
 	"context"
 	"fmt"
-	"time"
 
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
@@ -44,6 +43,10 @@ func (eh *eventHandler) Handle(evt interface{}) {
 	case *events.Pin:
 		pinned := v.Action.GetPinned()
 		eh.sm.setChatFlags(v.JID, nil, &pinned)
+	case *events.GroupInfo:
+		if v.Name != nil {
+			eh.sm.renameChat(v.JID, v.Name.Name)
+		}
 	case *events.MarkChatAsRead:
 		// read (or marked unread) on your phone or another device
 		eh.sm.setChatRead(v.JID, v.Action.GetRead())
@@ -281,20 +284,14 @@ func (eh *eventHandler) processIncomingMessage(evt *events.Message, text, previe
 	isCurrent := chatJID == eh.sm.currentReceiver
 	eh.sm.mu.RUnlock()
 
+	one := []Message{msg}
+	eh.sm.resolveMentions(one)
 	if isCurrent {
-		one := []Message{msg}
-		eh.sm.resolveMentions(one)
 		eh.sm.uiHandler.NewMessage(one[0])
-	} else if !evt.Info.IsFromMe {
-		if timestamp > uint64(time.Now().Unix()-30) {
-			senderName := eh.getContactShort(evt.Info.Sender)
-			if senderName == "" {
-				senderName = "New Message"
-			}
-			if err := notify(senderName, text); err != nil {
-				eh.sm.uiHandler.PrintError(err)
-			}
-		}
+	}
+	// the UI decides whether (and how) to notify
+	if !evt.Info.IsFromMe {
+		eh.sm.uiHandler.Incoming(one[0], chatName)
 	}
 
 	// Update chat list ordering
@@ -306,6 +303,7 @@ func (eh *eventHandler) handleMessage(evt *events.Message) {
 	eh.sm.canonicalSource(context.Background(), &evt.Info.MessageSource)
 	if r := evt.Message.GetReactionMessage(); r != nil {
 		eh.sm.handleReaction(evt.Info.Chat.String(), evt.Info.Sender, evt.Info.IsFromMe, r)
+		eh.reactedToYou(evt, r)
 		return
 	}
 	if pm := evt.Message.GetProtocolMessage(); pm != nil && pm.GetType() == waE2E.ProtocolMessage_REVOKE {
@@ -318,6 +316,28 @@ func (eh *eventHandler) handleMessage(evt *events.Message) {
 	}
 	text, preview := extractMessageContent(evt.Message)
 	eh.processIncomingMessage(evt, text, preview)
+}
+
+// reactedToYou reports a reaction to one of your messages for a
+// notification: Text is "[REACTION] <emoji>", QuotedText what you wrote.
+func (eh *eventHandler) reactedToYou(evt *events.Message, r *waE2E.ReactionMessage) {
+	if evt.Info.IsFromMe || r.GetText() == "" { // yours, or one taken back
+		return
+	}
+	target, err := eh.sm.db.GetMessage(r.GetKey().GetID())
+	if err != nil || !target.FromMe {
+		return
+	}
+	eh.sm.uiHandler.Incoming(Message{
+		Id:           evt.Info.ID,
+		ChatId:       evt.Info.Chat.String(),
+		ContactId:    evt.Info.Sender.String(),
+		ContactShort: eh.getContactShort(evt.Info.Sender),
+		Timestamp:    uint64(evt.Info.Timestamp.Unix()),
+		Text:         "[REACTION] " + r.GetText(),
+		QuotedID:     target.Id,
+		QuotedText:   target.Text,
+	}, eh.sm.getChatName(evt.Info.Chat))
 }
 
 // Helper to get contact name

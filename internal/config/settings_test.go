@@ -127,3 +127,47 @@ func TestHighlightOpacitySetting(t *testing.T) {
 		t.Fatalf("highlight_opacity read as %v", ui.HighlightOpacity)
 	}
 }
+
+func TestNotificationMode(t *testing.T) {
+	saved := *Config.General
+	defer func() { *Config.General = saved }()
+	for _, tc := range []struct {
+		mode         string
+		enable, bell bool
+		want         string
+	}{
+		{"", false, false, NotifyOff},
+		{"", true, false, NotifyAll},
+		{"", true, true, NotifySound},
+		{"popup", false, false, NotifyPopup},
+		{" Sound ", false, false, NotifySound},
+		{"bogus", true, false, NotifyAll},
+	} {
+		Config.General.Notifications, Config.General.EnableNotifications, Config.General.UseTerminalBell = tc.mode, tc.enable, tc.bell
+		if got := NotificationMode(); got != tc.want {
+			t.Errorf("%+v: got %q", tc, got)
+		}
+	}
+}
+
+func TestSetNotificationModeSaves(t *testing.T) {
+	saved, savedPath := *Config.General, configFilePath
+	defer func() { *Config.General, configFilePath = saved, savedPath }()
+	configFilePath = filepath.Join(t.TempDir(), "config.ini")
+	if err := os.WriteFile(configFilePath, []byte("[general]\ndownload_path = /x\n\n[ui]\nmouse = true\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := SetNotificationMode(NotifySound); err != nil {
+		t.Fatal(err)
+	}
+	f, err := ini.Load(configFilePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := f.Section("general").Key("notifications").String(); v != "sound" || NotificationMode() != NotifySound {
+		t.Fatalf("saved %q, mode %q", v, NotificationMode())
+	}
+	if f.Section("general").Key("download_path").String() != "/x" || f.Section("ui").Key("mouse").String() != "true" {
+		t.Fatal("other settings were lost")
+	}
+}

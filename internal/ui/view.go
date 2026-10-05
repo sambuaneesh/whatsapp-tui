@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/cursor"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
@@ -60,10 +62,10 @@ func (m *Model) refreshMessages(gotoBottom bool) {
 	// reactions or history arriving above would otherwise shift what you're
 	// reading (and the unread line) down the screen
 	anchor, delta := m.topVisible()
-	content, spans := m.renderMessages(m.rightWidth())
-	m.vp.SetContent(content)
+	lines, spans := m.renderMessages(m.rightWidth())
+	m.vp.SetLines(lines)
 	m.msgSpans = spans
-	m.msgLines = strings.Split(content, "\n")
+	m.msgLines = lines
 	if gotoBottom {
 		m.vp.GotoBottom()
 	} else {
@@ -72,6 +74,42 @@ func (m *Model) refreshMessages(gotoBottom bool) {
 }
 
 // ---------- helpers ----------
+
+// blink turns the cursors' blinking on or off. Off while the window is in
+// the background (or closed): a blink redraws the screen twice a second,
+// and nobody is looking.
+func (m *Model) blink(on bool) tea.Cmd {
+	mode := cursor.CursorStatic
+	if on {
+		mode = cursor.CursorBlink
+	}
+	return tea.Batch(m.compose.Cursor.SetMode(mode), m.cmdline.Cursor.SetMode(mode))
+}
+
+// fitLines splits a block into exactly h lines (cut, or padded with blank
+// ones).
+func fitLines(s string, h int) []string {
+	lines := strings.SplitN(s, "\n", h+1)
+	if len(lines) > h {
+		lines = lines[:h]
+	}
+	for len(lines) < h {
+		lines = append(lines, "")
+	}
+	return lines
+}
+
+// padLine pads (or cuts) a line to exactly w cells.
+func padLine(line string, w int) string {
+	n := ansi.StringWidth(line)
+	switch {
+	case n > w:
+		return ansi.Truncate(line, w, "")
+	case n < w:
+		return line + strings.Repeat(" ", w-n)
+	}
+	return line
+}
 
 func chatName(c *messages.Conversation) string {
 	if c == nil {
@@ -185,6 +223,10 @@ func (m Model) renderStatusLine() string {
 	switch {
 	case m.view != nil:
 		badge = styleModeVisual.Render("VIEW")
+	case m.emo != nil:
+		badge = styleModeVisual.Render("EMOJI")
+	case m.reactors != nil:
+		badge = styleModeVisual.Render("REACTIONS")
 	case m.stk != nil:
 		badge = styleModeVisual.Render("STICKERS")
 	case m.fwd != nil:
@@ -220,17 +262,22 @@ func (m Model) statusLineWith(badge string) string {
 	if m.screen == screenChat && m.current != nil {
 		where = " " + chatName(m.current)
 	}
+	left := badge + styleStatusBar.Render(where)
+	return fitRow(left, m.statusRight(), m.width, styleStatusBar)
+}
+
+// statusRight is the right of the status line: the notification badge
+// (click it to change), connection and help.
+func (m Model) statusRight() string {
 	conn := styleErr.Background(colorBarBg).Render("○ offline")
 	if m.status.Connected {
 		conn = styleOnline.Background(colorBarBg).Render("● online")
 	}
-	left := badge + styleStatusBar.Render(where)
-	right := conn + styleStatusBar.Render("  ? help ")
-	return fitRow(left, right, m.width, styleStatusBar)
+	return m.notifyBadge() + styleStatusBar.Render(" ") + conn + styleStatusBar.Render("  ? help ")
 }
 
 // visualHint lists the visual-mode actions.
-const visualHint = "j/k gg/G move · enter reply · p private · r react · e edit · f forward · space view · y copy · s save · d delete · o open · esc"
+const visualHint = "j/k gg/G move · enter reply · p private · r react · w who reacted · e edit · f forward · space view · y copy · s save · d delete · o open · esc"
 
 func (m Model) renderCommandLine() string {
 	switch {
@@ -292,6 +339,10 @@ func (m Model) View() string {
 	switch {
 	case m.showHelp:
 		main = m.renderHelp(m.width, h)
+	case m.emo != nil:
+		main = m.renderEmojiGrid(m.width, h)
+	case m.reactors != nil:
+		main = m.renderReactors(m.width, h)
 	case m.view != nil:
 		main = m.renderMediaView(m.width, h)
 	case m.pic != nil:
@@ -309,12 +360,25 @@ func (m Model) View() string {
 	case m.screen == screenList:
 		main = m.renderFullList(m.width, h)
 	default:
-		divider := lipgloss.NewStyle().Foreground(colorBorder).
-			Render(strings.TrimSuffix(strings.Repeat("│\n", h), "\n"))
-		main = lipgloss.JoinHorizontal(lipgloss.Top,
-			m.renderSidebar(m.sidebarW, h), divider, m.renderChatPane(m.rightWidth(), h))
+		// side by side, line by line: the sidebar padded to its width, the
+		// pane already drawn at its own
+		side := fitLines(m.renderSidebar(m.sidebarW, h), h)
+		pane := fitLines(m.renderChatPane(m.rightWidth(), h), h)
+		divider := lipgloss.NewStyle().Foreground(colorBorder).Render("│")
+		var b strings.Builder
+		for i := 0; i < h; i++ {
+			if i > 0 {
+				b.WriteByte('\n')
+			}
+			b.WriteString(padLine(side[i], m.sidebarW))
+			b.WriteString(divider)
+			b.WriteString(pane[i])
+		}
+		main = b.String()
 	}
-	main = lipgloss.NewStyle().Width(m.width).Height(h).MaxHeight(h).Render(main)
+	if m.screen != screenChat || m.overlayOpen() || m.qr != "" {
+		main = lipgloss.NewStyle().Width(m.width).Height(h).MaxHeight(h).Render(main)
+	}
 	cmdline := lipgloss.NewStyle().Width(m.width).MaxWidth(m.width).Render(m.renderCommandLine())
 	return paintBackground(main+"\n"+m.renderStatusLine()+"\n"+cmdline, m.bgSeq)
 }

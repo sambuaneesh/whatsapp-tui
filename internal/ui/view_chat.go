@@ -14,10 +14,29 @@ import (
 
 // msgSpan records which content lines a message occupies in the viewport.
 type msgSpan struct {
-	idx        int    // index into Model.msgs
-	id         string // that message's id when drawn (msgs can change since)
-	start, end int    // first and last line (inclusive)
+	idx        int       // index into Model.msgs
+	id         string    // that message's id when drawn (msgs can change since)
+	start, end int       // first and last line (inclusive)
+	quote      lineRange // the quoted message, for clicking through to it
+	media      lineRange // the picture, for clicking to view it
+	reacts     lineRange // the reactions, for clicking to see who reacted
 }
+
+// lineRange is n content lines from start; n == 0 means none.
+type lineRange struct{ start, n int }
+
+func (r lineRange) has(line int) bool { return r.n > 0 && line >= r.start && line < r.start+r.n }
+
+// offset moves the range down by d lines.
+func (r lineRange) offset(d int) lineRange {
+	if r.n == 0 {
+		return r
+	}
+	return lineRange{r.start + d, r.n}
+}
+
+// bubbleParts locates parts of a bubble, in lines from its top.
+type bubbleParts struct{ quote, media, reacts lineRange }
 
 // Size limits for inline media, in cells.
 const (
@@ -127,7 +146,7 @@ func (m Model) renderChatPane(width, height int) string {
 		}
 	}
 	parts := []string{m.renderHeader(title, width, m.focus == paneMessages)}
-	parts = append(parts, lipgloss.NewStyle().Width(width).Height(m.vp.Height).Render(m.vp.View()))
+	parts = append(parts, m.vp.View()) // already padded to the pane
 	if m.replyTo != nil || m.editing != nil {
 		parts = append(parts, m.renderReplyBar(width))
 	}
@@ -138,7 +157,8 @@ func (m Model) renderChatPane(width, height int) string {
 		parts = append(parts, m.renderMentionPicker(width))
 	}
 	parts = append(parts, m.renderCompose(width))
-	return lipgloss.NewStyle().Width(width).Height(height).MaxHeight(height).Render(strings.Join(parts, "\n"))
+	// each part is drawn at the pane's width; only the height is fitted
+	return strings.Join(fitLines(strings.Join(parts, "\n"), height), "\n")
 }
 
 // renderCompose draws the input as a rounded box with the text centred on
@@ -158,23 +178,33 @@ func (m Model) renderCompose(width int) string {
 		Render(view)
 }
 
-func (m Model) renderMessages(width int) (string, []msgSpan) {
+func (m Model) renderMessages(width int) ([]string, []msgSpan) {
 	if m.current == nil {
-		return "", nil
+		return nil, nil
 	}
 	if len(m.msgs) == 0 {
-		return "\n" + styleDim.PaddingLeft(2).Width(width).Render(
-			"No messages yet. Fetching recent history from your phone… (press i to write one)"), nil
+		return strings.Split("\n"+styleDim.PaddingLeft(2).Width(width).Render(
+			"No messages yet. Fetching recent history from your phone… (press i to write one)"), "\n"), nil
 	}
 	group := isGroup(m.current.JID)
 	now := time.Now()
 	maxInner := m.bubbleMaxInner(width)
+	cache := m.bubbles
+	defer cache.done()
+	m.img.beginPass()
 
-	var out []string
-	lines := 0
-	add := func(s string) {
-		out = append(out, s)
-		lines += strings.Count(s, "\n") + 1
+	out := make([]string, 0, len(m.msgs)*6)
+	add := func(s string) { out = append(out, s) }
+	// centred labels (dates, the unread line), cached like bubbles
+	centred := func(s string) {
+		key := cache.keyer().str("centred").str(s).int(width).sum()
+		if b, ok := cache.get(key); ok {
+			add(b.lines[0])
+			return
+		}
+		line := lipgloss.PlaceHorizontal(width, lipgloss.Center, s)
+		cache.put(key, cachedBubble{lines: []string{line}})
+		add(line)
 	}
 	spans := make([]msgSpan, 0, len(m.msgs))
 	var lastDay time.Time
@@ -183,7 +213,7 @@ func (m Model) renderMessages(width int) (string, []msgSpan) {
 		t := toTime(int64(msg.Timestamp))
 		if lastDay.IsZero() || !sameDay(t, lastDay) {
 			add("")
-			add(lipgloss.PlaceHorizontal(width, lipgloss.Center, styleDate.Render(" "+dayLabel(t, now)+" ")))
+			centred(styleDate.Render(" " + dayLabel(t, now) + " "))
 			lastDay = t
 			lastSender = ""
 		}
@@ -201,19 +231,27 @@ func (m Model) renderMessages(width int) (string, []msgSpan) {
 			if m.unreadCount == 1 {
 				label = " 1 unread message "
 			}
-			line := lipgloss.NewStyle().Foreground(colorWarm).Render("── ") + styleUnread.Bold(true).Render(label) +
-				lipgloss.NewStyle().Foreground(colorWarm).Render(" ──")
 			add("")
-			add(lipgloss.PlaceHorizontal(width, lipgloss.Center, line))
+			centred(lipgloss.NewStyle().Foreground(colorWarm).Render("── ") + styleUnread.Bold(true).Render(label) +
+				lipgloss.NewStyle().Foreground(colorWarm).Render(" ──"))
 		}
-		start := lines
+		start := len(out)
 		selected := m.mode == modeVisual && i == m.sel
-		add(m.renderBubble(msg, group && sender != lastSender, selected, maxInner, width, t))
-		spans = append(spans, msgSpan{idx: i, id: msg.Id, start: start, end: lines - 1})
+		showSender := group && sender != lastSender
+		key := m.bubbleKey(msg, showSender, selected, maxInner, width)
+		b, ok := cache.get(key)
+		if !ok {
+			bubble, parts := m.renderBubble(msg, showSender, selected, maxInner, width, t)
+			b = cachedBubble{lines: strings.Split(bubble, "\n"), parts: parts}
+			cache.put(key, b)
+		}
+		out = append(out, b.lines...)
+		spans = append(spans, msgSpan{idx: i, id: msg.Id, start: start, end: len(out) - 1,
+			quote: b.parts.quote.offset(start), media: b.parts.media.offset(start), reacts: b.parts.reacts.offset(start)})
 		lastSender = sender
 	}
 	add("")
-	return strings.Join(out, "\n"), spans
+	return out, spans
 }
 
 // quoteBlock renders the message a reply quotes, WhatsApp-style.
@@ -263,14 +301,17 @@ func (m Model) quotedSenderName(msg messages.Message) string {
 	return "+" + user
 }
 
-// reactionLine summarises reactions like "👍 2  ❤️".
-func reactionLine(rs []messages.Reaction) string {
-	if len(rs) == 0 {
-		return ""
-	}
+// reactionChip is one emoji's part of the line under a bubble: "👍 2".
+type reactionChip struct {
+	emoji, label string
+	mine         bool // you reacted with it
+}
+
+// reactionChips groups reactions by emoji, in the order first used.
+func reactionChips(rs []messages.Reaction) []reactionChip {
 	counts := map[string]int{}
-	var order []string
 	mine := map[string]bool{}
+	var order []string
 	for _, r := range rs {
 		if counts[r.Emoji] == 0 {
 			order = append(order, r.Emoji)
@@ -280,22 +321,34 @@ func reactionLine(rs []messages.Reaction) string {
 			mine[r.Emoji] = true
 		}
 	}
-	var parts []string
-	for _, e := range order {
-		p := e
+	chips := make([]reactionChip, len(order))
+	for i, e := range order {
+		label := e
 		if counts[e] > 1 {
-			p += " " + fmt.Sprint(counts[e])
+			label += " " + fmt.Sprint(counts[e])
 		}
-		if mine[e] {
-			parts = append(parts, lipgloss.NewStyle().Foreground(colorWarm).Render(p))
-		} else {
-			parts = append(parts, styleDim.Render(p))
-		}
+		chips[i] = reactionChip{emoji: e, label: label, mine: mine[e]}
 	}
-	return strings.Join(parts, "  ")
+	return chips
 }
 
-func (m Model) renderBubble(msg messages.Message, showSender, selected bool, maxInner, width int, t time.Time) string {
+// reactionGap separates the chips on the line.
+const reactionGap = "  "
+
+// reactionLine summarises reactions like "👍 2  ❤️".
+func reactionLine(rs []messages.Reaction) string {
+	var parts []string
+	for _, c := range reactionChips(rs) {
+		if c.mine {
+			parts = append(parts, lipgloss.NewStyle().Foreground(colorWarm).Render(c.label))
+		} else {
+			parts = append(parts, styleDim.Render(c.label))
+		}
+	}
+	return strings.Join(parts, reactionGap)
+}
+
+func (m Model) renderBubble(msg messages.Message, showSender, selected bool, maxInner, width int, t time.Time) (string, bubbleParts) {
 	border := pal.Muted
 	stampStyle := styleStampThem
 	if msg.FromMe {
@@ -330,9 +383,14 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 	if msg.Forwarded {
 		lines = append(lines, styleMuted.Italic(true).Render("↪ Forwarded"))
 	}
-	lines = append(lines, m.quoteBlock(msg, maxInner)...)
+	var parts bubbleParts
+	quote := m.quoteBlock(msg, maxInner)
+	parts.quote = lineRange{len(lines), len(quote)}
+	lines = append(lines, quote...)
 	if hasMedia {
-		lines = append(lines, strings.Split(block, "\n")...)
+		media := strings.Split(block, "\n")
+		parts.media = lineRange{len(lines), len(media)}
+		lines = append(lines, media...)
 		switch meta.Type {
 		case messages.MediaGIF:
 			text = strings.TrimSpace("GIF  " + text)
@@ -347,6 +405,10 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 	if isDeletedNote(msg) {
 		lines = append(lines, styleMuted.Italic(true).Render(msg.Text))
 		text = ""
+	}
+	if playableAudio(msg) && text != "" {
+		text = "▶ " + text // click (or space) plays it
+		parts.media = lineRange{len(lines), 1}
 	}
 	if text != "" {
 		if m.search != nil && matchesQuery(text, m.search.query) {
@@ -396,42 +458,84 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 			inner = w
 		}
 	}
-	body := strings.Join(lines, "\n")
-	var bubble string
+	// The frame is drawn by hand (lipgloss re-measures every line several
+	// times for a border, padding and alignment; this measures each once).
+	// Every line of blk is exactly blkW cells wide.
+	var blk []string
+	blkW := 0
 	if hasMedia && meta.Type == messages.MediaSticker && !selected {
-		bubble = body // stickers float without a bubble, like on the phone
+		// stickers float without a bubble, like on the phone
+		blk, blkW = make([]string, len(lines)), inner
+		for i, l := range lines {
+			blk[i] = padRight(l, inner)
+		}
 	} else {
-		bubble = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).BorderForeground(border).
-			Padding(0, 1).Width(inner + 2).
-			Render(body)
+		parts.quote, parts.media = parts.quote.offset(1), parts.media.offset(1) // below the top border
+		bc := lipgloss.NewStyle().Foreground(border)
+		side := bc.Render("│")
+		edge := strings.Repeat("─", inner+2)
+		blk = make([]string, 0, len(lines)+2)
+		blk = append(blk, bc.Render("╭"+edge+"╮"))
+		for _, l := range lines {
+			blk = append(blk, side+" "+padRight(l, inner)+" "+side)
+		}
+		blk = append(blk, bc.Render("╰"+edge+"╯"))
+		blkW = inner + 4
 	}
 	if r := reactionLine(msg.Reactions); r != "" {
-		align := lipgloss.Left
-		if msg.FromMe {
-			align = lipgloss.Right
+		// under the bubble, on its side
+		rl := " " + r + " "
+		rw := ansi.StringWidth(rl)
+		if rw > blkW {
+			for i, l := range blk {
+				if msg.FromMe {
+					blk[i] = strings.Repeat(" ", rw-blkW) + l
+				} else {
+					blk[i] = l + strings.Repeat(" ", rw-blkW)
+				}
+			}
+			blkW = rw
 		}
-		bubble = lipgloss.JoinVertical(align, bubble, " "+r+" ")
+		parts.reacts = lineRange{len(blk), 1}
+		if msg.FromMe {
+			rl = strings.Repeat(" ", blkW-rw) + rl
+		} else {
+			rl += strings.Repeat(" ", blkW-rw)
+		}
+		blk = append(blk, rl)
 	}
-	if selected || mentionsYou {
-		// a marker in the gutter makes the selection (or a mention of
-		// you) easy to spot
-		h := lipgloss.Height(bubble)
+	// place it: yours on the right, theirs on the left; a marker in the
+	// gutter makes the selection (or a mention of you) easy to spot
+	var prefix, suffix string
+	switch {
+	case selected || mentionsYou:
 		gutterColor := pal.Love
 		if selected {
 			gutterColor = pal.Rose
 		}
-		gutter := lipgloss.NewStyle().Foreground(gutterColor).Render(strings.TrimSuffix(strings.Repeat("▌\n", h), "\n"))
+		gutter := lipgloss.NewStyle().Foreground(gutterColor).Render("▌")
 		if msg.FromMe {
-			return lipgloss.JoinHorizontal(lipgloss.Top,
-				lipgloss.PlaceHorizontal(width-2, lipgloss.Right, bubble), gutter)
+			prefix, suffix = strings.Repeat(" ", max(width-2-blkW, 0)), gutter
+		} else {
+			prefix = gutter
 		}
-		return lipgloss.JoinHorizontal(lipgloss.Top, gutter, bubble)
+	case msg.FromMe:
+		prefix = strings.Repeat(" ", max(width-1-blkW, 0))
+	default:
+		prefix = " "
 	}
-	if msg.FromMe {
-		return lipgloss.PlaceHorizontal(width-1, lipgloss.Right, bubble)
+	for i, l := range blk {
+		blk[i] = prefix + l + suffix
 	}
-	return lipgloss.NewStyle().MarginLeft(1).Render(bubble)
+	return strings.Join(blk, "\n"), parts
+}
+
+// padRight pads a line with spaces to w cells.
+func padRight(line string, w int) string {
+	if n := ansi.StringWidth(line); n < w {
+		return line + strings.Repeat(" ", w-n)
+	}
+	return line
 }
 
 // statusMark shows how far one of your messages got, as two small blocks

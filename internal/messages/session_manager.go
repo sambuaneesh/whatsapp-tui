@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/Srindot/whatsapp-tui/internal/config"
-	"github.com/gen2brain/beeep"
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 
 	"go.mau.fi/whatsmeow"
@@ -42,6 +41,8 @@ type SessionManager struct {
 	debug           bool            // T-2: enable verbose WhatsApp protocol logging
 	backfilled      map[string]bool // chats whose history was requested this session
 	mediaSem        chan struct{}   // limits concurrent media downloads
+	downloads       sync.Map        // message ID -> *download in progress
+	lastPrune       time.Time       // media cache last pruned
 	avatarSem       chan struct{}   // limits concurrent profile picture fetches
 	logOut          io.Writer       // debug log destination (see SetLogWriter)
 	contactsSynced  bool            // contact names re-synced this session
@@ -97,6 +98,7 @@ func (sm *SessionManager) StartManager() error {
 	sm.started = true
 	sm.stop = make(chan struct{})
 	go sm.runManager()
+	sm.pruneMediaSoon()
 	return nil
 }
 
@@ -206,16 +208,4 @@ func checkParam(arr []string, length int) bool {
 		return false
 	}
 	return true
-}
-
-// notify will send a notification via beeep if EnableNotification is true. If
-// UseTerminalBell is true it will send a terminal bell instead.
-func notify(title, message string) error {
-	if !config.Config.General.EnableNotifications {
-		return nil
-	} else if config.Config.General.UseTerminalBell {
-		_, err := fmt.Printf("\a")
-		return err
-	}
-	return beeep.Notify(title, message, "")
 }

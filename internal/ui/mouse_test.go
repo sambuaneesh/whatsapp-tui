@@ -2,11 +2,16 @@ package ui
 
 import (
 	"fmt"
+	"image/color"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/x/ansi"
 	"github.com/skratchdot/open-golang/open"
+	"go.mau.fi/whatsmeow/proto/waE2E"
+	"google.golang.org/protobuf/proto"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -159,5 +164,188 @@ func TestURLAtColumn(t *testing.T) {
 		if got := urlAtColumn(line, col); got != want {
 			t.Errorf("col %d: %q, want %q", col, got, want)
 		}
+	}
+}
+
+// findLast returns the screen cell where needle is last drawn.
+func findLast(t *testing.T, m Model, needle string) (int, int) {
+	t.Helper()
+	x, y := -1, -1
+	for i, line := range strings.Split(ansi.Strip(m.View()), "\n") {
+		if j := strings.LastIndex(line, needle); j >= 0 {
+			x, y = ansi.StringWidth(line[:j]), i
+		}
+	}
+	if y < 0 {
+		t.Fatalf("%q not on screen", needle)
+	}
+	return x, y
+}
+
+// fakeClock makes clicks happen at controlled times.
+func fakeClock(t *testing.T) *time.Time {
+	t.Helper()
+	now := time.Unix(1700000000, 0)
+	clickNow = func() time.Time { return now }
+	t.Cleanup(func() { clickNow = time.Now })
+	return &now
+}
+
+func TestDoubleClickReplies(t *testing.T) {
+	now := fakeClock(t)
+	m := visualModel(t, &fakeActions{}, fakeClip{})
+	x, y := findLast(t, m, "yes!")
+
+	m, _ = click(t, m, x+1, y)
+	if m.replyTo != nil {
+		t.Fatal("a single click started a reply")
+	}
+	*now = now.Add(time.Second) // too slow for a double click
+	m, _ = click(t, m, x+1, y)
+	if m.replyTo != nil {
+		t.Fatal("two slow clicks started a reply")
+	}
+	*now = now.Add(200 * time.Millisecond)
+	m, _ = click(t, m, x+1, y)
+	if m.replyTo == nil || m.replyTo.Id != "m2" || m.mode != modeInsert {
+		t.Fatalf("double click: reply to %v, mode %v", m.replyTo, m.mode)
+	}
+
+	// a double click on the empty space beside a bubble does nothing
+	m = visualModel(t, &fakeActions{}, fakeClip{})
+	m, _ = click(t, m, m.width-3, y)
+	*now = now.Add(100 * time.Millisecond)
+	m, _ = click(t, m, m.width-3, y)
+	if m.replyTo != nil {
+		t.Fatal("double click beside the bubble started a reply")
+	}
+}
+
+func TestClickQuoteSelectsOriginal(t *testing.T) {
+	m := visualModel(t, &fakeActions{}, fakeClip{})
+	x, y := findLast(t, m, "dinner at 8?") // the quote in "count me in"
+	m, _ = click(t, m, x+2, y)
+	if sel, _ := m.selected(); m.mode != modeVisual || sel.Id != "m1" {
+		t.Fatalf("selected %s in mode %v", sel.Id, m.mode)
+	}
+}
+
+func TestClickQuoteLoadsOlderHistory(t *testing.T) {
+	const chat = "333@s.whatsapp.net"
+	var all []messages.Message
+	for i := 0; i < 300; i++ {
+		all = append(all, messages.Message{Id: fmt.Sprint("h", i), ChatId: chat, ContactId: chat,
+			Timestamp: uint64(1700000000 + i*60), Text: fmt.Sprint("history ", i)})
+	}
+	all[299].Text, all[299].QuotedID, all[299].QuotedText = "replying", "h10", "history 10"
+	f := &fakeGlobal{chats: map[string][]messages.Message{chat: all}}
+	m := New(make(chan messages.Command, 20), []*messages.Conversation{{JID: chat, Name: "Meera", LastMsgTime: 1}},
+		Options{SidebarWidth: 38, Images: termimg.ModeOff, GlobalSearcher: f})
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 32})
+	m = next.(Model)
+	m, _ = keys(t, m, "enter")
+	next, _ = m.Update(screenMsg(all[250:]))
+	m = next.(Model)
+
+	x, y := findLast(t, m, "history 10")
+	m, cmd := click(t, m, x+2, y)
+	m = drain(t, m, cmd)
+	if sel, _ := m.selected(); m.mode != modeVisual || sel.Id != "h10" {
+		t.Fatalf("selected %q in mode %v (%s)", sel.Id, m.mode, m.notice)
+	}
+	if !strings.Contains(ansi.Strip(m.View()), "history 10") {
+		t.Fatal("the quoted message isn't on screen")
+	}
+	// a fresh screen of the newest messages keeps the loaded history
+	next, _ = m.Update(screenMsg(all[250:]))
+	m = next.(Model)
+	if sel, _ := m.selected(); len(m.msgs) != 290 || sel.Id != "h10" {
+		t.Fatalf("after a new screen: %d messages, selected %s", len(m.msgs), sel.Id)
+	}
+
+	// a quote whose message isn't stored says so
+	all[299].QuotedID = "gone"
+	next, _ = m.Update(screenMsg(all[250:]))
+	m = next.(Model)
+	m.vp.GotoBottom()
+	x, y = findLast(t, m, "history 10")
+	m, cmd = click(t, m, x+2, y)
+	m = drain(t, m, cmd)
+	if !m.noticeErr || !strings.Contains(m.notice, "isn't on this device") {
+		t.Fatalf("notice %q", m.notice)
+	}
+}
+
+func TestClickPictureOpensViewer(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "photo.png")
+	writePNG(t, path, fill(1200, 800, color.RGBA{156, 207, 216, 255}))
+	photo := mediaMsg(t, "p1", &waE2E.Message{ImageMessage: &waE2E.ImageMessage{
+		Width: proto.Uint32(1200), Height: proto.Uint32(800)}}, "[IMAGE] sunset at the lake")
+	m := viewerModel(t, &viewActions{path: path}, photo)
+
+	// the caption opens nothing
+	x, y := findLast(t, m, "sunset at the lake")
+	m, _ = click(t, m, x+2, y)
+	if m.view != nil {
+		t.Fatal("clicking the caption opened the viewer")
+	}
+	var sp msgSpan
+	for _, s := range m.msgSpans {
+		if s.id == "p1" {
+			sp = s
+		}
+	}
+	line := sp.media.start + sp.media.n/2
+	from, to := inkColumns(m.msgLines[line])
+	m, cmd := click(t, m, m.sidebarW+1+(from+to)/2, headerRows+line-m.vp.YOffset)
+	m = drain(t, m, cmd)
+	if m.view == nil || m.view.loading || m.view.err != nil || m.view.msg.Id != "p1" {
+		t.Fatalf("viewer: %+v", m.view)
+	}
+}
+
+func TestInkColumns(t *testing.T) {
+	for line, want := range map[string][2]int{
+		"":                        {0, 0},
+		"    ":                    {0, 0},
+		"  \x1b[1m╭──╮\x1b[0m   ": {2, 6},
+		"   hi ✨ ":                {3, 8},
+	} {
+		if from, to := inkColumns(line); from != want[0] || to != want[1] {
+			t.Errorf("%q: %d..%d, want %v", line, from, to, want)
+		}
+	}
+}
+
+func TestMouseBackAfterPlayer(t *testing.T) {
+	enables := func(cmd tea.Cmd) bool {
+		queue := []tea.Cmd{cmd}
+		for len(queue) > 0 {
+			c := queue[0]
+			queue = queue[1:]
+			if c == nil {
+				continue
+			}
+			switch msg := c().(type) {
+			case tea.BatchMsg:
+				queue = append(queue, msg...)
+			default:
+				if fmt.Sprintf("%T", msg) == fmt.Sprintf("%T", tea.EnableMouseCellMotion()) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	m := New(make(chan messages.Command, 1), nil, Options{SidebarWidth: 38, Images: termimg.ModeOff, Mouse: true})
+	for _, msg := range []tea.Msg{videoDoneMsg{}, pickedFilesMsg{}} {
+		if _, cmd := m.Update(msg); !enables(cmd) {
+			t.Fatalf("%T: mouse not turned back on", msg)
+		}
+	}
+	m = New(make(chan messages.Command, 1), nil, Options{SidebarWidth: 38, Images: termimg.ModeOff})
+	if _, cmd := m.Update(videoDoneMsg{}); enables(cmd) {
+		t.Fatal("mouse turned on with mouse = false")
 	}
 }

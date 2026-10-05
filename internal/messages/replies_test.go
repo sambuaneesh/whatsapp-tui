@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"go.mau.fi/whatsmeow/proto/waE2E"
+	"go.mau.fi/whatsmeow/types"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -118,5 +119,34 @@ func TestMediaFileName(t *testing.T) {
 		if strings.Contains(mediaFileName(tt.msg), "/") {
 			t.Errorf("path separator in %q", mediaFileName(tt.msg))
 		}
+	}
+}
+
+func TestQuoteOfMarksForwardedWithoutReply(t *testing.T) {
+	var m Message
+	quoteOf(&m, &waE2E.Message{ExtendedTextMessage: &waE2E.ExtendedTextMessage{
+		Text: proto.String("look at this"), ContextInfo: &waE2E.ContextInfo{IsForwarded: proto.Bool(true)}}})
+	if !m.Forwarded || m.QuotedID != "" {
+		t.Fatalf("forwarded %v, quoted %q", m.Forwarded, m.QuotedID)
+	}
+	m = Message{}
+	quoteOf(&m, &waE2E.Message{ImageMessage: &waE2E.ImageMessage{ContextInfo: &waE2E.ContextInfo{IsForwarded: proto.Bool(true)}}})
+	if !m.Forwarded {
+		t.Fatal("forwarded photo not marked")
+	}
+}
+
+func TestGroupNameFromCacheAndRename(t *testing.T) {
+	sm := &SessionManager{uiHandler: NewMockUiHandler(), db: newTestDB(t), convByJID: map[string]*Conversation{
+		"123@g.us": {JID: "123@g.us", Name: "Hostel"},
+	}}
+	g := types.NewJID("123", types.GroupServer)
+	// no connection needed: the stored name, no server request
+	if got := sm.getChatName(g); got != "Hostel" {
+		t.Fatalf("name %q", got)
+	}
+	sm.renameChat(g, "Hostel 2026")
+	if got := sm.getChatName(g); got != "Hostel 2026" {
+		t.Fatalf("after rename: %q", got)
 	}
 }

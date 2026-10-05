@@ -55,10 +55,19 @@ well, and reading it on the phone clears it here.
 | `K` | chat info: description / about, members, picture |
 | `V` | the profile picture, full screen |
 | `d` then `enter` | delete the chat (on all your devices) |
-| `:q` | quit |
+| `:q` | close the window; the app keeps running (see below) |
+| `:q!` | quit for real |
 
-With the mouse: click a chat to open it, click a link to open it, scroll with
-the wheel.
+With the mouse: click a chat to open it, click a link to open it, click a
+photo, sticker, GIF, video or voice note (`▶ 🎤`) to view or play it, click the quote in a reply to jump to
+the message it replies to (selected, as in visual mode), double-click a message
+to reply to it, right-click a message to react (click an emoji on the bar),
+click the reactions under a message to see who reacted (click yours to take
+it back), and scroll with the wheel.
+
+**Reactions** to your messages notify you like messages do ("Priya: Reacted ❤️
+to: dinner at 8?"). The emoji grid (`r` then `+`, or type a name) has every
+emoji: type to search by name, arrows or the mouse to pick.
 
 ## Writing
 
@@ -89,13 +98,14 @@ you're at the bottom). Move with `j` `k`, `gg` (oldest) and `G` (newest), then:
 |---|---|
 | `enter` | reply |
 | `p` | reply privately to a group member |
-| `r` | react: `1`–`6` quick emoji, `x` removes, or type any emoji + `enter` |
+| `r` | react: `1`–`6` quick emoji, `x` removes yours, `+` (or start typing a name like `fire`) opens every emoji |
+| `w` | who reacted; `x` removes your reaction |
 | `e` | edit your message: it opens in the input box; `enter` saves, `esc` cancels (text messages, first 15 minutes) |
 | `f` | forward: type to filter chats, `space` picks several, `enter` sends |
 | `y` | copy the text and/or image |
 | `s` | save (download) to your download folder |
 | `d` | delete: `enter` for you, `e` for everyone (your messages, up to ~2½ days old) |
-| `space` | view the photo, sticker or GIF full screen; play a video |
+| `space` | view the photo, sticker or GIF full screen; play a voice note; open a video in mpv |
 | `o` | open the photo/file in its app, or the message's link |
 | `R` | retry a message that failed to send |
 | `esc` | done |
@@ -146,7 +156,12 @@ selected.
   into a sticker (needs ffmpeg).
 - **Viewing:** `v`, select a photo, sticker or GIF, `space` shows it full
   screen (GIFs and animated stickers play in kitty); `esc` closes. Videos play
-  in mpv (inside the terminal with mpv 0.36+, otherwise in its own window).
+  in their own mpv window (or your default video app). Downloads show their
+  progress on the bottom line.
+  Voice notes and audio play in the terminal with mpv (or ffplay): `space`
+  pauses, `←`/`→` seek, `q` stops and goes back to the chat.
+- **Copying:** `v`, select the message, `y` copies its text (or its picture).
+  To select text with the mouse instead, hold `shift` while dragging.
 - **Downloads** go to `~/Downloads`. `:download-dir` shows the folder,
   `:download-dir ~/Pictures/wa` changes it.
 
@@ -179,6 +194,39 @@ map --when-focus-on var:whatsapp_tui ctrl+v
 Reload with `ctrl+shift+f5` and restart whatsapp-tui. To select text with the
 mouse while it runs, hold `shift` while dragging.
 
+## Running in the background
+
+Like tmux or herdr, there's only ever one whatsapp-tui. The first launch
+starts it in the background and every launch is a window onto it:
+
+- **Closing the window** (or `q`, `:q`, `ctrl+c`) leaves it running, still
+  connected and still notifying. Launch it again and you're back exactly where
+  you were: same chat, scroll position, half-written message.
+- **Opening a second window** moves it there; the first one closes.
+- **Quitting for real:** `:q!` inside it, or `whatsapp-tui --stop`.
+- **After installing a new version**, the next launch restarts it on the new
+  build by itself.
+- `whatsapp-tui --foreground` runs it the old way, in this terminal only
+  (`background = false` in the config makes that the default). The background
+  app's own log is `~/.cache/whatsapp-tui/server.log`.
+
+## Notifications
+
+The status bar shows what a new message does; click it, press `M`, or use
+`:notify <mode>` to change it (the choice is saved):
+
+| Badge | Mode | New message |
+|---|---|---|
+| `🔔 all` | `all` | a popup in the notification drawer, and a sound |
+| `💬 popup` | `popup` | a silent popup |
+| `🔊 sound` | `sound` | only a sound |
+| `🔕 off` | `off` | nothing |
+
+Switching plays a sample. There's no notification for the chat you have
+open while the window has focus. Popups use `notify-send` (any notification
+daemon: Omarchy's, mako, dunst…); the sound is the desktop's "new message"
+sound, played with `canberra-gtk-play`, `pw-play` or `paplay`.
+
 ## Settings
 
 `~/.config/whatsapp-tui/config.ini` (macOS: `~/Library/Application
@@ -187,6 +235,8 @@ Support/whatsapp-tui/config.ini`):
 ```ini
 [general]
 download_path = ~/Downloads
+notifications = all            ; all, popup, sound, off (M in the app)
+background    = true           ; keep running when the window closes
 
 [ui]
 theme            = rose-pine   ; rose-pine, rose-pine-moon, rose-pine-dawn

@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -74,14 +74,34 @@ type Model struct {
 	msgSpans []msgSpan // content lines of each message, for lazy image loading
 	msgLines []string  // the rendered message lines (for clicking links)
 
+	// the last click on a message, to tell a double click
+	lastClickID string
+	lastClickAt time.Time
+	// older messages were loaded to show a quoted message: keep them when
+	// a newer screen arrives
+	keepOlder bool
+
 	// unread messages when the chat was opened: shown with a divider
 	unreadFor   string // chat JID
 	unreadCount int
 	unreadID    string // first unread message, found once messages load
 	focused     bool   // the terminal window has focus (unfocused: nothing counts as seen)
-	vp          viewport.Model
+	vp          lineView
+	bubbles     *bubbleCache // rendered bubbles, reused between redraws
 
-	img *images // nil-safe; nil disables images and avatars
+	img   *images // nil-safe; nil disables images and avatars
+	mouse bool    // mouse tracking is on
+
+	detach func() // see Options.Detach
+
+	notifyMode string   // config.NotifyAll etc.
+	notifier   Notifier // nil: no notifications
+	notifyLog  io.Writer
+	dl         *download // media download being shown with its progress
+
+	emo       *emojiPicker  // emoji grid for reacting, nil when closed
+	reactors  *reactorsView // who reacted to a message, nil when closed
+	lastSound time.Time
 
 	attachments []*attachment // files and pasted images waiting to be sent
 	lastPickDir string        // where yazi opens next time
@@ -141,6 +161,16 @@ type Options struct {
 	Theme           string // rose-pine, rose-pine-moon or rose-pine-dawn
 	PaintBackground bool   // fill the screen with the theme's base colour
 
+	Mouse bool // mouse tracking is on (turned back on after other programs)
+
+	// Detach closes this window and leaves the app running in the
+	// background (q, :q, ctrl+c); nil makes those quit instead.
+	Detach func()
+
+	Notifications string    // all, popup, sound or off
+	Notifier      Notifier  // desktop notifications; nil disables them
+	NotifyLog     io.Writer // where notification decisions are logged; may be nil
+
 	Images termimg.Mode   // how to draw images (ModeOff disables them)
 	Kitty  *termimg.Kitty // required for termimg.ModeKitty
 	Media  MediaSource    // downloads media and profile pictures; may be nil
@@ -191,17 +221,22 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		sidebarWidth = 38
 	}
 	m := Model{
-		commands: commands,
-		sidebarW: sidebarWidth,
-		bgSeq:    backgroundSeq(opts.PaintBackground),
-		vp:       viewport.New(0, 0),
-		compose:  compose,
-		cmdline:  cmdline,
-		img:      newImages(opts.Images, opts.Kitty, opts.Media),
-		sender:   opts.Sender,
-		clip:     opts.Clipboard,
-		actions:  opts.Actions,
-		searcher: opts.Searcher,
+		commands:   commands,
+		sidebarW:   sidebarWidth,
+		bgSeq:      backgroundSeq(opts.PaintBackground),
+		bubbles:    newBubbleCache(),
+		compose:    compose,
+		cmdline:    cmdline,
+		img:        newImages(opts.Images, opts.Kitty, opts.Media),
+		mouse:      opts.Mouse,
+		notifyMode: opts.Notifications,
+		detach:     opts.Detach,
+		notifier:   opts.Notifier,
+		notifyLog:  opts.NotifyLog,
+		sender:     opts.Sender,
+		clip:       opts.Clipboard,
+		actions:    opts.Actions,
+		searcher:   opts.Searcher,
 
 		globalSearcher: opts.GlobalSearcher,
 		forwarder:      opts.Forwarder,
@@ -216,7 +251,6 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 	if m.clip == nil {
 		m.clip = systemClipboard{}
 	}
-	m.vp.KeyMap = viewport.KeyMap{} // keys are handled by the model
 	m.setChats(initial)
 	return m
 }
@@ -457,6 +491,7 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 		m.attachments = nil
 		m.mention, m.chosen = nil, nil
 		m.search = nil
+		m.keepOlder = false
 		m.compose.SetHeight(1)
 	}
 	// always open at the first unread message, or else the newest
@@ -525,6 +560,14 @@ func (m *Model) back() {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	next, cmd := m.update(msg)
 	nm := next.(Model)
+	switch msg.(type) {
+	case videoDoneMsg, pickedFilesMsg:
+		// back from a player or yazi: Bubble Tea restores the screen but
+		// leaves the mouse off, so clicks would select text instead
+		if nm.mouse {
+			cmd = tea.Batch(cmd, tea.EnableMouseCellMotion)
+		}
+	}
 	if load := nm.loadVisible(); load != nil {
 		return nm, tea.Batch(cmd, load)
 	}
@@ -544,7 +587,7 @@ func (m Model) loadVisible() tea.Cmd {
 		}
 		return tea.Batch(cmds...)
 	}
-	if m.img == nil || m.width == 0 || m.qr != "" || m.showHelp || m.info != nil || m.global != nil || m.fwd != nil || m.pic != nil || m.view != nil {
+	if m.img == nil || m.width == 0 || m.qr != "" || m.showHelp || m.emo != nil || m.reactors != nil || m.info != nil || m.global != nil || m.fwd != nil || m.pic != nil || m.view != nil {
 		return nil
 	}
 	var cmds []tea.Cmd
@@ -587,10 +630,12 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case pictureMsg:
 		return m.applyPicture(msg)
 	case mediaViewMsg:
+		m.downloadDone()
 		return m.applyMediaView(msg)
 	case chatDeletedMsg:
 		return m.applyChatDeleted(msg)
 	case videoReadyMsg:
+		m.downloadDone()
 		return m.startVideo(msg)
 	case videoDoneMsg:
 		m.img.reset() // the player drew over the screen
@@ -665,6 +710,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case actionDoneMsg:
+		m.downloadDone()
 		if msg.err != nil {
 			m.notice, m.noticeErr = msg.err.Error(), true
 		} else if msg.ok != "" {
@@ -679,6 +725,19 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.applyGlobalHits(msg)
 	case openHitMsg:
 		return m.showHit(msg)
+	case quoteJumpMsg:
+		return m.applyQuoteJump(msg)
+	case incomingMsg:
+		return m.notifyIncoming(msg)
+	case downloadTickMsg:
+		return m.applyDownloadTick(msg)
+	case reactorNamesMsg:
+		return m.applyReactorNames(msg)
+	case ReattachMsg:
+		// a new terminal window: it has none of our images yet
+		m.img.reset()
+		m.refreshMessages(false)
+		return m, nil
 	case infoMsg:
 		if m.info != nil && m.info.conv.JID == msg.jid {
 			m.info.loading, m.info.data, m.info.err, m.info.picture = false, msg.data, msg.err, msg.picture
@@ -709,12 +768,14 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.markSeen() // a message that arrived while you watch is read
 
 	case tea.FocusMsg:
+		m.notifyLogf("window focused")
 		m.focused = true
-		return m, m.markSeen()
+		return m, tea.Batch(m.markSeen(), m.blink(true))
 
 	case tea.BlurMsg:
+		m.notifyLogf("window unfocused or closed")
 		m.focused = false
-		return m, nil
+		return m, m.blink(false)
 
 	case screenMsg:
 		if m.current == nil {
@@ -733,7 +794,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.search != nil && len(msg) < len(m.msgs) {
 			return m, nil // keep the older messages a search loaded
 		}
-		m.msgs = append([]messages.Message(nil), msg...)
+		m.msgs = append(m.olderThan(msg), msg...)
 		m.sel = len(m.msgs) - 1
 		for i, x := range m.msgs {
 			if x.Id == selID {
@@ -834,11 +895,17 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, func() tea.Msg { return actionDoneMsg{ok: "Copied", err: clip.WriteText(text)} }
 	}
 	if key == "ctrl+c" {
-		return m, tea.Quit
+		return m, m.leave()
 	}
 
 	if m.confirm != nil {
 		return m.handleConfirm(msg)
+	}
+	if m.emo != nil {
+		return m.handleEmoji(msg)
+	}
+	if m.reactors != nil {
+		return m.handleReactors(msg)
 	}
 	if m.view != nil {
 		return m.handleMediaView(msg)
@@ -935,6 +1002,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.mode = modeCommand
 		m.cmdline.SetValue("")
 		return m, m.cmdline.Focus()
+	case "M": // notifications: all → popup → sound → off
+		return m.cycleNotifyMode()
 	case "?":
 		m.showHelp = true
 		return m, nil
@@ -1016,7 +1085,7 @@ func (m Model) handleListPane(key string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if key == "q" {
-			return m, tea.Quit
+			return m, m.leave()
 		}
 	case "tab", "ctrl+l":
 		if m.screen == screenChat {
@@ -1227,8 +1296,10 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	switch fields[0] {
-	case "q", "q!", "qa", "quit", "wq", "x":
-		return m, tea.Quit
+	case "q", "qa", "quit", "wq", "x":
+		return m, m.leave()
+	case "q!", "qa!", "quit!":
+		return m, tea.Quit // stops it, even running in the background
 	case "h", "help":
 		m.showHelp = true
 		return m, nil
@@ -1276,6 +1347,11 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 			paths = []string{joined}
 		}
 		return m, m.loadAttachments(paths)
+	case "notify", "notifications":
+		if len(fields) == 1 {
+			return m.cycleNotifyMode()
+		}
+		return m.setNotifyMode(strings.ToLower(fields[1]))
 	case "download-dir", "downloads", "dl":
 		if len(fields) == 1 {
 			m.notice, m.noticeErr = "Downloads go to "+tildePath(downloadDir())+"  (change: :download-dir <path>)", false

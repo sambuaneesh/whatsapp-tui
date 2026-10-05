@@ -38,16 +38,17 @@ func contextInfo(msg *waE2E.Message) *waE2E.ContextInfo {
 	return nil
 }
 
-// quoteOf fills in the reply fields of m from msg.
+// quoteOf fills in the reply fields of m from msg, and Forwarded (which a
+// message can be without being a reply).
 func quoteOf(m *Message, msg *waE2E.Message) {
 	ci := contextInfo(msg)
+	m.Forwarded = m.Forwarded || ci.GetIsForwarded()
 	if ci.GetStanzaID() == "" {
 		return
 	}
 	m.QuotedID = ci.GetStanzaID()
 	m.QuotedSender = ci.GetParticipant()
 	m.QuotedText, _ = extractMessageContent(ci.GetQuotedMessage())
-	m.Forwarded = m.Forwarded || ci.GetIsForwarded()
 }
 
 // handleReaction stores a reaction (from a live message or history) and

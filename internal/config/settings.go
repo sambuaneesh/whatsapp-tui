@@ -26,8 +26,11 @@ type General struct {
 	PreviewPath         string
 	CmdPrefix           string
 	ShowCommand         string
-	EnableNotifications bool
-	UseTerminalBell     bool
+	EnableNotifications bool   // old switch, used when Notifications is unset
+	UseTerminalBell     bool   // with EnableNotifications: a sound instead of a popup
+	Notifications       string // all, popup, sound or off
+	Background          bool   // keep running after the window closes; launches attach
+	MediaCacheMb        int    // downloaded media kept (MB); least recently used go first
 	NotificationTimeout int64
 	BacklogMsgQuantity  int
 }
@@ -91,6 +94,8 @@ var Config = IniFile{
 		EnableNotifications: false,
 		UseTerminalBell:     false,
 		NotificationTimeout: 60,
+		Background:          true,
+		MediaCacheMb:        1024,
 		BacklogMsgQuantity:  10,
 	},
 	&Keymap{
@@ -215,18 +220,60 @@ func ExpandPath(p string) string {
 // config file, keeping the rest of the file as it is.
 func SetDownloadPath(p string) error {
 	p = ExpandPath(p)
+	if err := saveGeneral("download_path", p); err != nil {
+		return err
+	}
+	Config.General.DownloadPath = p
+	return nil
+}
+
+// Notification modes: what a new message does.
+const (
+	NotifyAll   = "all"   // a popup in the notification drawer and a sound
+	NotifyPopup = "popup" // a silent popup
+	NotifySound = "sound" // only a sound
+	NotifyOff   = "off"
+)
+
+// NotificationMode is the configured mode, falling back to the old
+// enable_notifications / use_terminal_bell switches.
+func NotificationMode() string {
+	g := Config.General
+	switch m := strings.ToLower(strings.TrimSpace(g.Notifications)); m {
+	case NotifyAll, NotifyPopup, NotifySound, NotifyOff:
+		return m
+	}
+	switch {
+	case !g.EnableNotifications:
+		return NotifyOff
+	case g.UseTerminalBell:
+		return NotifySound
+	}
+	return NotifyAll
+}
+
+// SetNotificationMode changes the mode and writes it to the config file.
+func SetNotificationMode(mode string) error {
+	if err := saveGeneral("notifications", mode); err != nil {
+		return err
+	}
+	Config.General.Notifications = mode
+	return nil
+}
+
+// saveGeneral writes one [general] key to the config file, keeping the rest
+// of the file as it is (nothing is written when there is no file).
+func saveGeneral(key, value string) error {
 	if configFilePath == "" {
-		Config.General.DownloadPath = p
 		return nil
 	}
 	f, err := ini.Load(configFilePath)
 	if err != nil {
 		return fmt.Errorf("read config: %w", err)
 	}
-	f.Section("general").Key("download_path").SetValue(p)
+	f.Section("general").Key(key).SetValue(value)
 	if err := f.SaveTo(configFilePath); err != nil {
 		return fmt.Errorf("save config: %w", err)
 	}
-	Config.General.DownloadPath = p
 	return nil
 }
