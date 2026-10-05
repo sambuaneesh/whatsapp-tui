@@ -94,6 +94,9 @@ type Model struct {
 
 	detach func() // see Options.Detach
 
+	drafts     map[string]string // chat JID -> what you were writing there
+	draftStore DraftStore
+
 	notifyMode string   // config.NotifyAll etc.
 	notifier   Notifier // nil: no notifications
 	notifyLog  io.Writer
@@ -163,6 +166,8 @@ type Options struct {
 
 	Mouse bool // mouse tracking is on (turned back on after other programs)
 
+	Drafts DraftStore // keeps drafts across restarts; may be nil
+
 	// Detach closes this window and leaves the app running in the
 	// background (q, :q, ctrl+c); nil makes those quit instead.
 	Detach func()
@@ -231,6 +236,8 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		mouse:      opts.Mouse,
 		notifyMode: opts.Notifications,
 		detach:     opts.Detach,
+		drafts:     map[string]string{},
+		draftStore: opts.Drafts,
 		notifier:   opts.Notifier,
 		notifyLog:  opts.NotifyLog,
 		sender:     opts.Sender,
@@ -250,6 +257,9 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 	}
 	if m.clip == nil {
 		m.clip = systemClipboard{}
+	}
+	if m.draftStore != nil {
+		m.drafts = m.draftStore.Drafts()
 	}
 	m.setChats(initial)
 	return m
@@ -481,7 +491,9 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 	}
 	m.screen = screenChat
 	m.focus = paneMessages
+	var save tea.Cmd
 	if m.current == nil || m.current.JID != c.JID {
+		save = m.stashDraft() // what you were writing in the last chat
 		m.current = c
 		m.selfChat = m.privacy != nil && m.privacy.IsSelfChat(c.JID)
 		m.msgs = nil
@@ -493,6 +505,7 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 		m.search = nil
 		m.keepOlder = false
 		m.compose.SetHeight(1)
+		m.restoreDraft()
 	}
 	// always open at the first unread message, or else the newest
 	m.unreadFor, m.unreadCount, m.unreadID = "", 0, ""
@@ -505,7 +518,7 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 	m.sel = len(m.msgs) - 1
 	m.resize()
 	m.refreshMessages(true)
-	return tea.Batch(m.dispatch("select", c.JID), m.markSeen())
+	return tea.Batch(m.dispatch("select", c.JID), m.markSeen(), save)
 }
 
 // markSeen marks the open chat read when you're looking at it: it's on
@@ -547,12 +560,15 @@ func (m *Model) clearFilter() {
 	m.clampCursor()
 }
 
-func (m *Model) back() {
+// back goes to the chat list, keeping what you were writing as a draft.
+func (m *Model) back() tea.Cmd {
+	save := m.stashDraft()
 	m.screen = screenList
 	m.focus = paneList
 	m.mode = modeNormal
 	m.compose.Blur()
 	m.clampCursor()
+	return save
 }
 
 // Update handles all events, then starts loading any images that became
@@ -775,7 +791,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.BlurMsg:
 		m.notifyLogf("window unfocused or closed")
 		m.focused = false
-		return m, m.blink(false)
+		return m, tea.Batch(m.blink(false), m.stashDraft())
 
 	case screenMsg:
 		if m.current == nil {
@@ -1068,8 +1084,7 @@ func (m Model) handleListPane(key string) (tea.Model, tea.Cmd) {
 		return m, m.cmdline.Focus()
 	case "backspace", "q":
 		if m.screen == screenChat {
-			m.back()
-			return m, nil
+			return m, m.back()
 		}
 		if m.filter != "" {
 			m.clearFilter()
@@ -1145,7 +1160,7 @@ func (m Model) handleMessagesPane(key string) (tea.Model, tea.Cmd) {
 	case "K":
 		return m, m.openInfo(m.current)
 	case "backspace", "q":
-		m.back()
+		return m, m.back()
 	}
 	return m, nil
 }
@@ -1299,13 +1314,15 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 	case "q", "qa", "quit", "wq", "x":
 		return m, m.leave()
 	case "q!", "qa!", "quit!":
+		if save := m.stashDraft(); save != nil {
+			save() // before the app goes
+		}
 		return m, tea.Quit // stops it, even running in the background
 	case "h", "help":
 		m.showHelp = true
 		return m, nil
 	case "b", "back":
-		m.back()
-		return m, nil
+		return m, m.back()
 	case "info":
 		c := m.current
 		if m.screen == screenList || c == nil {

@@ -108,3 +108,16 @@ func (sm *SessionManager) renameChat(jid types.JID, name string) {
 	}
 	sm.scheduleListPush()
 }
+
+// SaveDraft keeps what you were writing in a chat ("" removes it).
+func (sm *SessionManager) SaveDraft(jid, text string) error { return sm.db.SaveDraft(jid, text) }
+
+// Drafts returns every chat's draft.
+func (sm *SessionManager) Drafts() map[string]string {
+	d, err := sm.db.Drafts()
+	if err != nil {
+		sm.debugf("load drafts: %v", err)
+		return map[string]string{}
+	}
+	return d
+}

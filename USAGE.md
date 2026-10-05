@@ -72,6 +72,8 @@ emoji: type to search by name, arrows or the mouse to pick.
 ## Writing
 
 `i` (or `enter`) starts typing, `enter` sends, `esc` goes back to normal mode.
+What you write is kept per chat: switch to another chat (or close the window)
+and it's still there when you come back, shown as "Draft:" in the chat list.
 The input box works like other text boxes: `ctrl+a` selects everything (then
 typing replaces it, `backspace` deletes it, `ctrl+c` copies and `ctrl+x` cuts
 it), `ctrl+←` / `ctrl+→` jump a word, `ctrl+backspace` deletes one, `home` /

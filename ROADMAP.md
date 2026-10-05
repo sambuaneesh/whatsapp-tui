@@ -33,7 +33,8 @@ Goal: the lightest, most responsive messaging client there is. Measure with
 - [x] Cursor stops blinking (and redrawing) while the window is unfocused or
       closed
 - [~] Batch image-arrival redraws: not needed now, a redraw is 0.35 ms
-- [ ] Measure the background app's memory and idle CPU on real use
+- [ ] Measure the background app's memory and idle CPU on real use (needs
+      the window reopened on the new build)
 - [ ] Bubble Tea v2 (cell renderer, synchronized output): later, bigger change
 
 Results (before → after):
@@ -50,7 +51,8 @@ Results (before → after):
 
 ## 2. Things WhatsApp can't do (pick from these next)
 
-- [ ] Drafts kept per chat (survive switching chats and reattaching)
+- [x] Drafts kept per chat (survive switching chats, closing the window and
+      restarts; "Draft:" in the chat list)
 - [ ] Triage keys: archive + mark read, jump to next unread, mark unread
 - [ ] Send later (`:later 9am`), run by the background app
 - [ ] Snooze a chat until a time

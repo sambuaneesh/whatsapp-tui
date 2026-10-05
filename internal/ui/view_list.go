@@ -121,6 +121,10 @@ func (m Model) renderEntry(c *messages.Conversation, width int, sel, open bool, 
 
 	preview := paint(previewStyle, sel).Render(previewText(c))
 	switch {
+	case m.listDraft(c.JID) != "":
+		// what you were writing there, like WhatsApp
+		preview = paint(styleErr, sel).Render("Draft: ") +
+			paint(styleDim, sel).Render(plainText(strings.ReplaceAll(m.listDraft(c.JID), "\n", " ")))
 	case c.LastMsgTime == 0:
 		preview = paint(styleMuted, sel).Italic(true).Render("start a new chat")
 	case c.IsArchived && !m.archive:

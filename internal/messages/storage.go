@@ -83,6 +83,11 @@ func (md *MessageDatabase) InitWithDB(db *sql.DB) error {
 	md.db.Exec(`CREATE INDEX IF NOT EXISTS idx_messages_media_ts ON messages(media_type, timestamp)`)
 
 	// One reaction per person per message; an empty emoji removes it.
+	// What you were writing in each chat, kept until sent.
+	if _, err := md.db.Exec(`CREATE TABLE IF NOT EXISTS drafts (jid TEXT PRIMARY KEY, text TEXT)`); err != nil {
+		return fmt.Errorf("failed to create drafts table: %w", err)
+	}
+
 	if _, err := md.db.Exec(`
 	CREATE TABLE IF NOT EXISTS reactions (
 		msg_id TEXT,
@@ -639,4 +644,33 @@ func (md *MessageDatabase) DeleteChat(chat string) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// SaveDraft keeps what you were writing in a chat; "" removes it.
+func (md *MessageDatabase) SaveDraft(jid, text string) error {
+	if text == "" {
+		_, err := md.db.Exec(`DELETE FROM drafts WHERE jid = ?`, jid)
+		return err
+	}
+	_, err := md.db.Exec(`INSERT INTO drafts (jid, text) VALUES (?, ?)
+		ON CONFLICT(jid) DO UPDATE SET text = excluded.text`, jid, text)
+	return err
+}
+
+// Drafts returns every chat's draft.
+func (md *MessageDatabase) Drafts() (map[string]string, error) {
+	rows, err := md.db.Query(`SELECT jid, text FROM drafts`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var jid, text string
+		if err := rows.Scan(&jid, &text); err != nil {
+			return nil, err
+		}
+		out[jid] = text
+	}
+	return out, rows.Err()
 }

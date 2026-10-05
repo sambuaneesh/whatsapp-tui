@@ -472,3 +472,18 @@ func msgIDs(msgs []Message) []string {
 	}
 	return ids
 }
+
+func TestDrafts(t *testing.T) {
+	md := newTestDB(t)
+	if err := md.SaveDraft("a@s.whatsapp.net", "half a thought"); err != nil {
+		t.Fatal(err)
+	}
+	_ = md.SaveDraft("b@g.us", "x")
+	_ = md.SaveDraft("b@g.us", "changed")
+	_ = md.SaveDraft("c@g.us", "gone")
+	_ = md.SaveDraft("c@g.us", "")
+	d, err := md.Drafts()
+	if err != nil || len(d) != 2 || d["a@s.whatsapp.net"] != "half a thought" || d["b@g.us"] != "changed" {
+		t.Fatalf("%v %v", d, err)
+	}
+}
