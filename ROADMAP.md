@@ -61,7 +61,7 @@ Results (before → after):
 - [x] Snooze a chat until a time (`:snooze`)
 - [x] "Nudge me if no reply" (`:nudge 3h`); `:scheduled` lists and cancels
 - [ ] "Later" screen: starred, reminders, snoozed, follow-ups, with done
-- [ ] One feed of mentions, replies to you and reactions to your messages
+- [x] One feed of mentions, replies to you and reactions to your messages
 - [ ] Highlight words, per-chat notification levels, quiet hours
 - [x] Read without sending read receipts; mark read when you choose
 - [ ] Plain-text chat logs and "download all media" for a chat
@@ -98,7 +98,8 @@ Results (before → after):
       the real tray (`s`).
 - [x] Deleted-for-everyone messages keep their text and media, marked
       "deleted by <name>" (gone only with delete for me)
-- [ ] 5. One feed of mentions, replies to you, reactions to your messages
+- [x] 5. Activity feed (`I`, `:activity`): mentions, replies to you,
+      reactions to your messages, across all chats
 - [x] 9. Private reading (`:private`, 🙈 badge): no read receipts until you
       mark a chat read (`U`, `:read`)
 - [x] 17. Bulk actions in visual mode: `V` range, then copy as transcript,

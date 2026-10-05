@@ -229,6 +229,8 @@ func (m Model) renderStatusLine() string {
 		badge = styleModeVisual.Render("REACTIONS")
 	case m.sched != nil:
 		badge = styleModeVisual.Render("SCHEDULED")
+	case m.act != nil:
+		badge = styleModeVisual.Render("ACTIVITY")
 	case m.stk != nil:
 		badge = styleModeVisual.Render("STICKERS")
 	case m.fwd != nil:
@@ -350,6 +352,8 @@ func (m Model) View() string {
 		main = m.renderReactors(m.width, h)
 	case m.sched != nil:
 		main = m.renderScheduled(m.width, h)
+	case m.act != nil:
+		main = m.renderActivity(m.width, h)
 	case m.view != nil:
 		main = m.renderMediaView(m.width, h)
 	case m.pic != nil:

@@ -297,15 +297,21 @@ func (md *MessageDatabase) GetMessagesPaginated(chatId string, beforeTimestamp u
 	return collectMessages(rows)
 }
 
+// msgScanTargets are where a msgColumns row is scanned into (the
+// timestamp separately, into ts).
+func msgScanTargets(msg *Message, ts *int64) []any {
+	return []any{&msg.Id, &msg.ChatId, &msg.ContactId, &msg.ContactName, &msg.ContactShort, ts,
+		&msg.FromMe, &msg.Forwarded, &msg.Text, &msg.MediaType, &msg.Media,
+		&msg.QuotedID, &msg.QuotedSender, &msg.QuotedText, &msg.Status, &msg.Edited, &msg.Deleted}
+}
+
 // collectMessages iterates over rows and scans each into a Message (audit CQ-2).
 func collectMessages(rows *sql.Rows) ([]Message, error) {
 	msgs := make([]Message, 0)
 	for rows.Next() {
 		var msg Message
 		var ts int64
-		if err := rows.Scan(&msg.Id, &msg.ChatId, &msg.ContactId, &msg.ContactName, &msg.ContactShort, &ts,
-			&msg.FromMe, &msg.Forwarded, &msg.Text, &msg.MediaType, &msg.Media,
-			&msg.QuotedID, &msg.QuotedSender, &msg.QuotedText, &msg.Status, &msg.Edited, &msg.Deleted); err != nil {
+		if err := rows.Scan(msgScanTargets(&msg, &ts)...); err != nil {
 			return msgs, fmt.Errorf("failed to scan message row: %w", err)
 		}
 		msg.Timestamp = uint64(ts)

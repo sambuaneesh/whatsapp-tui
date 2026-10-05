@@ -42,7 +42,7 @@ func (m Model) leave() tea.Cmd {
 
 // overlayOpen reports screens that cover the chat list and messages.
 func (m Model) overlayOpen() bool {
-	return m.showHelp || m.emo != nil || m.reactors != nil || m.sched != nil || m.info != nil || m.global != nil || m.fwd != nil || m.stk != nil || m.pic != nil || m.view != nil || m.qr != ""
+	return m.showHelp || m.emo != nil || m.reactors != nil || m.sched != nil || m.act != nil || m.info != nil || m.global != nil || m.fwd != nil || m.stk != nil || m.pic != nil || m.view != nil || m.qr != ""
 }
 
 func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
@@ -53,6 +53,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m.mouseReactors(msg)
 	case m.sched != nil:
 		return m.mouseScheduled(msg)
+	case m.act != nil:
+		return m.mouseActivity(msg)
 	case m.overlayOpen():
 		return m, nil
 	}
@@ -236,9 +238,18 @@ func (m Model) jumpToQuoted(msg messages.Message) (tea.Model, tea.Cmd) {
 		m.notice, m.noticeErr = "the replied-to message isn't loaded", true
 		return m, nil
 	}
-	gs, chat, id := m.globalSearcher, m.current.JID, msg.QuotedID
 	m.notice, m.noticeErr = "Finding the replied-to message…", false
-	return m, func() tea.Msg {
+	return m, m.loadAndSelect(m.current.JID, msg.QuotedID)
+}
+
+// loadAndSelect loads a chat's history around a message, then selects it
+// (see applyQuoteJump).
+func (m Model) loadAndSelect(chat, id string) tea.Cmd {
+	gs := m.globalSearcher
+	if gs == nil {
+		return nil
+	}
+	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		msgs, err := gs.LoadAround(ctx, chat, id)

@@ -221,6 +221,13 @@ none left). `e` in the list does the same for the selected chat (in the
 archive, `e` brings it back), and `U` marks a chat unread, or read. These
 change the chat on your phone too.
 
+## Activity
+
+`I` (or `:activity`) lists what happened to you across all chats, newest
+first: messages that @mention you (or @all), replies to your messages, and
+reactions to your messages. `enter` or a click opens the message in its
+chat, loading older history if needed.
+
 ## Later: send, snooze, nudge
 
 The background app can do things later, even with the window closed

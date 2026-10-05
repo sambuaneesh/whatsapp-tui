@@ -102,6 +102,8 @@ type Model struct {
 	sched       *schedView           // the :scheduled list, nil when closed
 	privateRead bool                 // see Options.PrivateReading
 	rangeFrom   int                  // visual-mode range start (index into msgs), noRange if none
+	activity    ActivitySource
+	act         *activityView // the activity feed, nil when closed
 
 	notifyMode string   // config.NotifyAll etc.
 	notifier   Notifier // nil: no notifications
@@ -172,9 +174,10 @@ type Options struct {
 
 	Mouse bool // mouse tracking is on (turned back on after other programs)
 
-	Drafts    DraftStore // keeps drafts across restarts; may be nil
-	Triage    Triager    // archive / mark unread on all devices; may be nil
-	Scheduler Scheduler  // send later, snooze, nudge; may be nil
+	Drafts    DraftStore     // keeps drafts across restarts; may be nil
+	Triage    Triager        // archive / mark unread on all devices; may be nil
+	Scheduler Scheduler      // send later, snooze, nudge; may be nil
+	Activity  ActivitySource // the activity feed; may be nil
 
 	// PrivateReading: opening a chat doesn\'t send read receipts; you mark
 	// chats read yourself (U, :read).
@@ -252,6 +255,7 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		draftStore:  opts.Drafts,
 		triage:      opts.Triage,
 		scheduler:   opts.Scheduler,
+		activity:    opts.Activity,
 		privateRead: opts.PrivateReading,
 		rangeFrom:   noRange,
 		notifier:    opts.Notifier,
@@ -627,7 +631,7 @@ func (m Model) loadVisible() tea.Cmd {
 		}
 		return tea.Batch(cmds...)
 	}
-	if m.img == nil || m.width == 0 || m.qr != "" || m.showHelp || m.emo != nil || m.reactors != nil || m.sched != nil || m.info != nil || m.global != nil || m.fwd != nil || m.pic != nil || m.view != nil {
+	if m.img == nil || m.width == 0 || m.qr != "" || m.showHelp || m.emo != nil || m.reactors != nil || m.sched != nil || m.act != nil || m.info != nil || m.global != nil || m.fwd != nil || m.pic != nil || m.view != nil {
 		return nil
 	}
 	var cmds []tea.Cmd
@@ -773,6 +777,11 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.applyDownloadTick(msg)
 	case reactorNamesMsg:
 		return m.applyReactorNames(msg)
+	case activityMsg:
+		if m.act != nil {
+			m.act.loading, m.act.items, m.act.err = false, msg.items, msg.err
+		}
+		return m, nil
 	case scheduledMsg:
 		m.scheduled = msg
 		if m.sched != nil {
@@ -956,6 +965,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.sched != nil {
 		return m.handleScheduled(msg)
 	}
+	if m.act != nil {
+		return m.handleActivity(msg)
+	}
 	if m.view != nil {
 		return m.handleMediaView(msg)
 	}
@@ -1109,6 +1121,8 @@ func (m Model) handleListPane(key string) (tea.Model, tea.Cmd) {
 		return m, m.openPicture(m.selectedChat())
 	case "e", "U", "J":
 		return m.triageKey(key, false)
+	case "I":
+		return m, m.openActivity()
 	case "d":
 		m.askDeleteChat(m.selectedChat())
 	case "/":
@@ -1196,6 +1210,8 @@ func (m Model) handleMessagesPane(key string) (tea.Model, tea.Cmd) {
 		return m, m.openInfo(m.current)
 	case "e", "U", "J":
 		return m.triageKey(key, true)
+	case "I":
+		return m, m.openActivity()
 	case "backspace", "q":
 		return m, m.back()
 	}
@@ -1422,6 +1438,8 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 		return m.scheduleCommand(messages.ScheduleNudge, fields[1:])
 	case "scheduled", "sched":
 		return m, m.openScheduled()
+	case "activity":
+		return m, m.openActivity()
 	case "notify", "notifications":
 		if len(fields) == 1 {
 			return m.cycleNotifyMode()
