@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -73,6 +74,7 @@ func run() error {
 		// two copies would fight over the same WhatsApp session
 		return errors.New("it's already running in the background: run whatsapp-tui without --foreground to open it, or whatsapp-tui --stop first")
 	}
+	servePprof()
 	var srv *daemon.Server
 	if *server {
 		var err error
@@ -178,17 +180,40 @@ func run() error {
 		if config.Config.Ui.Mouse {
 			mouse = "\x1b[?1002h\x1b[?1006h"
 		}
+		// With no window attached, Bubble Tea lets go of the terminal: its
+		// renderer otherwise wakes 60 times a second for nothing. The app
+		// keeps running (messages, notifications, scheduled sends).
+		var termMu sync.Mutex
+		released := false
+		release := func() {
+			termMu.Lock()
+			defer termMu.Unlock()
+			if !released && p.ReleaseTerminal() == nil {
+				released = true
+			}
+		}
+		restore := func() {
+			termMu.Lock()
+			defer termMu.Unlock()
+			if released && p.RestoreTerminal() == nil {
+				released = false
+			}
+		}
 		srv.Serve(daemon.Hooks{
 			Prelude: func() string { return mouse + hello },
 			Goodbye: func() string { return bye },
 			Attach: func(z daemon.Size) {
+				restore()
 				p.Send(ui.ReattachMsg{})
 				p.Send(tea.WindowSizeMsg{Width: int(z.Cols), Height: int(z.Rows)})
 				p.Send(tea.FocusMsg{})
 			},
 			Resize: func(z daemon.Size) { p.Send(tea.WindowSizeMsg{Width: int(z.Cols), Height: int(z.Rows)}) },
-			Detach: func() { p.Send(tea.BlurMsg{}) }, // nobody's looking: notify for every chat
-			Quit:   p.Quit,
+			Detach: func() {
+				p.Send(tea.BlurMsg{}) // nobody's looking: notify for every chat
+				release()
+			},
+			Quit: p.Quit,
 		})
 		srv.WaitFirst() // start with the first window's size and terminal
 	} else {

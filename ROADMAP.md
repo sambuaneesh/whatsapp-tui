@@ -33,8 +33,11 @@ Goal: the lightest, most responsive messaging client there is. Measure with
 - [x] Cursor stops blinking (and redrawing) while the window is unfocused or
       closed
 - [~] Batch image-arrival redraws: not needed now, a redraw is 0.35 ms
-- [ ] Measure the background app's memory and idle CPU on real use (needs
-      the window reopened on the new build)
+- [x] No renderer wake-ups while no window is attached (Bubble Tea lets go
+      of the terminal): detached idle CPU 11 → 3 ticks/10 s in a test copy
+      (the 3 left are its login QR countdown)
+- [ ] Memory: 86–94 MB measured on real use; profile it
+      (`WHATSAPP_TUI_PPROF=127.0.0.1:6060`) before tuning
 - [ ] Bubble Tea v2 (cell renderer, synchronized output): later, bigger change
 
 Results (before → after):
