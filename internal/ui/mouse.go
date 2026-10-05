@@ -72,6 +72,13 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m.setPrivateReading(false)
 	}
 	overList := m.screen == screenList || msg.X < m.sidebarW
+	if m.split != nil && m.screen == screenChat && msg.X > m.sidebarW+m.rightWidth() {
+		// the chat beside: a click makes it the one you write in
+		if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress && msg.Y >= headerRows && msg.Y < m.mainHeight() {
+			return m.swapSplit()
+		}
+		return m, nil
+	}
 	switch msg.Button {
 	case tea.MouseButtonWheelUp, tea.MouseButtonWheelDown:
 		dir := 1

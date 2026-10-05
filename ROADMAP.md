@@ -104,7 +104,8 @@ Results (before → after):
       mark a chat read (`U`, `:read`)
 - [x] 17. Bulk actions in visual mode: `V` range, then copy as transcript,
       forward all, delete all, save all media
-- [ ] 14. Split view: two chats side by side
+- [x] 14. Split view: `v` in the list opens a chat beside the open one
+      (live), `W` swaps, `:only` closes
 - [ ] 13. Local API for scripts and hooks (documented)
 - [ ] 20. Better search: full-text index + search by meaning
 

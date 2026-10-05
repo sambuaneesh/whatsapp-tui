@@ -221,6 +221,13 @@ none left). `e` in the list does the same for the selected chat (in the
 archive, `e` brings it back), and `U` marks a chat unread, or read. These
 change the chat on your phone too.
 
+## Two chats side by side
+
+In a chat, go to the list (`h`), pick another chat and press `v`: it opens on
+the right, beside the one you're in, and stays current as messages arrive.
+`W` (or a click on it) swaps them, so you write in the other one; `:only`
+closes the split.
+
 ## Activity
 
 `I` (or `:activity`) lists what happened to you across all chats, newest

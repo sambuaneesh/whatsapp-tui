@@ -262,3 +262,19 @@ func (sm *SessionManager) Conversations() []*Conversation {
 	defer sm.mu.RUnlock()
 	return sm.snapshotPQ()
 }
+
+// splitLimit is how many messages a side-by-side chat shows.
+const splitLimit = 120
+
+// ChatMessages returns a chat's latest messages, ready to show (for a
+// chat shown beside the open one).
+func (sm *SessionManager) ChatMessages(_ context.Context, jid string) ([]Message, error) {
+	msgs, err := sm.db.GetLatestMessages(jid, splitLimit)
+	if err != nil {
+		return nil, err
+	}
+	sm.resolveSenders(msgs)
+	sm.attachReactions(msgs)
+	sm.resolveMentions(msgs)
+	return msgs, nil
+}

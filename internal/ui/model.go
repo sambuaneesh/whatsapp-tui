@@ -104,6 +104,8 @@ type Model struct {
 	rangeFrom   int                  // visual-mode range start (index into msgs), noRange if none
 	activity    ActivitySource
 	act         *activityView // the activity feed, nil when closed
+	chatReader  ChatReader
+	split       *splitView // a second chat beside the open one, nil when none
 
 	notifyMode string   // config.NotifyAll etc.
 	notifier   Notifier // nil: no notifications
@@ -178,6 +180,7 @@ type Options struct {
 	Triage    Triager        // archive / mark unread on all devices; may be nil
 	Scheduler Scheduler      // send later, snooze, nudge; may be nil
 	Activity  ActivitySource // the activity feed; may be nil
+	Chats     ChatReader     // loads a chat for split view; may be nil
 
 	// PrivateReading: opening a chat doesn\'t send read receipts; you mark
 	// chats read yourself (U, :read).
@@ -256,6 +259,7 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		triage:      opts.Triage,
 		scheduler:   opts.Scheduler,
 		activity:    opts.Activity,
+		chatReader:  opts.Chats,
 		privateRead: opts.PrivateReading,
 		rangeFrom:   noRange,
 		notifier:    opts.Notifier,
@@ -515,6 +519,9 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 	m.screen = screenChat
 	m.focus = paneMessages
 	var save tea.Cmd
+	if m.split != nil && m.split.conv.JID == c.JID {
+		m.split = nil // it moves from beside to here
+	}
 	if m.current == nil || m.current.JID != c.JID {
 		save = m.stashDraft() // what you were writing in the last chat
 		m.current = c
@@ -777,6 +784,8 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.applyDownloadTick(msg)
 	case reactorNamesMsg:
 		return m.applyReactorNames(msg)
+	case splitMsg:
+		return m.applySplit(msg)
 	case activityMsg:
 		if m.act != nil {
 			m.act.loading, m.act.items, m.act.err = false, msg.items, msg.err
@@ -820,7 +829,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case chatListMsg:
 		m.setChats(msg)
-		return m, m.markSeen() // a message that arrived while you watch is read
+		// a message that arrived while you watch is read; the split chat
+		// reloads if it got something
+		return m, tea.Batch(m.markSeen(), m.splitChanged())
 
 	case tea.FocusMsg:
 		m.notifyLogf("window focused")
@@ -1119,6 +1130,8 @@ func (m Model) handleListPane(key string) (tea.Model, tea.Cmd) {
 		return m, m.openInfo(m.selectedChat())
 	case "V":
 		return m, m.openPicture(m.selectedChat())
+	case "v": // beside the open chat
+		return m, m.openSplit(m.selectedChat())
 	case "e", "U", "J":
 		return m.triageKey(key, false)
 	case "I":
@@ -1208,6 +1221,8 @@ func (m Model) handleMessagesPane(key string) (tea.Model, tea.Cmd) {
 		m.nextMatch(1)
 	case "K":
 		return m, m.openInfo(m.current)
+	case "W":
+		return m.swapSplit()
 	case "e", "U", "J":
 		return m.triageKey(key, true)
 	case "I":
@@ -1440,6 +1455,9 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 		return m, m.openScheduled()
 	case "activity":
 		return m, m.openActivity()
+	case "only", "unsplit":
+		m.closeSplit()
+		return m, nil
 	case "notify", "notifications":
 		if len(fields) == 1 {
 			return m.cycleNotifyMode()

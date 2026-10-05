@@ -37,6 +37,9 @@ func (m Model) listRows() int {
 
 func (m Model) rightWidth() int {
 	w := m.width - m.sidebarW - 1 // 1 column for the divider
+	if m.split != nil {
+		w = (w - 1) / 2 // the other half (and a divider) shows the split chat
+	}
 	if w < 10 {
 		w = 10
 	}
@@ -375,6 +378,12 @@ func (m Model) View() string {
 		// pane already drawn at its own
 		side := fitLines(m.renderSidebar(m.sidebarW, h), h)
 		pane := fitLines(m.renderChatPane(m.rightWidth(), h), h)
+		if m.split != nil {
+			right := m.splitPane(h)
+			for i := range pane {
+				pane[i] = padLine(pane[i], m.rightWidth()) + splitDivider() + right[i]
+			}
+		}
 		divider := lipgloss.NewStyle().Foreground(colorBorder).Render("│")
 		var b strings.Builder
 		for i := 0; i < h; i++ {
