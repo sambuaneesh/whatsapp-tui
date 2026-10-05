@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"strings"
 
 	"go.mau.fi/whatsmeow/proto/waHistorySync"
@@ -120,6 +121,9 @@ func (sm *SessionManager) loadRecentChats() {
 // metadata (timestamps, unread counts, pinned status) and store historical
 // messages in SQLite. This enables correct chat ordering on first login.
 func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
+	// a sync is big and rare: give its memory back to the system when done
+	// (Go would otherwise keep it reserved)
+	defer debug.FreeOSMemory()
 	msgCount := 0
 	for _, c := range data.GetConversations() {
 		msgCount += len(c.GetMessages())

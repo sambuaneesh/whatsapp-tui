@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	runtimedebug "runtime/debug"
 	"strings"
 	"sync"
 
@@ -87,6 +88,9 @@ func run() error {
 		// deferred first so it runs last: the lock is held until WhatsApp
 		// has shut down and a new server can safely start
 		defer srv.Close()
+		// running all day in the background: collect garbage sooner, so the
+		// app holds less memory between bursts (UI updates barely allocate)
+		runtimedebug.SetGCPercent(50)
 		// the app runs on the server's terminal, which attached windows show
 		os.Stdin, os.Stdout = srv.TTY(), srv.TTY()
 		// the colour support was guessed when the program loaded, from the

@@ -36,8 +36,7 @@ Goal: the lightest, most responsive messaging client there is. Measure with
 - [x] No renderer wake-ups while no window is attached (Bubble Tea lets go
       of the terminal): detached idle CPU 11 → 3 ticks/10 s in a test copy
       (the 3 left are its login QR countdown)
-- [ ] Memory: 86–94 MB measured on real use; profile it
-      (`WHATSAPP_TUI_PPROF=127.0.0.1:6060`) before tuning
+- [x] Memory: profiled (see batch item 2 below)
 - [ ] Bubble Tea v2 (cell renderer, synchronized output): later, bigger change
 
 Results (before → after):
@@ -86,7 +85,11 @@ Results (before → after):
 
 - [x] 1. More time phrases: `in an hour`, `next friday`, `next week`,
       `weekend`, `eod`, dates (`12 oct 3pm`, `12/10`, `2026-10-12`)
-- [ ] 2. Profile and cut the background app's memory
+- [x] 2. Memory: profiled with a copy of the real data (no login): the
+      app's own heap is 5.4 MB, the process 38 MB; the rest of the real
+      94 MB is the logged-in WhatsApp session and history-sync bursts. Now
+      returns sync memory to the system and collects garbage sooner
+      (GOGC 50). Re-measure on the live app after the next restart.
 - [x] 3. Show polls (question + options), live location and events, and
       several-contact cards; locations get a map link
 - [ ] 4. Animated stickers/GIFs striped in the sticker tray
