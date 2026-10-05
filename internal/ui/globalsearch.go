@@ -233,30 +233,23 @@ func highlightQuery(line, query string, base lipgloss.Style) string {
 // highlightWith renders line in base with each occurrence of query (smartcase)
 // in mark.
 func highlightWith(line, query string, base, mark lipgloss.Style) string {
-	if query == "" {
+	ranges := matchRanges(line, query)
+	if len(ranges) == 0 {
 		return base.Render(line)
 	}
-	needle, fold := smartCase(query)
-	hay := line
-	if fold {
-		hay = strings.ToLower(line)
-	}
 	var b strings.Builder
-	for {
-		i := strings.Index(hay, needle)
-		// ToLower can change byte lengths for some scripts; only
-		// highlight when offsets still line up.
-		if i < 0 || len(hay) != len(line) {
-			b.WriteString(base.Render(line))
-			return b.String()
+	prev := 0
+	for _, r := range ranges {
+		if r[0] > prev {
+			b.WriteString(base.Render(line[prev:r[0]]))
 		}
-		b.WriteString(base.Render(line[:i]))
-		b.WriteString(mark.Render(line[i : i+len(needle)]))
-		line, hay = line[i+len(needle):], hay[i+len(needle):]
-		if line == "" {
-			return b.String()
-		}
+		b.WriteString(mark.Render(line[r[0]:r[1]]))
+		prev = r[1]
 	}
+	if prev < len(line) {
+		b.WriteString(base.Render(line[prev:]))
+	}
+	return b.String()
 }
 
 // snippet centres the text around the first match so it stays visible.
@@ -265,16 +258,11 @@ func snippet(text, query string, width int) string {
 	if lipgloss.Width(text) <= width || query == "" {
 		return ansi.Truncate(text, width, "…")
 	}
-	needle, fold := smartCase(query)
-	hay := text
-	if fold {
-		hay = strings.ToLower(text)
-	}
-	i := strings.Index(hay, needle)
-	if i < 0 || len(hay) != len(text) {
+	ranges := matchRanges(text, query)
+	if len(ranges) == 0 {
 		return ansi.Truncate(text, width, "…")
 	}
-	start := max(0, i-width/3)
+	start := max(0, ranges[0][0]-width/3)
 	for start > 0 && start < len(text) && (text[start]&0xC0) == 0x80 {
 		start-- // don't cut a UTF-8 sequence
 	}

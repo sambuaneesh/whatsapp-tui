@@ -220,3 +220,31 @@ func TestChatSearchMoveWhileTyping(t *testing.T) {
 		t.Fatalf("after enter: %s mode %d", id(), m.mode)
 	}
 }
+
+func TestMatchingLikeTheIndex(t *testing.T) {
+	for _, tc := range []struct {
+		text, query string
+		want        bool
+	}{
+		{"the address of the flat", "flat addr", true}, // any order, word pieces
+		{"the address of the flat", "flat house", false},
+		{"Meet at the Café", "cafe", true},  // accents
+		{"meet at the cafe", "Café", false}, // capitals: exact case
+		{"Meet at the Café", "Café", true},
+		{"naïve résumé", "naive resume", true},
+		{"anything", "", false},
+	} {
+		if got := matchesQuery(tc.text, tc.query); got != tc.want {
+			t.Errorf("%q in %q: %v", tc.query, tc.text, got)
+		}
+	}
+	// highlights land on the original text, accents and all
+	r := matchRanges("Le Café du coin, café", "cafe")
+	if len(r) != 2 || "Le Café du coin, café"[r[0][0]:r[0][1]] != "Café" || "Le Café du coin, café"[r[1][0]:r[1][1]] != "café" {
+		t.Fatalf("ranges %v", r)
+	}
+	r = matchRanges("flat on the address", "address flat")
+	if len(r) != 2 || r[0] != [2]int{0, 4} || r[1] != [2]int{12, 19} {
+		t.Fatalf("ranges %v", r)
+	}
+}

@@ -19,7 +19,8 @@ trap 'rm -f -- "$build_file"' EXIT
 
 (
   cd "$repo_dir"
-  mise exec "go@$go_version" -- go build -o "$build_file" .
+  # sqlite_fts5: full-text message search (see internal/messages/fts.go)
+  mise exec "go@$go_version" -- go build -tags sqlite_fts5 -o "$build_file" .
 )
 chmod 755 "$build_file"
 mv -f -- "$build_file" "$binary"

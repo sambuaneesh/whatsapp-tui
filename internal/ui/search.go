@@ -48,17 +48,6 @@ func smartCase(query string) (needle string, fold bool) {
 	return strings.ToLower(query), true
 }
 
-func matchesQuery(text, query string) bool {
-	if query == "" {
-		return false
-	}
-	needle, fold := smartCase(query)
-	if fold {
-		text = strings.ToLower(text)
-	}
-	return strings.Contains(text, needle)
-}
-
 // startSearch opens the "/" prompt in the chat.
 func (m *Model) startSearch() tea.Cmd {
 	m.search = &chatSearch{prevOffset: m.vp.YOffset, prevMode: m.mode, prevSel: m.sel}

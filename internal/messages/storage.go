@@ -11,7 +11,8 @@ import (
 
 // MessageDatabase stores messages and contact data in SQLite
 type MessageDatabase struct {
-	db *sql.DB
+	db  *sql.DB
+	fts bool // full-text index available (see fts.go)
 }
 
 // Init initializes the message database with a file-based SQLite connection.
@@ -87,6 +88,8 @@ func (md *MessageDatabase) InitWithDB(db *sql.DB) error {
 	// status updates that got in as a chat before they were filtered out
 	md.db.Exec(`DELETE FROM messages WHERE chat_id LIKE '%@broadcast'`)
 	md.db.Exec(`DELETE FROM conversations WHERE jid LIKE '%@broadcast'`)
+
+	md.initFTS()
 
 	if err := md.initScheduled(); err != nil {
 		return fmt.Errorf("failed to create scheduled table: %w", err)
@@ -256,6 +259,13 @@ func (md *MessageDatabase) SearchMessages(chatId, keyword string, limit int) ([]
 	}
 	if keyword == "" {
 		return []Message{}, nil
+	}
+	// every word, in any order; else (no index, or nothing found: a piece
+	// of a word, an emoji) the text as typed, anywhere
+	if md.fts {
+		if msgs, err := md.searchFTS(chatId, keyword, limit); err == nil && len(msgs) > 0 {
+			return msgs, nil
+		}
 	}
 	likePattern := "%" + escapeLike(keyword) + "%"
 

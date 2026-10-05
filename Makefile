@@ -9,6 +9,9 @@
 
 PREFIX   ?= $(HOME)/.local
 TERMINAL ?= kitty
+# SQLite with full-text search (FTS5) for message search; without it search
+# falls back to plain substring matching
+TAGS     := sqlite_fts5
 BINDIR   := $(PREFIX)/bin
 APPDIR   := $(PREFIX)/share/applications
 ICONDIR  := $(PREFIX)/share/icons/hicolor/scalable/apps
@@ -17,7 +20,7 @@ BIN      := whatsapp-tui
 .PHONY: build install uninstall test clean omarchy-install omarchy-watch
 
 build:
-	go build -o $(BIN) .
+	go build -tags $(TAGS) -o $(BIN) .
 
 install: build
 	mkdir -p $(DESTDIR)$(BINDIR)
@@ -43,7 +46,7 @@ uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/$(BIN) $(DESTDIR)$(APPDIR)/$(BIN).desktop $(DESTDIR)$(ICONDIR)/$(BIN).svg
 
 test:
-	go test ./...
+	go test -tags $(TAGS) ./...
 
 clean:
 	rm -f $(BIN)

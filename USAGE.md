@@ -221,6 +221,15 @@ none left). `e` in the list does the same for the selected chat (in the
 archive, `e` brings it back), and `U` marks a chat unread, or read. These
 change the chat on your phone too.
 
+## How search matches
+
+`/` (this chat) and `S` (all chats) find messages with **every word** you
+type, in any order, word beginnings included: `flat addr` finds "the
+address of the flat". Accents don't matter (`cafe` finds "Café"); case
+doesn't either, unless you type a capital. When that finds nothing, the text
+as typed is looked for anywhere (inside words, emoji). A full-text index
+makes it fast (0.3 ms over 50,000 messages); it's built automatically.
+
 ## Two chats side by side
 
 In a chat, go to the list (`h`), pick another chat and press `v`: it opens on

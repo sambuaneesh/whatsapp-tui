@@ -108,7 +108,10 @@ Results (before → after):
       (live), `W` swaps, `:only` closes
 - [x] 13. Local API (`whatsapp-tui api …`, JSON-lines socket) and hooks
       (`~/.config/whatsapp-tui/hooks/on-*`), documented in docs/API.md
-- [ ] 20. Better search: full-text index + search by meaning
+- [x] 20a. Full-text search (SQLite FTS5, built with `-tags sqlite_fts5`):
+      all words, any order, prefixes, accents ignored; 0.3 ms vs 6.7 ms;
+      index +0.7 MB; safe fallback without FTS5
+- [ ] 20b. Search by meaning (local embeddings; needs Ollama)
 
 ## Known bugs
 
