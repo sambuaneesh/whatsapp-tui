@@ -41,13 +41,36 @@ func TestParse(t *testing.T) {
 		"wed 6pm":        at(7, 18, 0), // still today
 		"mon":            at(12, 9, 0),
 		"sunday 10:00":   at(11, 10, 0),
+		// spelled out, weeks
+		"in an hour":      at(7, 15, 20),
+		"in half an hour": at(7, 14, 50),
+		"in a week":       at(14, 14, 20),
+		"in 2 weeks":      at(21, 14, 20),
+		// next ..., weekend, end of day
+		"next week":         at(12, 9, 0),
+		"next friday":       at(16, 9, 0),
+		"next fri 5pm":      at(16, 17, 0),
+		"next monday":       at(12, 9, 0),
+		"weekend":           at(10, 9, 0),
+		"this weekend 11am": at(10, 11, 0),
+		"eod":               at(7, 18, 0),
+		"end of day":        at(7, 18, 0),
+		// calendar dates
+		"12 oct":           at(12, 9, 0),
+		"12th oct 3pm":     at(12, 15, 0),
+		"oct 12":           at(12, 9, 0),
+		"october 12 21:00": at(12, 21, 0),
+		"12/10":            at(12, 9, 0),
+		"12/10 6pm":        at(12, 18, 0),
+		"2026-10-12":       at(12, 9, 0),
+		"7 oct 6pm":        at(7, 18, 0),
 	} {
 		got, err := Parse(in, now)
 		if err != nil || !got.Equal(want) {
 			t.Errorf("%q: %v %v, want %v", in, got, err, want)
 		}
 	}
-	for _, bad := range []string{"", "soon", "25:00", "13pm", "9:75", "in", "0h", "next week", "00:30pm"} {
+	for _, bad := range []string{"", "soon", "25:00", "13pm", "9:75", "in", "0h", "00:30pm", "31 feb", "12/13", "7 oct 9am", "next blursday"} {
 		if _, err := Parse(bad, now); err == nil {
 			t.Errorf("%q parsed", bad)
 		}
@@ -60,5 +83,22 @@ func TestDescribe(t *testing.T) {
 		if got := Describe(time.Date(2026, 10, 7+d, 9, 5, 0, 0, time.Local), now); got != want {
 			t.Errorf("+%d days: %q, want %q", d, got, want)
 		}
+	}
+}
+
+func TestDatesRollToNextYear(t *testing.T) {
+	now := time.Date(2026, 10, 7, 14, 20, 0, 0, time.Local)
+	for in, want := range map[string]time.Time{
+		"5 jan": time.Date(2027, 1, 5, 9, 0, 0, 0, time.Local),
+		"1/3":   time.Date(2027, 3, 1, 9, 0, 0, 0, time.Local),
+		"7 oct": time.Date(2027, 10, 7, 9, 0, 0, 0, time.Local), // today's 9:00 is gone
+	} {
+		got, err := Parse(in, now)
+		if err != nil || !got.Equal(want) {
+			t.Errorf("%q: %v %v, want %v", in, got, err, want)
+		}
+	}
+	if got := Describe(time.Date(2027, 1, 5, 9, 0, 0, 0, time.Local), now); got != "5 Jan 2027 09:00" {
+		t.Errorf("describe next year: %q", got)
 	}
 }

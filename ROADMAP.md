@@ -82,6 +82,22 @@ Results (before → after):
 - [ ] MCP server in the background app (sending needs approval in the app)
 - [ ] Todos/dates to reminders, translation, tone rewrite, scam warnings
 
+## Batch 2026-10-06 (chosen: 1–5, 9, 13, 14, 17, 20, + deleted messages)
+
+- [x] 1. More time phrases: `in an hour`, `next friday`, `next week`,
+      `weekend`, `eod`, dates (`12 oct 3pm`, `12/10`, `2026-10-12`)
+- [ ] 2. Profile and cut the background app's memory
+- [ ] 3. Show polls, live location and event messages
+- [ ] 4. Animated stickers/GIFs striped in the sticker tray
+- [ ] Deleted-for-everyone messages keep their text, marked deleted
+      (gone only with delete for me)
+- [ ] 5. One feed of mentions, replies to you, reactions to your messages
+- [ ] 9. Read without sending blue ticks; mark read when you choose
+- [ ] 17. Bulk actions in visual mode
+- [ ] 14. Split view: two chats side by side
+- [ ] 13. Local API for scripts and hooks (documented)
+- [ ] 20. Better search: full-text index + search by meaning
+
 ## Known bugs
 
 - [ ] Polls, live location and event messages are silently dropped
