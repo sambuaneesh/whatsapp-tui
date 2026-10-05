@@ -204,6 +204,7 @@ func (sm *SessionManager) repliedSince(chat string, t time.Time) bool {
 
 // remind notifies you, like a message (following the notification mode).
 func (sm *SessionManager) remind(chat, text string) {
+	sm.emit(Event{Kind: EventReminder, Reminder: ReminderEvent{Chat: chat, Text: text}})
 	sm.uiHandler.Incoming(Message{
 		Id: fmt.Sprintf("reminder-%d", time.Now().UnixNano()), ChatId: chat,
 		Timestamp: uint64(time.Now().Unix()), Text: "[REMINDER] " + text,

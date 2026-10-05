@@ -276,6 +276,14 @@ starts it in the background and every launch is a window onto it:
   (`background = false` in the config makes that the default). The background
   app's own log is `~/.cache/whatsapp-tui/server.log`.
 
+## Scripts, hooks and the API
+
+The running app answers scripts on a local socket (`whatsapp-tui api chats`,
+`whatsapp-tui api subscribe`, …) and runs your hooks
+(`~/.config/whatsapp-tui/hooks/on-message`, `on-mention`, `on-reaction`,
+`on-reminder`) with each event as JSON. Sending through it is off unless
+`api_allow_send = true`. Everything is in [docs/API.md](docs/API.md).
+
 ## Notifications
 
 The status bar shows what a new message does; click it, press `M`, or use
@@ -305,6 +313,7 @@ notifications = all            ; all, popup, sound, off (M in the app)
 background    = true           ; keep running when the window closes
 private_reading = false        ; true: no read receipts until you mark a chat read
 media_cache_mb  = 1024         ; downloaded media kept on disk
+api_allow_send  = false        ; true: scripts may send through the local API
 
 [ui]
 theme            = rose-pine   ; rose-pine, rose-pine-moon, rose-pine-dawn

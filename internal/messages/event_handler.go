@@ -367,6 +367,7 @@ func (eh *eventHandler) processIncomingMessage(evt *events.Message, text, previe
 	if !evt.Info.IsFromMe {
 		eh.sm.uiHandler.Incoming(one[0], chatName)
 	}
+	eh.sm.emit(Event{Kind: EventMessage, Message: one[0], MentionsYou: mentionsMe})
 
 	// Update chat list ordering
 	eh.sm.uiHandler.UpdateChatList(safeList)
@@ -378,6 +379,12 @@ func (eh *eventHandler) handleMessage(evt *events.Message) {
 	if r := evt.Message.GetReactionMessage(); r != nil {
 		eh.sm.handleReaction(evt.Info.Chat.String(), evt.Info.Sender, evt.Info.IsFromMe, r)
 		eh.reactedToYou(evt, r)
+		sender := ""
+		if !evt.Info.IsFromMe {
+			sender = evt.Info.Sender.ToNonAD().String()
+		}
+		eh.sm.emit(Event{Kind: EventReaction, Reaction: ReactionEvent{Chat: evt.Info.Chat.String(),
+			MessageID: r.GetKey().GetID(), Sender: sender, Emoji: r.GetText(), FromMe: evt.Info.IsFromMe}})
 		return
 	}
 	if pm := evt.Message.GetProtocolMessage(); pm != nil && pm.GetType() == waE2E.ProtocolMessage_REVOKE {

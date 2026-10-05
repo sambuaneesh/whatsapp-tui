@@ -17,6 +17,7 @@ import (
 	"github.com/charmbracelet/x/term"
 	"github.com/muesli/termenv"
 
+	"github.com/Srindot/whatsapp-tui/internal/api"
 	"github.com/Srindot/whatsapp-tui/internal/config"
 	"github.com/Srindot/whatsapp-tui/internal/daemon"
 	"github.com/Srindot/whatsapp-tui/internal/messages"
@@ -47,6 +48,17 @@ func main() {
 }
 
 func run() error {
+	// whatsapp-tui api <method> [params]: talk to the running app (docs/API.md)
+	if len(os.Args) > 1 && os.Args[1] == "api" {
+		if len(os.Args) < 3 {
+			return errors.New("usage: whatsapp-tui api <method> ['{json params}'] (methods: docs/API.md)")
+		}
+		params := ""
+		if len(os.Args) > 3 {
+			params = os.Args[3]
+		}
+		return api.Call(api.SocketPath(daemon.SocketPath()), os.Args[2], params, os.Stdout)
+	}
 	debug := flag.Bool("debug", false, "write WhatsApp protocol logs to "+debugLogPath())
 	foreground := flag.Bool("foreground", false, "run in this terminal only, not in the background")
 	stop := flag.Bool("stop", false, "quit the app running in the background")
@@ -230,6 +242,17 @@ func run() error {
 
 	if err := sm.StartManager(); err != nil {
 		return fmt.Errorf("start: %w", err)
+	}
+	// the local API for scripts and hooks (docs/API.md)
+	apiOpts := api.Options{
+		AllowSend: config.Config.General.ApiAllowSend,
+		HooksDir:  filepath.Join(filepath.Dir(config.GetConfigFilePath()), "hooks"),
+	}
+	if srv != nil {
+		apiOpts.Log = func(s string) { fmt.Fprintln(os.Stderr, s) } // the background app's log
+	}
+	if apiSrv, err := api.Listen(api.SocketPath(daemon.SocketPath()), sm, apiOpts); err == nil {
+		defer apiSrv.Close()
 	}
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("ui: %w", err)

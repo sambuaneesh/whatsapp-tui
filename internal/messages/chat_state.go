@@ -247,12 +247,13 @@ func (sm *SessionManager) storeSent(msg Message, preview string) {
 		}
 		sm.uiHandler.UpdateChatList(safeList)
 	}
+	// names for its @mentions, as a loaded chat has (editing needs them)
+	one := []Message{msg}
+	sm.resolveMentions(one)
 	if isCurrent {
-		// names for its @mentions, as a loaded chat has (editing needs them)
-		one := []Message{msg}
-		sm.resolveMentions(one)
 		sm.uiHandler.NewMessage(one[0])
 	}
+	sm.emit(Event{Kind: EventMessage, Message: one[0]})
 }
 
 // Conversations returns a snapshot of all known conversations (unsorted), so

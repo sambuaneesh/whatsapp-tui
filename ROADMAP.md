@@ -66,7 +66,7 @@ Results (before → after):
 - [x] Read without sending read receipts; mark read when you choose
 - [ ] Plain-text chat logs and "download all media" for a chat
 - [ ] Rule-based folders and saved searches (`from:… has:image after:…`)
-- [ ] Local API on the background app for scripts and hooks
+- [x] Local API on the background app for scripts and hooks
 - [ ] Split view of two chats; multiple accounts
 
 ## 3. Local AI (all off by default, per chat)
@@ -106,7 +106,8 @@ Results (before → after):
       forward all, delete all, save all media
 - [x] 14. Split view: `v` in the list opens a chat beside the open one
       (live), `W` swaps, `:only` closes
-- [ ] 13. Local API for scripts and hooks (documented)
+- [x] 13. Local API (`whatsapp-tui api …`, JSON-lines socket) and hooks
+      (`~/.config/whatsapp-tui/hooks/on-*`), documented in docs/API.md
 - [ ] 20. Better search: full-text index + search by meaning
 
 ## Known bugs

@@ -75,6 +75,9 @@ map --when-focus-on var:whatsapp_tui shift+enter send_text all \x1b\r
 map --when-focus-on var:whatsapp_tui ctrl+v
 ```
 
+Scripts and tools can use it through a local API and hooks: see
+[docs/API.md](docs/API.md).
+
 Settings live in `~/.config/whatsapp-tui/config.ini` (on macOS:
 `~/Library/Application Support/whatsapp-tui/`): theme, images, mouse,
 download folder. `--debug` writes logs to `~/.cache/whatsapp-tui/debug.log`.

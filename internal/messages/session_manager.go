@@ -44,6 +44,7 @@ type SessionManager struct {
 	downloads       sync.Map        // message ID -> *download in progress
 	lastPrune       time.Time       // media cache last pruned
 	schedWake       chan struct{}   // wakes the scheduler when items change
+	observers       observers       // event subscribers (local API, hooks)
 	avatarSem       chan struct{}   // limits concurrent profile picture fetches
 	logOut          io.Writer       // debug log destination (see SetLogWriter)
 	contactsSynced  bool            // contact names re-synced this session

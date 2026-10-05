@@ -32,6 +32,7 @@ type General struct {
 	Background          bool   // keep running after the window closes; launches attach
 	MediaCacheMb        int    // downloaded media kept (MB); least recently used go first
 	PrivateReading      bool   // open chats without sending read receipts (mark read yourself)
+	ApiAllowSend        bool   // let scripts send through the local API (docs/API.md)
 	NotificationTimeout int64
 	BacklogMsgQuantity  int
 }
