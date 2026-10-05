@@ -158,20 +158,16 @@ func (m Model) helpLines(width int) []string {
 		blocks = append(blocks, append(lines, ""))
 	}
 
-	// fill columns top to bottom, balancing their heights
+	// fill columns top to bottom, keeping sections in order and the
+	// tallest column as short as possible
 	ncols := max(1, min(len(blocks), (width-4)/colW))
-	total := 0
-	for _, b := range blocks {
-		total += len(b)
+	sizes := make([]int, len(blocks))
+	for i, b := range blocks {
+		sizes[i] = len(b)
 	}
-	target := (total + ncols - 1) / ncols
 	cols := make([][]string, ncols)
-	c := 0
-	for _, b := range blocks {
-		if c < ncols-1 && len(cols[c]) > 0 && len(cols[c])+len(b) > target {
-			c++
-		}
-		cols[c] = append(cols[c], b...)
+	for i, c := range balancedSplit(sizes, ncols) {
+		cols[c] = append(cols[c], blocks[i]...)
 	}
 	var rendered []string
 	for _, col := range cols {
@@ -223,4 +219,47 @@ func helpRoom(height int) int { return max(height-3, 1) }
 // helpMaxScroll is how far the help screen can scroll.
 func (m Model) helpMaxScroll() int {
 	return max(len(m.helpLines(m.width))-helpRoom(m.mainHeight()), 0)
+}
+
+// balancedSplit puts items (of the given heights, in order) into k columns
+// so the tallest column is as short as possible; it returns each item's
+// column.
+func balancedSplit(sizes []int, k int) []int {
+	n := len(sizes)
+	sum := make([]int, n+1)
+	for i, s := range sizes {
+		sum[i+1] = sum[i] + s
+	}
+	// best[c][i]: the tallest column when the first i items fill c columns
+	const inf = 1 << 30
+	best := make([][]int, k+1)
+	cut := make([][]int, k+1)
+	for c := range best {
+		best[c], cut[c] = make([]int, n+1), make([]int, n+1)
+		for i := range best[c] {
+			best[c][i] = inf
+		}
+	}
+	best[0][0] = 0
+	for c := 1; c <= k; c++ {
+		for i := 0; i <= n; i++ {
+			for j := 0; j <= i; j++ { // column c holds items j..i-1
+				if best[c-1][j] == inf {
+					continue
+				}
+				if h := max(best[c-1][j], sum[i]-sum[j]); h < best[c][i] {
+					best[c][i], cut[c][i] = h, j
+				}
+			}
+		}
+	}
+	col := make([]int, n)
+	for c, i := k, n; c > 0; c-- {
+		j := cut[c][i]
+		for x := j; x < i; x++ {
+			col[x] = c - 1
+		}
+		i = j
+	}
+	return col
 }

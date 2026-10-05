@@ -397,3 +397,18 @@ func TestFilterFindsContactsAndOpens(t *testing.T) {
 		t.Fatal("esc should cancel the search")
 	}
 }
+
+func TestBalancedSplit(t *testing.T) {
+	// greedy would put 18+9+19+24 = 70 in the last column; best is 44
+	col := balancedSplit([]int{19, 25, 11, 18, 9, 19, 24}, 3)
+	h := make([]int, 3)
+	for i, c := range col {
+		h[c] += []int{19, 25, 11, 18, 9, 19, 24}[i]
+		if i > 0 && c < col[i-1] {
+			t.Fatal("sections out of order")
+		}
+	}
+	if max(h[0], h[1], h[2]) != 44 {
+		t.Fatalf("columns %v", h)
+	}
+}
