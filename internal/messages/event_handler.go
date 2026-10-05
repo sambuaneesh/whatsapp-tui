@@ -375,6 +375,9 @@ func (eh *eventHandler) processIncomingMessage(evt *events.Message, text, previe
 
 // Handle incoming messages — dispatches to extractMessageContent then processIncomingMessage.
 func (eh *eventHandler) handleMessage(evt *events.Message) {
+	if evt.Info.Chat.Server == types.BroadcastServer {
+		return // status updates and broadcast lists aren't chats (history sync skips them too)
+	}
 	eh.sm.canonicalSource(context.Background(), &evt.Info.MessageSource)
 	if r := evt.Message.GetReactionMessage(); r != nil {
 		eh.sm.handleReaction(evt.Info.Chat.String(), evt.Info.Sender, evt.Info.IsFromMe, r)

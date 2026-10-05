@@ -487,3 +487,20 @@ func TestDrafts(t *testing.T) {
 		t.Fatalf("%v %v", d, err)
 	}
 }
+
+func TestStatusUpdatesRemovedOnStart(t *testing.T) {
+	md := newTestDB(t)
+	_ = md.UpsertConversation(Conversation{JID: "status@broadcast", Name: "status", LastMsgTime: 5})
+	_ = md.AddMessage(Message{Id: "s", ChatId: "status@broadcast", Text: "a reel"})
+	_ = md.UpsertConversation(Conversation{JID: "1@s.whatsapp.net", Name: "Arjun", LastMsgTime: 4})
+	if err := md.InitWithDB(md.db); err != nil { // as on the next start
+		t.Fatal(err)
+	}
+	cs, _ := md.GetConversations()
+	if len(cs) != 1 || cs[0].JID != "1@s.whatsapp.net" {
+		t.Fatalf("conversations %+v", cs)
+	}
+	if _, err := md.GetMessage("s"); err == nil {
+		t.Fatal("status message kept")
+	}
+}

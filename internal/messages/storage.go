@@ -84,6 +84,10 @@ func (md *MessageDatabase) InitWithDB(db *sql.DB) error {
 	md.db.Exec(`CREATE INDEX IF NOT EXISTS idx_messages_media_ts ON messages(media_type, timestamp)`)
 
 	// One reaction per person per message; an empty emoji removes it.
+	// status updates that got in as a chat before they were filtered out
+	md.db.Exec(`DELETE FROM messages WHERE chat_id LIKE '%@broadcast'`)
+	md.db.Exec(`DELETE FROM conversations WHERE jid LIKE '%@broadcast'`)
+
 	if err := md.initScheduled(); err != nil {
 		return fmt.Errorf("failed to create scheduled table: %w", err)
 	}
