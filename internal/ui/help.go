@@ -66,6 +66,7 @@ var helpSections = []struct {
 	}},
 	{"Visual (v)", [][2]string{
 		{"j k · gg G", "select another message"},
+		{"V", "select several (j/k extend): y f d s act on all"},
 		{"enter", "reply"},
 		{"p", "reply privately (groups)"},
 		{"r", "react: 1–6, x remove, + or a name: any emoji"},

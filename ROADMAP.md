@@ -101,7 +101,8 @@ Results (before → after):
 - [ ] 5. One feed of mentions, replies to you, reactions to your messages
 - [x] 9. Private reading (`:private`, 🙈 badge): no read receipts until you
       mark a chat read (`U`, `:read`)
-- [ ] 17. Bulk actions in visual mode
+- [x] 17. Bulk actions in visual mode: `V` range, then copy as transcript,
+      forward all, delete all, save all media
 - [ ] 14. Split view: two chats side by side
 - [ ] 13. Local API for scripts and hooks (documented)
 - [ ] 20. Better search: full-text index + search by meaning

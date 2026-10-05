@@ -22,6 +22,7 @@ type Forwarder interface {
 // forwardPicker is the "Forward to…" screen.
 type forwardPicker struct {
 	msg    messages.Message
+	more   []messages.Message // the rest of a visual-mode range, oldest first
 	filter string
 	cursor int
 	offset int
@@ -128,15 +129,26 @@ func (m Model) handleForward(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(to) == 0 {
 			return m, nil
 		}
-		fw, id := m.forwarder, f.msg.Id
+		fw, ids := m.forwarder, []string{f.msg.Id}
+		for _, x := range f.more {
+			ids = append(ids, x.Id)
+		}
 		label := "Forwarded to " + m.targetNames(to)
+		if len(ids) > 1 {
+			label = fmt.Sprintf("Forwarded %d messages to %s", len(ids), m.targetNames(to))
+		}
 		m.closeForward()
 		m.notice, m.noticeErr = "Forwarding…", false
 		if m.mode == modeVisual {
 			m.exitVisual()
 		}
 		return m, m.action(label, func(ctx context.Context) (string, error) {
-			return "", fw.ForwardMessage(ctx, id, to)
+			for _, id := range ids { // in order, like they were written
+				if err := fw.ForwardMessage(ctx, id, to); err != nil {
+					return "", err
+				}
+			}
+			return "", nil
 		})
 	}
 	var cmd tea.Cmd
@@ -178,6 +190,9 @@ func (m Model) renderForward(width, height int) string {
 
 	// what is being forwarded
 	preview := strings.Join(strings.Fields(prettyTags(f.msg.Text)), " ")
+	if len(f.more) > 0 {
+		preview = fmt.Sprintf("%d messages, from: %s", len(f.more)+1, preview)
+	}
 	bar := lipgloss.NewStyle().Foreground(senderColor(f.msg.ContactId)).Render("▎")
 	b.WriteString("\n " + bar + senderStyle(f.msg.ContactId).Render(m.senderName(f.msg)) +
 		"\n " + bar + styleDim.Render(ansi.Truncate(preview, width-4, "…")) + "\n")

@@ -109,6 +109,7 @@ you're at the bottom). Move with `j` `k`, `gg` (oldest) and `G` (newest), then:
 | `d` | delete: `enter` for you, `e` for everyone (your messages, up to ~2½ days old) |
 | `space` | view the photo, sticker or GIF full screen; play a voice note; open a video in mpv |
 | `o` | open the photo/file in its app, or the message's link |
+| `V` | select several: `j`/`k` extend, then `y` copies them as a transcript, `f` forwards them all, `d` deletes them, `s` saves their media; `V` or `esc` ends |
 | `R` | retry a message that failed to send |
 | `esc` | done |
 

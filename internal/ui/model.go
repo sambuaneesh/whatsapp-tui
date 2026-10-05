@@ -101,6 +101,7 @@ type Model struct {
 	scheduled   []messages.Scheduled // pending, soonest first
 	sched       *schedView           // the :scheduled list, nil when closed
 	privateRead bool                 // see Options.PrivateReading
+	rangeFrom   int                  // visual-mode range start (index into msgs), noRange if none
 
 	notifyMode string   // config.NotifyAll etc.
 	notifier   Notifier // nil: no notifications
@@ -252,6 +253,7 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		triage:      opts.Triage,
 		scheduler:   opts.Scheduler,
 		privateRead: opts.PrivateReading,
+		rangeFrom:   noRange,
 		notifier:    opts.Notifier,
 		notifyLog:   opts.NotifyLog,
 		sender:      opts.Sender,

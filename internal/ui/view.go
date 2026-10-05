@@ -279,7 +279,7 @@ func (m Model) statusRight() string {
 }
 
 // visualHint lists the visual-mode actions.
-const visualHint = "j/k gg/G move · enter reply · p private · r react · w who reacted · e edit · f forward · space view · y copy · s save · d delete · o open · esc"
+const visualHint = "j/k gg/G move · V several · enter reply · p private · r react · w who reacted · e edit · f forward · space view · y copy · s save · d delete · o open · esc"
 
 func (m Model) renderCommandLine() string {
 	switch {
@@ -313,6 +313,9 @@ func (m Model) renderCommandLine() string {
 		return m.searchStatus()
 	case m.mode == modeVisual && m.picker:
 		return m.renderPicker()
+	case m.mode == modeVisual && m.notice == "" && m.rangeFrom != noRange:
+		return styleDim.Render(ansi.Truncate(fmt.Sprintf("%d selected · j/k extend · y copy · f forward · d delete · s save media · V or esc ends",
+			len(m.rangeMsgs())), m.width, "…"))
 	case m.mode == modeVisual && m.notice == "":
 		return styleDim.Render(ansi.Truncate(visualHint, m.width, "…"))
 	case m.notice != "" && m.noticeErr:

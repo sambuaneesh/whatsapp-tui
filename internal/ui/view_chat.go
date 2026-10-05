@@ -240,7 +240,7 @@ func (m Model) renderMessages(width int) ([]string, []msgSpan) {
 				lipgloss.NewStyle().Foreground(colorWarm).Render(" ──"))
 		}
 		start := len(out)
-		selected := m.mode == modeVisual && i == m.sel
+		selected := m.mode == modeVisual && (i == m.sel || m.inRange(i))
 		showSender := group && sender != lastSender
 		key := m.bubbleKey(msg, showSender, selected, maxInner, width)
 		b, ok := cache.get(key)

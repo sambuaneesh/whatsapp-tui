@@ -107,6 +107,7 @@ func (m Model) lowestVisible() int {
 }
 
 func (m *Model) exitVisual() {
+	m.rangeFrom = noRange
 	m.mode = modeNormal
 	m.picker = false
 	m.refreshMessages(false)
@@ -180,7 +181,16 @@ func (m Model) handleVisual(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.exitVisual()
 		return m, nil
 	}
+	if m.rangeFrom != noRange {
+		if next, cmd, done := m.handleRange(key); done {
+			return next, cmd
+		}
+	}
 	switch key {
+	case "V": // start selecting several
+		m.rangeFrom = m.sel
+		m.refreshMessages(false)
+		return m, nil
 	case "esc", "v", "q":
 		m.exitVisual()
 	case "/":

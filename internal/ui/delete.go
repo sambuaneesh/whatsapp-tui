@@ -20,6 +20,7 @@ type Deleter interface {
 // confirmDelete asks before deleting (d, then enter).
 type confirmDelete struct {
 	msg  *messages.Message      // deleting a message
+	msgs []messages.Message     // or several (a visual-mode range)
 	chat *messages.Conversation // or a whole chat
 }
 
@@ -54,6 +55,27 @@ func (m Model) handleConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.action(label, func(ctx context.Context) (string, error) { return "", f(ctx) })
 	}
 	switch key := msg.String(); {
+	case len(c.msgs) > 0 && (key == "enter" || (key == "e" && allDeletableForEveryone(c.msgs))):
+		sel, forAll := c.msgs, key == "e"
+		label := fmt.Sprintf("Deleted %d messages for you", len(sel))
+		if forAll {
+			label = fmt.Sprintf("Deleted %d messages for everyone", len(sel))
+		}
+		if m.mode == modeVisual {
+			m.exitVisual()
+		}
+		return m, run(label, func(ctx context.Context) error {
+			for _, x := range sel {
+				f := d.DeleteForMe
+				if forAll {
+					f = d.DeleteForEveryone
+				}
+				if err := f(ctx, x); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
 	case c.msg != nil && key == "enter":
 		sel := *c.msg
 		return m, run("Deleted for you", func(ctx context.Context) error { return d.DeleteForMe(ctx, sel) })
@@ -92,9 +114,27 @@ func (m Model) renderConfirm() string {
 		return styleErr.Render(fmt.Sprintf("Delete chat “%s” and its messages on all your devices?", chatName(c.chat))) +
 			styleDim.Render("  enter delete · esc cancel")
 	}
+	if len(c.msgs) > 0 {
+		q := styleErr.Render(fmt.Sprintf("Delete these %d messages?", len(c.msgs))) + styleDim.Render("  enter for me")
+		if allDeletableForEveryone(c.msgs) {
+			q += styleDim.Render(" · e for everyone")
+		}
+		return q + styleDim.Render(" · esc cancel")
+	}
 	q := styleErr.Render("Delete this message?") + styleDim.Render("  enter for me")
 	if messages.CanDeleteForEveryone(*c.msg) {
 		q += styleDim.Render(" · e for everyone")
 	}
 	return q + styleDim.Render(" · esc cancel")
+}
+
+// allDeletableForEveryone reports whether every message can still be
+// deleted for everyone.
+func allDeletableForEveryone(msgs []messages.Message) bool {
+	for _, x := range msgs {
+		if !messages.CanDeleteForEveryone(x) {
+			return false
+		}
+	}
+	return len(msgs) > 0
 }
