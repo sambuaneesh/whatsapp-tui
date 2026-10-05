@@ -196,6 +196,14 @@ map --when-focus-on var:whatsapp_tui ctrl+v
 Reload with `ctrl+shift+f5` and restart whatsapp-tui. To select text with the
 mouse while it runs, hold `shift` while dragging.
 
+## Going through your chats
+
+Like an inbox: `J` opens the next unread chat; in it, `e` marks it read,
+archives it and opens the next unread one (back to the list when there are
+none left). `e` in the list does the same for the selected chat (in the
+archive, `e` brings it back), and `U` marks a chat unread, or read. These
+change the chat on your phone too.
+
 ## Running in the background
 
 Like tmux or herdr, there's only ever one whatsapp-tui. The first launch

@@ -53,7 +53,8 @@ Results (before → after):
 
 - [x] Drafts kept per chat (survive switching chats, closing the window and
       restarts; "Draft:" in the chat list)
-- [ ] Triage keys: archive + mark read, jump to next unread, mark unread
+- [x] Triage keys: `e` done (read + archive, then next unread), `U` mark
+      unread, `J` next unread chat; synced to the phone
 - [ ] Send later (`:later 9am`), run by the background app
 - [ ] Snooze a chat until a time
 - [ ] "Nudge me if no reply in N hours"

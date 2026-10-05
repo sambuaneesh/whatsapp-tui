@@ -96,6 +96,7 @@ type Model struct {
 
 	drafts     map[string]string // chat JID -> what you were writing there
 	draftStore DraftStore
+	triage     Triager
 
 	notifyMode string   // config.NotifyAll etc.
 	notifier   Notifier // nil: no notifications
@@ -167,6 +168,7 @@ type Options struct {
 	Mouse bool // mouse tracking is on (turned back on after other programs)
 
 	Drafts DraftStore // keeps drafts across restarts; may be nil
+	Triage Triager    // archive / mark unread on all devices; may be nil
 
 	// Detach closes this window and leaves the app running in the
 	// background (q, :q, ctrl+c); nil makes those quit instead.
@@ -238,6 +240,7 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		detach:     opts.Detach,
 		drafts:     map[string]string{},
 		draftStore: opts.Drafts,
+		triage:     opts.Triage,
 		notifier:   opts.Notifier,
 		notifyLog:  opts.NotifyLog,
 		sender:     opts.Sender,
@@ -1074,6 +1077,8 @@ func (m Model) handleListPane(key string) (tea.Model, tea.Cmd) {
 		return m, m.openInfo(m.selectedChat())
 	case "V":
 		return m, m.openPicture(m.selectedChat())
+	case "e", "U", "J":
+		return m.triageKey(key, false)
 	case "d":
 		m.askDeleteChat(m.selectedChat())
 	case "/":
@@ -1159,6 +1164,8 @@ func (m Model) handleMessagesPane(key string) (tea.Model, tea.Cmd) {
 		m.nextMatch(1)
 	case "K":
 		return m, m.openInfo(m.current)
+	case "e", "U", "J":
+		return m.triageKey(key, true)
 	case "backspace", "q":
 		return m, m.back()
 	}
