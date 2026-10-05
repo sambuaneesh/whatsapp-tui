@@ -76,12 +76,22 @@ func TestDeleteStorageAndRevoke(t *testing.T) {
 	sm.currentReceiver = "c"
 	sm.handleRevoke("c", &waE2E.ProtocolMessage{Type: waE2E.ProtocolMessage_REVOKE.Enum(),
 		Key: &waCommon.MessageKey{ID: proto.String("a")}}, false)
+	// what it said stays, marked deleted by them; it can't be edited
 	m, _ := sm.db.GetMessage("a")
-	if m.Text != noteDeleted || m.MediaType != "" || len(m.Media) != 0 {
+	if m.Text != "[IMAGE] pic" || m.MediaType != MediaImage || len(m.Media) != 1 || m.Deleted != DeletedByThem {
 		t.Fatalf("revoked = %+v", m)
 	}
-	if r, _ := sm.db.GetReactions([]string{"a"}); len(r["a"]) != 0 {
-		t.Fatal("reactions kept on a deleted message")
+	if ok, _ := sm.db.EditMessage("a", "changed"); ok {
+		t.Fatal("edited a deleted message")
+	}
+	// a message we never had the content of becomes a note
+	addTestMsg(t, sm.db, Message{Id: "e", ChatId: "c", Timestamp: 3})
+	_ = sm.db.MarkRevoked("e", DeletedByYou)
+	if e, _ := sm.db.GetMessage("e"); e.Text != noteYouDeleted || e.Deleted != DeletedByYou {
+		t.Fatalf("empty revoked = %+v", e)
+	}
+	if CanDeleteForEveryone(Message{FromMe: true, Timestamp: uint64(time.Now().Unix()), Text: "x", Deleted: DeletedByYou}) {
+		t.Fatal("can delete a deleted message again")
 	}
 	time.Sleep(10 * time.Millisecond)
 	ui.mu.Lock()
@@ -94,7 +104,8 @@ func TestDeleteStorageAndRevoke(t *testing.T) {
 	if err := sm.db.DeleteMessage("b"); err != nil {
 		t.Fatal(err)
 	}
-	if msgs, _ := sm.db.GetLatestMessages("c", 5); len(msgs) != 1 {
+	// delete for me: gone
+	if msgs, _ := sm.db.GetLatestMessages("c", 5); len(msgs) != 2 {
 		t.Fatalf("%d messages left", len(msgs))
 	}
 }

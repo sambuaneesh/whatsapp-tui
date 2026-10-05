@@ -21,7 +21,13 @@ import (
 // everyone (WhatsApp's limit is about two and a half days).
 const RevokeWindow = 60 * time.Hour
 
-// Notes shown in place of deleted messages.
+// Who deleted a message for everyone (Message.Deleted).
+const (
+	DeletedByThem = 1
+	DeletedByYou  = 2
+)
+
+// Notes shown in place of deleted messages whose content we never had.
 const (
 	noteYouDeleted = "🚫 You deleted this message"
 	noteDeleted    = "🚫 This message was deleted"
@@ -30,7 +36,7 @@ const (
 // CanDeleteForEveryone reports whether m can still be deleted for everyone.
 func CanDeleteForEveryone(m Message) bool {
 	return m.FromMe && m.Status != StatusFailed && m.Status != StatusPending &&
-		m.Text != noteYouDeleted &&
+		m.Text != noteYouDeleted && m.Deleted == 0 &&
 		time.Since(time.Unix(int64(m.Timestamp), 0)) < RevokeWindow
 }
 
@@ -104,7 +110,7 @@ func (sm *SessionManager) DeleteForEveryone(ctx context.Context, m Message) erro
 	if _, err := client.SendMessage(ctx, chat, client.BuildRevoke(chat, types.EmptyJID, m.Id)); err != nil {
 		return fmt.Errorf("delete for everyone: %w", err)
 	}
-	if err := sm.db.MarkRevoked(m.Id, noteYouDeleted); err != nil {
+	if err := sm.db.MarkRevoked(m.Id, DeletedByYou); err != nil {
 		return fmt.Errorf("delete locally: %w", err)
 	}
 	sm.refreshIfOpen(m.ChatId)
@@ -166,18 +172,18 @@ func (sm *SessionManager) removeChatLocally(chat string) {
 	sm.uiHandler.UpdateChatList(list)
 }
 
-// handleRevoke shows "This message was deleted" when someone deletes a
-// message for everyone.
+// handleRevoke marks a message deleted for everyone: what it said stays
+// visible, marked as deleted.
 func (sm *SessionManager) handleRevoke(chat string, pm *waE2E.ProtocolMessage, fromMe bool) {
 	id := pm.GetKey().GetID()
 	if id == "" {
 		return
 	}
-	note := noteDeleted
+	by := DeletedByThem
 	if fromMe {
-		note = noteYouDeleted
+		by = DeletedByYou
 	}
-	if err := sm.db.MarkRevoked(id, note); err != nil {
+	if err := sm.db.MarkRevoked(id, by); err != nil {
 		sm.debugf("revoke %s: %v", id, err)
 		return
 	}

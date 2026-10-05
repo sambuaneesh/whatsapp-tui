@@ -79,6 +79,7 @@ func (md *MessageDatabase) InitWithDB(db *sql.DB) error {
 	md.db.Exec(`ALTER TABLE messages ADD COLUMN quoted_text TEXT DEFAULT ''`)
 	md.db.Exec(`ALTER TABLE messages ADD COLUMN status INTEGER DEFAULT 0`)
 	md.db.Exec(`ALTER TABLE messages ADD COLUMN edited BOOLEAN DEFAULT 0`)
+	md.db.Exec(`ALTER TABLE messages ADD COLUMN revoked INTEGER DEFAULT 0`) // Deleted*
 	// the sticker/GIF tray: newest of a kind
 	md.db.Exec(`CREATE INDEX IF NOT EXISTS idx_messages_media_ts ON messages(media_type, timestamp)`)
 
@@ -109,7 +110,7 @@ func (md *MessageDatabase) InitWithDB(db *sql.DB) error {
 // msgColumns is the column list scanned by collectMessages.
 const msgColumns = "id, chat_id, contact_id, contact_name, contact_short, timestamp, from_me, forwarded, text, " +
 	"COALESCE(media_type, ''), media, COALESCE(quoted_id, ''), COALESCE(quoted_sender, ''), COALESCE(quoted_text, ''), " +
-	"COALESCE(status, 0), COALESCE(edited, 0)"
+	"COALESCE(status, 0), COALESCE(edited, 0), COALESCE(revoked, 0)"
 
 // escapeLike escapes the SQL LIKE metacharacters (%, _, \) so they are
 // treated as literal characters in a LIKE ? ESCAPE '\' clause.
@@ -304,7 +305,7 @@ func collectMessages(rows *sql.Rows) ([]Message, error) {
 		var ts int64
 		if err := rows.Scan(&msg.Id, &msg.ChatId, &msg.ContactId, &msg.ContactName, &msg.ContactShort, &ts,
 			&msg.FromMe, &msg.Forwarded, &msg.Text, &msg.MediaType, &msg.Media,
-			&msg.QuotedID, &msg.QuotedSender, &msg.QuotedText, &msg.Status, &msg.Edited); err != nil {
+			&msg.QuotedID, &msg.QuotedSender, &msg.QuotedText, &msg.Status, &msg.Edited, &msg.Deleted); err != nil {
 			return msgs, fmt.Errorf("failed to scan message row: %w", err)
 		}
 		msg.Timestamp = uint64(ts)
@@ -559,7 +560,8 @@ func (md *MessageDatabase) EditMessage(id, text string) (bool, error) {
 	if md.db == nil {
 		return false, fmt.Errorf("database not initialized")
 	}
-	res, err := md.db.Exec(`UPDATE messages SET text = ?, edited = 1 WHERE id = ? AND text NOT IN (?, ?)`,
+	res, err := md.db.Exec(`UPDATE messages SET text = ?, edited = 1 WHERE id = ? AND COALESCE(revoked, 0) = 0
+		AND text NOT IN (?, ?)`,
 		text, id, noteDeleted, noteYouDeleted)
 	if err != nil {
 		return false, err
@@ -616,15 +618,19 @@ func (md *MessageDatabase) UnreadCounts() (map[string]uint16, map[string]bool, e
 }
 
 // MarkRevoked replaces a message deleted for everyone with a note.
-func (md *MessageDatabase) MarkRevoked(id, note string) error {
+func (md *MessageDatabase) MarkRevoked(id string, by int) error {
 	if md.db == nil {
 		return fmt.Errorf("database not initialized")
 	}
-	_, err := md.db.Exec(`UPDATE messages SET text = ?, media_type = '', media = NULL,
-		quoted_id = '', quoted_sender = '', quoted_text = '' WHERE id = ?`, note, id)
-	if err == nil {
-		_, err = md.db.Exec(`DELETE FROM reactions WHERE msg_id = ?`, id)
+	// keep what it said, marked; a message we never had the content of
+	// becomes a note
+	note := noteDeleted
+	if by == DeletedByYou {
+		note = noteYouDeleted
 	}
+	_, err := md.db.Exec(`UPDATE messages SET revoked = ?,
+		text = CASE WHEN COALESCE(text, '') = '' AND media IS NULL THEN ? ELSE text END
+		WHERE id = ?`, by, note, id)
 	return err
 }
 

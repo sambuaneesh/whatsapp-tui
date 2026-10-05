@@ -79,7 +79,7 @@ func (k keyer) sum() uint64 { return uint64(k) }
 func (m Model) bubbleKey(msg messages.Message, showSender, selected bool, maxInner, width int) uint64 {
 	k := m.bubbles.keyer().str("bubble").str(msg.Id).str(msg.Text).int(msg.Status).bool(msg.Edited).
 		bool(msg.FromMe).bool(msg.Forwarded).str(msg.ContactId).str(msg.ContactShort).str(msg.ContactName).
-		int(int(msg.Timestamp)).str(msg.MediaType).str(string(msg.Media)).
+		int(int(msg.Timestamp)).str(msg.MediaType).str(string(msg.Media)).int(msg.Deleted).
 		bool(showSender).bool(selected).int(maxInner).int(width)
 	if msg.QuotedID != "" {
 		k = k.str(msg.QuotedID).str(msg.QuotedText).str(msg.QuotedSender).str(m.quotedSenderName(msg))

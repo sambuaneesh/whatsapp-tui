@@ -20,7 +20,7 @@ func CanEdit(m Message) (bool, string) {
 	switch {
 	case !m.FromMe:
 		return false, "you can only edit your own messages"
-	case m.Text == noteYouDeleted || m.Text == noteDeleted:
+	case m.Text == noteYouDeleted || m.Text == noteDeleted || m.Deleted != 0:
 		return false, "deleted messages can't be edited"
 	case m.MediaType != "":
 		return false, "only text messages can be edited"

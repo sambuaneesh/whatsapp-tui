@@ -466,3 +466,24 @@ func (a *fakeActions) EditMessage(_ context.Context, m messages.Message, text st
 	a.edits = append(a.edits, m.Id+"|"+text+"|"+strings.Join(mentions, ","))
 	return nil
 }
+
+func TestDeletedMessageStaysVisible(t *testing.T) {
+	m := visualModel(t, &fakeActions{}, fakeClip{})
+	msgs := groupMsgs()
+	msgs[1].Deleted = messages.DeletedByThem // Priya deleted "yes!"
+	msgs[2].Deleted = messages.DeletedByYou  // you deleted "count me in"
+	next, _ := m.Update(screenMsg(msgs))
+	m = next.(Model)
+	v := stripANSI(m.View())
+	for _, want := range []string{"yes!", "🚫 deleted by Priya", "count me in", "🚫 you deleted this for everyone"} {
+		if !strings.Contains(v, want) {
+			t.Fatalf("missing %q:\n%s", want, v)
+		}
+	}
+	// one we never had the content of: just the note
+	msgs[0].Text, msgs[0].Deleted = "🚫 This message was deleted", messages.DeletedByThem
+	next, _ = m.Update(screenMsg(msgs))
+	if v := stripANSI(next.(Model).View()); strings.Contains(v, "🚫 deleted by Arjun") {
+		t.Fatal("note marked twice")
+	}
+}

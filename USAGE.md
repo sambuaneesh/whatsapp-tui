@@ -196,6 +196,14 @@ map --when-focus-on var:whatsapp_tui ctrl+v
 Reload with `ctrl+shift+f5` and restart whatsapp-tui. To select text with the
 mouse while it runs, hold `shift` while dragging.
 
+## Deleted messages
+
+When someone deletes a message for everyone after it reached you, it stays
+readable here, marked "🚫 deleted by <name>" with a faded border (your own
+show "🚫 you deleted this for everyone"). Only **delete for me** (`d` then
+`enter`) removes a message from this app. Messages deleted before this
+version only kept the "This message was deleted" note.
+
 ## Going through your chats
 
 Like an inbox: `J` opens the next unread chat; in it, `e` marks it read,

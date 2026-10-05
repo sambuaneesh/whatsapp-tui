@@ -78,6 +78,11 @@ type Message struct {
 
 	Edited bool // changed after sending ("edited" next to the time)
 
+	// Deleted for everyone (DeletedByThem / DeletedByYou); the content is
+	// kept and shown marked. 0 when not deleted. Delete-for-me removes the
+	// message instead.
+	Deleted int
+
 	Mentions map[string]string // "@<number>" in Text -> display name; filled when loading
 }
 

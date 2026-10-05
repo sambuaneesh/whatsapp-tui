@@ -363,6 +363,9 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 	if failed || mentionsYou {
 		border = pal.Love
 	}
+	if msg.Deleted != 0 {
+		border = pal.HighlightMed // faded: no longer there for the others
+	}
 	if selected {
 		border = pal.Rose
 	}
@@ -386,6 +389,14 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 	}
 	if msg.Forwarded {
 		lines = append(lines, styleMuted.Italic(true).Render("↪ Forwarded"))
+	}
+	if msg.Deleted != 0 && !isDeletedNote(msg) {
+		// deleted for everyone, but we'd seen it: shown, marked
+		who := "🚫 deleted by " + m.senderName(msg)
+		if msg.Deleted == messages.DeletedByYou || msg.FromMe {
+			who = "🚫 you deleted this for everyone"
+		}
+		lines = append(lines, styleErr.Italic(true).Render(ansi.Truncate(who, maxInner, "…")))
 	}
 	var parts bubbleParts
 	quote := m.quoteBlock(msg, maxInner)

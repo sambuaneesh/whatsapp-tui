@@ -90,8 +90,8 @@ Results (before → after):
 - [x] 3. Show polls (question + options), live location and events, and
       several-contact cards; locations get a map link
 - [ ] 4. Animated stickers/GIFs striped in the sticker tray
-- [ ] Deleted-for-everyone messages keep their text, marked deleted
-      (gone only with delete for me)
+- [x] Deleted-for-everyone messages keep their text and media, marked
+      "deleted by <name>" (gone only with delete for me)
 - [ ] 5. One feed of mentions, replies to you, reactions to your messages
 - [ ] 9. Read without sending blue ticks; mark read when you choose
 - [ ] 17. Bulk actions in visual mode
