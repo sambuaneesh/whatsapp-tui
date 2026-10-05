@@ -93,8 +93,10 @@ func Parse(s string, now time.Time) (time.Time, error) {
 			minute, _ = strconv.Atoi(m[2])
 		}
 		switch ampm := m[3]; {
-		case hour > 23 || minute > 59 || (ampm != "" && (hour == 0 || hour > 12)):
+		case hour > 23 || minute > 59 || (ampm != "" && hour > 12):
 			return time.Time{}, ErrUnknown
+		case hour == 0 && strings.HasPrefix(ampm, "p"):
+			return time.Time{}, ErrUnknown // "00:30pm" means nothing
 		case strings.HasPrefix(ampm, "p") && hour < 12:
 			hour += 12
 		case strings.HasPrefix(ampm, "a") && hour == 12:

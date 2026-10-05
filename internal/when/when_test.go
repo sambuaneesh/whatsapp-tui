@@ -22,6 +22,10 @@ func TestParse(t *testing.T) {
 		"9am":            at(8, 9, 0), // passed today: tomorrow
 		"9:30am":         at(8, 9, 30),
 		"12am":           at(8, 0, 0),
+		"00:35AM":        at(8, 0, 35), // as people write it
+		"00:35 am":       at(8, 0, 35),
+		"0:35":           at(8, 0, 35),
+		"12:35am":        at(8, 0, 35),
 		"12pm":           at(8, 12, 0),
 		"noon":           at(8, 12, 0),
 		"tonight":        at(7, 20, 0),
@@ -43,7 +47,7 @@ func TestParse(t *testing.T) {
 			t.Errorf("%q: %v %v, want %v", in, got, err, want)
 		}
 	}
-	for _, bad := range []string{"", "soon", "25:00", "13pm", "9:75", "in", "0h", "next week"} {
+	for _, bad := range []string{"", "soon", "25:00", "13pm", "9:75", "in", "0h", "next week", "00:30pm"} {
 		if _, err := Parse(bad, now); err == nil {
 			t.Errorf("%q parsed", bad)
 		}
