@@ -52,7 +52,8 @@ func NewHandler(send func(tea.Msg)) *Handler { return &Handler{send: send} }
 // SetSend sets the function used to deliver messages to the UI.
 func (h *Handler) SetSend(send func(tea.Msg)) { h.send = send }
 
-func (h *Handler) NewMessage(m messages.Message) { h.send(newMessageMsg(m)) }
+func (h *Handler) NewMessage(m messages.Message)               { h.send(newMessageMsg(m)) }
+func (h *Handler) ScheduledChanged(items []messages.Scheduled) { h.send(scheduledMsg(items)) }
 func (h *Handler) Incoming(m messages.Message, chatName string) {
 	h.send(incomingMsg{msg: m, chatName: chatName})
 }

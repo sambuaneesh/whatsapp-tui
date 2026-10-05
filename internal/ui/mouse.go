@@ -42,7 +42,7 @@ func (m Model) leave() tea.Cmd {
 
 // overlayOpen reports screens that cover the chat list and messages.
 func (m Model) overlayOpen() bool {
-	return m.showHelp || m.emo != nil || m.reactors != nil || m.info != nil || m.global != nil || m.fwd != nil || m.stk != nil || m.pic != nil || m.view != nil || m.qr != ""
+	return m.showHelp || m.emo != nil || m.reactors != nil || m.sched != nil || m.info != nil || m.global != nil || m.fwd != nil || m.stk != nil || m.pic != nil || m.view != nil || m.qr != ""
 }
 
 func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
@@ -51,6 +51,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m.mouseEmoji(msg)
 	case m.reactors != nil:
 		return m.mouseReactors(msg)
+	case m.sched != nil:
+		return m.mouseScheduled(msg)
 	case m.overlayOpen():
 		return m, nil
 	}
@@ -60,6 +62,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	}
 	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress && m.notifyBadgeAt(msg.X, msg.Y) {
 		return m.cycleNotifyMode()
+	}
+	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress && m.scheduledBadgeAt(msg.X, msg.Y) {
+		return m, m.openScheduled()
 	}
 	overList := m.screen == screenList || msg.X < m.sidebarW
 	switch msg.Button {

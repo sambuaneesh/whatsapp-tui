@@ -43,6 +43,7 @@ type SessionManager struct {
 	mediaSem        chan struct{}   // limits concurrent media downloads
 	downloads       sync.Map        // message ID -> *download in progress
 	lastPrune       time.Time       // media cache last pruned
+	schedWake       chan struct{}   // wakes the scheduler when items change
 	avatarSem       chan struct{}   // limits concurrent profile picture fetches
 	logOut          io.Writer       // debug log destination (see SetLogWriter)
 	contactsSynced  bool            // contact names re-synced this session
@@ -99,6 +100,8 @@ func (sm *SessionManager) StartManager() error {
 	sm.stop = make(chan struct{})
 	go sm.runManager()
 	sm.pruneMediaSoon()
+	sm.schedWake = make(chan struct{}, 1)
+	go sm.runScheduler(sm.stop)
 	return nil
 }
 

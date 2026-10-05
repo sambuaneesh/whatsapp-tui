@@ -55,9 +55,9 @@ Results (before → after):
       restarts; "Draft:" in the chat list)
 - [x] Triage keys: `e` done (read + archive, then next unread), `U` mark
       unread, `J` next unread chat; synced to the phone
-- [ ] Send later (`:later 9am`), run by the background app
-- [ ] Snooze a chat until a time
-- [ ] "Nudge me if no reply in N hours"
+- [x] Send later (`:later 9am`), run by the background app
+- [x] Snooze a chat until a time (`:snooze`)
+- [x] "Nudge me if no reply" (`:nudge 3h`); `:scheduled` lists and cancels
 - [ ] "Later" screen: starred, reminders, snoozed, follow-ups, with done
 - [ ] One feed of mentions, replies to you and reactions to your messages
 - [ ] Highlight words, per-chat notification levels, quiet hours

@@ -204,6 +204,23 @@ none left). `e` in the list does the same for the selected chat (in the
 archive, `e` brings it back), and `U` marks a chat unread, or read. These
 change the chat on your phone too.
 
+## Later: send, snooze, nudge
+
+The background app can do things later, even with the window closed
+(WhatsApp itself can't):
+
+- `:later <when>` sends what's in the input box then: write it, `esc`, then
+  e.g. `:later tomorrow 9am`.
+- `:snooze <when>` archives the chat; it comes back, unread, with a
+  notification.
+- `:nudge <when>` reminds you then if they haven't replied by then.
+- `:scheduled` lists what's pending (`x` cancels); the status bar shows a ⏰
+  count you can click.
+
+Times: `9am`, `21:30`, `tonight`, `tomorrow`, `tomorrow 9am`, `fri 5pm`,
+`in 2h`, `90m`, `in 3 days`. A message due while you're offline is sent as
+soon as you're connected again.
+
 ## Running in the background
 
 Like tmux or herdr, there's only ever one whatsapp-tui. The first launch

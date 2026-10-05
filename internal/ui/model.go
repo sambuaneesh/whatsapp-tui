@@ -97,6 +97,9 @@ type Model struct {
 	drafts     map[string]string // chat JID -> what you were writing there
 	draftStore DraftStore
 	triage     Triager
+	scheduler  Scheduler
+	scheduled  []messages.Scheduled // pending, soonest first
+	sched      *schedView           // the :scheduled list, nil when closed
 
 	notifyMode string   // config.NotifyAll etc.
 	notifier   Notifier // nil: no notifications
@@ -167,8 +170,9 @@ type Options struct {
 
 	Mouse bool // mouse tracking is on (turned back on after other programs)
 
-	Drafts DraftStore // keeps drafts across restarts; may be nil
-	Triage Triager    // archive / mark unread on all devices; may be nil
+	Drafts    DraftStore // keeps drafts across restarts; may be nil
+	Triage    Triager    // archive / mark unread on all devices; may be nil
+	Scheduler Scheduler  // send later, snooze, nudge; may be nil
 
 	// Detach closes this window and leaves the app running in the
 	// background (q, :q, ctrl+c); nil makes those quit instead.
@@ -241,6 +245,7 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		drafts:     map[string]string{},
 		draftStore: opts.Drafts,
 		triage:     opts.Triage,
+		scheduler:  opts.Scheduler,
 		notifier:   opts.Notifier,
 		notifyLog:  opts.NotifyLog,
 		sender:     opts.Sender,
@@ -263,6 +268,9 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 	}
 	if m.draftStore != nil {
 		m.drafts = m.draftStore.Drafts()
+	}
+	if m.scheduler != nil {
+		m.scheduled = m.scheduler.ScheduledItems()
 	}
 	m.setChats(initial)
 	return m
@@ -606,7 +614,7 @@ func (m Model) loadVisible() tea.Cmd {
 		}
 		return tea.Batch(cmds...)
 	}
-	if m.img == nil || m.width == 0 || m.qr != "" || m.showHelp || m.emo != nil || m.reactors != nil || m.info != nil || m.global != nil || m.fwd != nil || m.pic != nil || m.view != nil {
+	if m.img == nil || m.width == 0 || m.qr != "" || m.showHelp || m.emo != nil || m.reactors != nil || m.sched != nil || m.info != nil || m.global != nil || m.fwd != nil || m.pic != nil || m.view != nil {
 		return nil
 	}
 	var cmds []tea.Cmd
@@ -752,6 +760,12 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.applyDownloadTick(msg)
 	case reactorNamesMsg:
 		return m.applyReactorNames(msg)
+	case scheduledMsg:
+		m.scheduled = msg
+		if m.sched != nil {
+			m.sched.cursor = min(m.sched.cursor, max(len(msg)-1, 0))
+		}
+		return m, nil
 	case ReattachMsg:
 		// a new terminal window: it has none of our images yet
 		m.img.reset()
@@ -925,6 +939,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	if m.reactors != nil {
 		return m.handleReactors(msg)
+	}
+	if m.sched != nil {
+		return m.handleScheduled(msg)
 	}
 	if m.view != nil {
 		return m.handleMediaView(msg)
@@ -1371,6 +1388,14 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 			paths = []string{joined}
 		}
 		return m, m.loadAttachments(paths)
+	case "later":
+		return m.scheduleCommand(messages.ScheduleSend, fields[1:])
+	case "snooze":
+		return m.scheduleCommand(messages.ScheduleSnooze, fields[1:])
+	case "nudge", "remind":
+		return m.scheduleCommand(messages.ScheduleNudge, fields[1:])
+	case "scheduled", "sched":
+		return m, m.openScheduled()
 	case "notify", "notifications":
 		if len(fields) == 1 {
 			return m.cycleNotifyMode()

@@ -16,6 +16,7 @@ type MockUiHandler struct {
 	Screens     [][]Message
 	Messages    []Message
 	Incomings   []Message // messages reported for notifications
+	Scheduled   []Scheduled
 	HelpCalled  int
 	ClearCalled int
 	QuitCalled  int
@@ -27,7 +28,8 @@ func NewMockUiHandler() *MockUiHandler {
 	return &MockUiHandler{}
 }
 
-func (m *MockUiHandler) NewMessage(msg Message) { m.Messages = append(m.Messages, msg) }
+func (m *MockUiHandler) NewMessage(msg Message)             { m.Messages = append(m.Messages, msg) }
+func (m *MockUiHandler) ScheduledChanged(items []Scheduled) { m.Scheduled = items }
 func (m *MockUiHandler) Incoming(msg Message, _ string) {
 	m.Incomings = append(m.Incomings, msg)
 }

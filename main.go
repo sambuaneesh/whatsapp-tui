@@ -134,6 +134,7 @@ func run() error {
 		Deleter:         sm,
 		Drafts:          sm,
 		Triage:          sm,
+		Scheduler:       sm,
 	}
 	// the screen and the images share the terminal; writes go out whole
 	out := termimg.NewOutput(os.Stdout)

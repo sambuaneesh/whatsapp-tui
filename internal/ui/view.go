@@ -227,6 +227,8 @@ func (m Model) renderStatusLine() string {
 		badge = styleModeVisual.Render("EMOJI")
 	case m.reactors != nil:
 		badge = styleModeVisual.Render("REACTIONS")
+	case m.sched != nil:
+		badge = styleModeVisual.Render("SCHEDULED")
 	case m.stk != nil:
 		badge = styleModeVisual.Render("STICKERS")
 	case m.fwd != nil:
@@ -273,7 +275,7 @@ func (m Model) statusRight() string {
 	if m.status.Connected {
 		conn = styleOnline.Background(colorBarBg).Render("● online")
 	}
-	return m.notifyBadge() + styleStatusBar.Render(" ") + conn + styleStatusBar.Render("  ? help ")
+	return m.scheduledBadge() + m.notifyBadge() + styleStatusBar.Render(" ") + conn + styleStatusBar.Render("  ? help ")
 }
 
 // visualHint lists the visual-mode actions.
@@ -343,6 +345,8 @@ func (m Model) View() string {
 		main = m.renderEmojiGrid(m.width, h)
 	case m.reactors != nil:
 		main = m.renderReactors(m.width, h)
+	case m.sched != nil:
+		main = m.renderScheduled(m.width, h)
 	case m.view != nil:
 		main = m.renderMediaView(m.width, h)
 	case m.pic != nil:
