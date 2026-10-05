@@ -8,6 +8,8 @@ import (
 	"container/heap"
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
@@ -72,6 +74,25 @@ func (eh *eventHandler) Handle(evt interface{}) {
 	case *events.HistorySync:
 		go eh.sm.processHistorySync(v.Data)
 	}
+}
+
+// mapLink is a map address for a location, which the UI can open.
+func mapLink(lat, long float64) string {
+	return fmt.Sprintf("https://maps.google.com/?q=%.6f,%.6f", lat, long)
+}
+
+// pollOf returns a message's poll, whichever version it came as.
+func pollOf(msg *waE2E.Message) *waE2E.PollCreationMessage {
+	for _, p := range []*waE2E.PollCreationMessage{msg.GetPollCreationMessage(), msg.GetPollCreationMessageV2(),
+		msg.GetPollCreationMessageV3(), msg.GetPollCreationMessageV5(), msg.GetPollCreationMessageV6()} {
+		if p != nil {
+			return p
+		}
+	}
+	if v4 := msg.GetPollCreationMessageV4(); v4 != nil && v4.GetMessage() != nil {
+		return pollOf(v4.GetMessage()) // wrapped
+	}
+	return nil
 }
 
 // extractMessageContent extracts display text and chat-list preview from a
@@ -156,18 +177,71 @@ func extractMessageContent(msg *waE2E.Message) (text, preview string) {
 		return "[CONTACT]", "[CONTACT]"
 	}
 
-	// 8. Location
+	// 8. Location (with a map link to click)
 	if loc := msg.GetLocationMessage(); loc != nil {
 		name := loc.GetName()
 		if name == "" {
 			name = loc.GetAddress()
 		}
+		link := mapLink(loc.GetDegreesLatitude(), loc.GetDegreesLongitude())
 		if name != "" {
-			t := fmt.Sprintf("[LOCATION] %s (%.4f, %.4f)", name, loc.GetDegreesLatitude(), loc.GetDegreesLongitude())
-			return t, "[LOCATION] " + name
+			return "[LOCATION] " + name + "\n" + link, "[LOCATION] " + name
 		}
-		t := fmt.Sprintf("[LOCATION] (%.4f, %.4f)", loc.GetDegreesLatitude(), loc.GetDegreesLongitude())
-		return t, t
+		return "[LOCATION] " + link, "[LOCATION]"
+	}
+	if live := msg.GetLiveLocationMessage(); live != nil {
+		t := strings.TrimSpace("[LIVE LOCATION] " + live.GetCaption())
+		return t + "\n" + mapLink(live.GetDegreesLatitude(), live.GetDegreesLongitude()), t
+	}
+
+	// Polls: the question and options (votes are made on the phone)
+	if poll := pollOf(msg); poll != nil {
+		var b strings.Builder
+		b.WriteString("[POLL] " + poll.GetName())
+		for _, o := range poll.GetOptions() {
+			b.WriteString("\n○ " + o.GetOptionName())
+		}
+		if n := poll.GetSelectableOptionsCount(); n > 1 {
+			fmt.Fprintf(&b, "\n(pick up to %d)", n)
+		}
+		return b.String(), truncatePreview("[POLL] " + poll.GetName())
+	}
+
+	// Events: name, when, where, what
+	if ev := msg.GetEventMessage(); ev != nil {
+		head := "[EVENT] " + ev.GetName()
+		if ev.GetIsCanceled() {
+			head += " (cancelled)"
+		}
+		var b strings.Builder
+		b.WriteString(head)
+		var when []string
+		if st := ev.GetStartTime(); st > 0 {
+			when = append(when, time.Unix(st, 0).Format("Mon 2 Jan 15:04"))
+		}
+		if loc := ev.GetLocation(); loc != nil && (loc.GetName() != "" || loc.GetAddress() != "") {
+			when = append(when, strings.TrimSpace(loc.GetName()+" "+loc.GetAddress()))
+		}
+		if len(when) > 0 {
+			b.WriteString("\n🗓 " + strings.Join(when, " · "))
+		}
+		if d := ev.GetDescription(); d != "" {
+			b.WriteString("\n" + d)
+		}
+		if l := ev.GetJoinLink(); l != "" {
+			b.WriteString("\n" + l)
+		}
+		return b.String(), truncatePreview(head)
+	}
+
+	// Several contacts at once
+	if cs := msg.GetContactsArrayMessage(); cs != nil {
+		var names []string
+		for _, c := range cs.GetContacts() {
+			names = append(names, c.GetDisplayName())
+		}
+		t := "[CONTACTS] " + strings.Join(names, ", ")
+		return t, truncatePreview(t)
 	}
 
 	// 9. Reaction

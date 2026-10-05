@@ -34,6 +34,14 @@ func contextInfo(msg *waE2E.Message) *waE2E.ContextInfo {
 		return msg.GetContactMessage().GetContextInfo()
 	case msg.GetLocationMessage() != nil:
 		return msg.GetLocationMessage().GetContextInfo()
+	case msg.GetLiveLocationMessage() != nil:
+		return msg.GetLiveLocationMessage().GetContextInfo()
+	case msg.GetEventMessage() != nil:
+		return msg.GetEventMessage().GetContextInfo()
+	case msg.GetContactsArrayMessage() != nil:
+		return msg.GetContactsArrayMessage().GetContextInfo()
+	case pollOf(msg) != nil:
+		return pollOf(msg).GetContextInfo()
 	}
 	return nil
 }

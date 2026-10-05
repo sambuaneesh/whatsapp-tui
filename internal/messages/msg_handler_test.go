@@ -3,6 +3,7 @@ package messages
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"google.golang.org/protobuf/proto"
@@ -225,8 +226,9 @@ func TestExtractMessageContent_LocationNoName(t *testing.T) {
 	if !strings.Contains(text, "1.2345") {
 		t.Errorf("expected text to contain latitude, got %q", text)
 	}
-	if text != preview {
-		t.Errorf("expected text == preview for unnamed location, got text=%q preview=%q", text, preview)
+	// the list shows just the tag; the message has the map link
+	if preview != "[LOCATION]" || !strings.Contains(text, "maps.google.com/?q=1.234500,6.789000") {
+		t.Errorf("text=%q preview=%q", text, preview)
 	}
 }
 
@@ -275,5 +277,41 @@ func TestExtractMessageContent_ExtendedTextPriority(t *testing.T) {
 	text, _ := extractMessageContent(msg)
 	if text != "extended takes priority" {
 		t.Errorf("expected ExtendedTextMessage to take priority, got %q", text)
+	}
+}
+
+func TestExtractPollsEventsLiveLocationContacts(t *testing.T) {
+	poll := &waE2E.PollCreationMessage{Name: proto.String("Dinner where?"), SelectableOptionsCount: proto.Uint32(2),
+		Options: []*waE2E.PollCreationMessage_Option{{OptionName: proto.String("Paradise")}, {OptionName: proto.String("Bawarchi")}}}
+	for name, tc := range map[string]struct {
+		msg           *waE2E.Message
+		text, preview string
+	}{
+		"poll": {&waE2E.Message{PollCreationMessage: poll},
+			"[POLL] Dinner where?\n○ Paradise\n○ Bawarchi\n(pick up to 2)", "[POLL] Dinner where?"},
+		"poll v3": {&waE2E.Message{PollCreationMessageV3: poll},
+			"[POLL] Dinner where?\n○ Paradise\n○ Bawarchi\n(pick up to 2)", "[POLL] Dinner where?"},
+		"poll v4 (wrapped)": {&waE2E.Message{PollCreationMessageV4: &waE2E.FutureProofMessage{Message: &waE2E.Message{PollCreationMessage: poll}}},
+			"[POLL] Dinner where?\n○ Paradise\n○ Bawarchi\n(pick up to 2)", "[POLL] Dinner where?"},
+		"live location": {&waE2E.Message{LiveLocationMessage: &waE2E.LiveLocationMessage{Caption: proto.String("on my way"),
+			DegreesLatitude: proto.Float64(17.385), DegreesLongitude: proto.Float64(78.4867)}},
+			"[LIVE LOCATION] on my way\nhttps://maps.google.com/?q=17.385000,78.486700", "[LIVE LOCATION] on my way"},
+		"location": {&waE2E.Message{LocationMessage: &waE2E.LocationMessage{Name: proto.String("Charminar"),
+			DegreesLatitude: proto.Float64(17.3616), DegreesLongitude: proto.Float64(78.4747)}},
+			"[LOCATION] Charminar\nhttps://maps.google.com/?q=17.361600,78.474700", "[LOCATION] Charminar"},
+		"event": {&waE2E.Message{EventMessage: &waE2E.EventMessage{Name: proto.String("Farewell"),
+			Description: proto.String("bring cake"), StartTime: proto.Int64(time.Date(2026, 10, 12, 18, 0, 0, 0, time.Local).Unix()),
+			Location: &waE2E.LocationMessage{Name: proto.String("Hostel terrace")}}},
+			"[EVENT] Farewell\n🗓 Mon 12 Oct 18:00 · Hostel terrace\nbring cake", "[EVENT] Farewell"},
+		"cancelled event": {&waE2E.Message{EventMessage: &waE2E.EventMessage{Name: proto.String("Trip"), IsCanceled: proto.Bool(true)}},
+			"[EVENT] Trip (cancelled)", "[EVENT] Trip (cancelled)"},
+		"contacts": {&waE2E.Message{ContactsArrayMessage: &waE2E.ContactsArrayMessage{
+			Contacts: []*waE2E.ContactMessage{{DisplayName: proto.String("Ravi")}, {DisplayName: proto.String("Sita")}}}},
+			"[CONTACTS] Ravi, Sita", "[CONTACTS] Ravi, Sita"},
+	} {
+		text, preview := extractMessageContent(tc.msg)
+		if text != tc.text || preview != tc.preview {
+			t.Errorf("%s:\n got %q / %q\nwant %q / %q", name, text, preview, tc.text, tc.preview)
+		}
 	}
 }

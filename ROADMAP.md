@@ -87,7 +87,8 @@ Results (before → after):
 - [x] 1. More time phrases: `in an hour`, `next friday`, `next week`,
       `weekend`, `eod`, dates (`12 oct 3pm`, `12/10`, `2026-10-12`)
 - [ ] 2. Profile and cut the background app's memory
-- [ ] 3. Show polls, live location and event messages
+- [x] 3. Show polls (question + options), live location and events, and
+      several-contact cards; locations get a map link
 - [ ] 4. Animated stickers/GIFs striped in the sticker tray
 - [ ] Deleted-for-everyone messages keep their text, marked deleted
       (gone only with delete for me)
@@ -100,7 +101,7 @@ Results (before → after):
 
 ## Known bugs
 
-- [ ] Polls, live location and event messages are silently dropped
+- [x] Polls, live location and event messages were silently dropped
 - [x] Forwarded messages weren't marked (also fixed for re-synced history)
 - [ ] Animated stickers and GIFs render striped in the sticker tray (parked)
 

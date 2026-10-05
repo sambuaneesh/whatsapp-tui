@@ -55,6 +55,10 @@ var tagLabels = []struct{ tag, label string }{
 	{"[DOCUMENT]", "📄"},
 	{"[CONTACT]", "👤"},
 	{"[LOCATION]", "📍"},
+	{"[LIVE LOCATION]", "📍 Live location"},
+	{"[POLL]", "📊 Poll:"},
+	{"[EVENT]", "📅"},
+	{"[CONTACTS]", "👥"},
 	{"[REACTION]", "Reacted"},
 }
 
