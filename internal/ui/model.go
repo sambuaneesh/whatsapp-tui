@@ -94,12 +94,13 @@ type Model struct {
 
 	detach func() // see Options.Detach
 
-	drafts     map[string]string // chat JID -> what you were writing there
-	draftStore DraftStore
-	triage     Triager
-	scheduler  Scheduler
-	scheduled  []messages.Scheduled // pending, soonest first
-	sched      *schedView           // the :scheduled list, nil when closed
+	drafts      map[string]string // chat JID -> what you were writing there
+	draftStore  DraftStore
+	triage      Triager
+	scheduler   Scheduler
+	scheduled   []messages.Scheduled // pending, soonest first
+	sched       *schedView           // the :scheduled list, nil when closed
+	privateRead bool                 // see Options.PrivateReading
 
 	notifyMode string   // config.NotifyAll etc.
 	notifier   Notifier // nil: no notifications
@@ -174,6 +175,10 @@ type Options struct {
 	Triage    Triager    // archive / mark unread on all devices; may be nil
 	Scheduler Scheduler  // send later, snooze, nudge; may be nil
 
+	// PrivateReading: opening a chat doesn\'t send read receipts; you mark
+	// chats read yourself (U, :read).
+	PrivateReading bool
+
 	// Detach closes this window and leaves the app running in the
 	// background (q, :q, ctrl+c); nil makes those quit instead.
 	Detach func()
@@ -232,26 +237,27 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		sidebarWidth = 38
 	}
 	m := Model{
-		commands:   commands,
-		sidebarW:   sidebarWidth,
-		bgSeq:      backgroundSeq(opts.PaintBackground),
-		bubbles:    newBubbleCache(),
-		compose:    compose,
-		cmdline:    cmdline,
-		img:        newImages(opts.Images, opts.Kitty, opts.Media),
-		mouse:      opts.Mouse,
-		notifyMode: opts.Notifications,
-		detach:     opts.Detach,
-		drafts:     map[string]string{},
-		draftStore: opts.Drafts,
-		triage:     opts.Triage,
-		scheduler:  opts.Scheduler,
-		notifier:   opts.Notifier,
-		notifyLog:  opts.NotifyLog,
-		sender:     opts.Sender,
-		clip:       opts.Clipboard,
-		actions:    opts.Actions,
-		searcher:   opts.Searcher,
+		commands:    commands,
+		sidebarW:    sidebarWidth,
+		bgSeq:       backgroundSeq(opts.PaintBackground),
+		bubbles:     newBubbleCache(),
+		compose:     compose,
+		cmdline:     cmdline,
+		img:         newImages(opts.Images, opts.Kitty, opts.Media),
+		mouse:       opts.Mouse,
+		notifyMode:  opts.Notifications,
+		detach:      opts.Detach,
+		drafts:      map[string]string{},
+		draftStore:  opts.Drafts,
+		triage:      opts.Triage,
+		scheduler:   opts.Scheduler,
+		privateRead: opts.PrivateReading,
+		notifier:    opts.Notifier,
+		notifyLog:   opts.NotifyLog,
+		sender:      opts.Sender,
+		clip:        opts.Clipboard,
+		actions:     opts.Actions,
+		searcher:    opts.Searcher,
 
 		globalSearcher: opts.GlobalSearcher,
 		forwarder:      opts.Forwarder,
@@ -536,10 +542,15 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 // screen and the terminal has focus. Called on open, when the chat list
 // changes (a new message arrived) and when the window gets focus back.
 func (m *Model) markSeen() tea.Cmd {
-	if m.screen != screenChat || m.current == nil || !m.focused {
+	if m.screen != screenChat || m.current == nil || !m.focused || m.privateRead {
 		return nil
 	}
-	jid, unseen := m.current.JID, false
+	return m.markRead(m.current.JID)
+}
+
+// markRead marks a chat read here and on WhatsApp (read receipts).
+func (m *Model) markRead(jid string) tea.Cmd {
+	unseen := false
 	for _, list := range [][]*messages.Conversation{m.chats, m.allChats, {m.current}} {
 		for _, c := range list {
 			if c.JID == jid && (c.Unread > 0 || c.Mentioned) {
@@ -1388,6 +1399,19 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 			paths = []string{joined}
 		}
 		return m, m.loadAttachments(paths)
+	case "private":
+		on := !m.privateRead
+		if len(fields) > 1 {
+			on = fields[1] == "on"
+		}
+		return m.setPrivateReading(on)
+	case "read":
+		if m.current == nil || m.screen != screenChat {
+			m.notice, m.noticeErr = ":read works in a chat (or U in the list)", true
+			return m, nil
+		}
+		m.notice, m.noticeErr = "Marked read", false
+		return m, m.dispatch("read", m.current.JID)
 	case "later":
 		return m.scheduleCommand(messages.ScheduleSend, fields[1:])
 	case "snooze":

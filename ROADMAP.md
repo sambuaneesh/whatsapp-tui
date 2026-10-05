@@ -63,7 +63,7 @@ Results (before → after):
 - [ ] "Later" screen: starred, reminders, snoozed, follow-ups, with done
 - [ ] One feed of mentions, replies to you and reactions to your messages
 - [ ] Highlight words, per-chat notification levels, quiet hours
-- [ ] Read without sending read receipts; mark read when you choose
+- [x] Read without sending read receipts; mark read when you choose
 - [ ] Plain-text chat logs and "download all media" for a chat
 - [ ] Rule-based folders and saved searches (`from:… has:image after:…`)
 - [ ] Local API on the background app for scripts and hooks
@@ -99,7 +99,8 @@ Results (before → after):
 - [x] Deleted-for-everyone messages keep their text and media, marked
       "deleted by <name>" (gone only with delete for me)
 - [ ] 5. One feed of mentions, replies to you, reactions to your messages
-- [ ] 9. Read without sending blue ticks; mark read when you choose
+- [x] 9. Private reading (`:private`, 🙈 badge): no read receipts until you
+      mark a chat read (`U`, `:read`)
 - [ ] 17. Bulk actions in visual mode
 - [ ] 14. Split view: two chats side by side
 - [ ] 13. Local API for scripts and hooks (documented)

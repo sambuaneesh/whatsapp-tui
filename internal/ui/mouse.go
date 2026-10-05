@@ -66,6 +66,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress && m.scheduledBadgeAt(msg.X, msg.Y) {
 		return m, m.openScheduled()
 	}
+	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress && m.privateBadgeAt(msg.X, msg.Y) {
+		return m.setPrivateReading(false)
+	}
 	overList := m.screen == screenList || msg.X < m.sidebarW
 	switch msg.Button {
 	case tea.MouseButtonWheelUp, tea.MouseButtonWheelDown:

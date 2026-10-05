@@ -31,6 +31,7 @@ type General struct {
 	Notifications       string // all, popup, sound or off
 	Background          bool   // keep running after the window closes; launches attach
 	MediaCacheMb        int    // downloaded media kept (MB); least recently used go first
+	PrivateReading      bool   // open chats without sending read receipts (mark read yourself)
 	NotificationTimeout int64
 	BacklogMsgQuantity  int
 }
@@ -258,6 +259,15 @@ func SetNotificationMode(mode string) error {
 		return err
 	}
 	Config.General.Notifications = mode
+	return nil
+}
+
+// SetPrivateReading turns private reading on or off and saves it.
+func SetPrivateReading(on bool) error {
+	if err := saveGeneral("private_reading", fmt.Sprint(on)); err != nil {
+		return err
+	}
+	Config.General.PrivateReading = on
 	return nil
 }
 

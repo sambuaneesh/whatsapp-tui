@@ -275,7 +275,7 @@ func (m Model) statusRight() string {
 	if m.status.Connected {
 		conn = styleOnline.Background(colorBarBg).Render("● online")
 	}
-	return m.scheduledBadge() + m.notifyBadge() + styleStatusBar.Render(" ") + conn + styleStatusBar.Render("  ? help ")
+	return m.privateBadge() + m.scheduledBadge() + m.notifyBadge() + styleStatusBar.Render(" ") + conn + styleStatusBar.Render("  ? help ")
 }
 
 // visualHint lists the visual-mode actions.

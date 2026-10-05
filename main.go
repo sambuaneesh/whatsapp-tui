@@ -158,6 +158,7 @@ func run() error {
 		opts.NotifyLog = os.Stderr // the background app's log
 	}
 	opts.Mouse = config.Config.Ui.Mouse
+	opts.PrivateReading = config.Config.General.PrivateReading
 	opts.Notifications, opts.Notifier = config.NotificationMode(), notify.System{}
 	model := ui.New(sm.CommandChannel, sm.Conversations(), opts)
 	progOpts := []tea.ProgramOption{tea.WithAltScreen(), tea.WithReportFocus(), tea.WithOutput(out)} // focus: only mark chats read while you look

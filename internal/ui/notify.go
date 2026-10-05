@@ -217,7 +217,7 @@ func (m Model) notifyBadgeAt(x, y int) bool {
 		return false
 	}
 	w := lipgloss.Width(m.notifyBadge())
-	start := m.width - lipgloss.Width(m.statusRight()) + lipgloss.Width(m.scheduledBadge())
+	start := m.width - lipgloss.Width(m.statusRight()) + lipgloss.Width(m.privateBadge()) + lipgloss.Width(m.scheduledBadge())
 	return w > 0 && x >= start && x < start+w
 }
 
@@ -228,6 +228,16 @@ func (m Model) scheduledBadgeAt(x, y int) bool {
 		return false
 	}
 	w := lipgloss.Width(m.scheduledBadge())
+	start := m.width - lipgloss.Width(m.statusRight()) + lipgloss.Width(m.privateBadge())
+	return w > 0 && x >= start && x < start+w
+}
+
+// privateBadgeAt reports whether screen cell (x, y) is on the 🙈 badge.
+func (m Model) privateBadgeAt(x, y int) bool {
+	if y != m.mainHeight() {
+		return false
+	}
+	w := lipgloss.Width(m.privateBadge())
 	start := m.width - lipgloss.Width(m.statusRight())
 	return w > 0 && x >= start && x < start+w
 }

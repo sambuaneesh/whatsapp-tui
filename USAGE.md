@@ -196,6 +196,14 @@ map --when-focus-on var:whatsapp_tui ctrl+v
 Reload with `ctrl+shift+f5` and restart whatsapp-tui. To select text with the
 mouse while it runs, hold `shift` while dragging.
 
+## Private reading (no blue ticks)
+
+`:private` (or `private_reading = true` in the config) lets you open chats
+without sending read receipts: no blue ticks for the sender, and the chat
+stays unread for you. Mark a chat read when you choose: `U` in the list or
+in the chat, or `:read`. The status bar shows 🙈 while it's on; click it (or
+`:private off`) to turn it off, which marks the open chat read.
+
 ## Deleted messages
 
 When someone deletes a message for everyone after it reached you, it stays
@@ -280,6 +288,8 @@ Support/whatsapp-tui/config.ini`):
 download_path = ~/Downloads
 notifications = all            ; all, popup, sound, off (M in the app)
 background    = true           ; keep running when the window closes
+private_reading = false        ; true: no read receipts until you mark a chat read
+media_cache_mb  = 1024         ; downloaded media kept on disk
 
 [ui]
 theme            = rose-pine   ; rose-pine, rose-pine-moon, rose-pine-dawn
