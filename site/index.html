@@ -340,6 +340,7 @@ td .ctx { font-family: var(--mono); font-size: 12px; color: var(--muted); }
       <div class="point"><span class="k"><kbd>⇄</kbd></span><h3>A second window takes over</h3><p>Open it from another workspace and it moves there; the old window closes. It's never open twice, never logged in twice.</p></div>
       <div class="point"><span class="k"><kbd>↑</kbd></span><h3>Updates itself on the next launch</h3><p>Install a new build and the next launch notices, restarts the background app on it and attaches. No stale version left behind.</p></div>
       <div class="point"><span class="k"><kbd>0%</kbd></span><h3>Costs nothing while it waits</h3><p>With no window attached it stops drawing altogether. Idle, it does no work you'd notice.</p></div>
+      <div class="point"><span class="k"><kbd>1</kbd></span><h3>Or just one terminal</h3><p><code>whatsapp-tui --foreground</code> (or <code>background = false</code> in the config) runs it the classic way, in that terminal only. <code>--debug</code> writes a log for troubleshooting.</p></div>
     </div>
     <div style="display:grid;gap:16px">
       <div class="attach" aria-label="Diagram: windows attach to one background app">
@@ -404,7 +405,7 @@ td .ctx { font-family: var(--mono); font-size: 12px; color: var(--muted); }
     </div>
     <div class="feat">
       <h3>Find, filter, archive</h3>
-      <p>Pinned chats stay on top and muted ones are marked 🔕, synced from your phone. <kbd>/</kbd> finds chats and contacts by name or number (archived ones too), <kbd>u</kbd> shows only unread, <kbd>A</kbd> the archive, <kbd>K</kbd> a chat's info and members, <kbd>V</kbd> a profile picture full screen.</p>
+      <p>Pinned chats stay on top and muted ones are marked 🔕, synced from your phone, as are archives, renamed groups and chats you read there. Status updates stay out of your chat list. <kbd>/</kbd> finds chats and contacts by name or number (archived ones too), <kbd>u</kbd> shows only unread, <kbd>A</kbd> the archive, <kbd>K</kbd> a chat's info and members, <kbd>V</kbd> a profile picture full screen.</p>
     </div>
     <div class="feat">
       <h3>Mentions stand out</h3>
@@ -431,6 +432,13 @@ td .ctx { font-family: var(--mono); font-size: 12px; color: var(--muted); }
       <div class="result" id="tp-out" aria-live="polite"></div>
       <div class="chips" id="tp-chips"></div>
       <p class="note" id="tp-now"></p>
+      <div class="tbl"><table>
+        <tr><th>Kind</th><th>Examples</th></tr>
+        <tr><td>Clock</td><td class="mono">9am · 9:30pm · 21:30 · 00:35am · noon · tonight · eod</td></tr>
+        <tr><td>Day</td><td class="mono">today 5pm · tomorrow · fri 5pm · next friday · next week · weekend</td></tr>
+        <tr><td>Date</td><td class="mono">12 oct · oct 12 3pm · 12/10 (day/month) · 2026-10-12 9:00</td></tr>
+        <tr><td>From now</td><td class="mono">in 2h · 90m · in an hour · in half an hour · in 3 days · in 2 weeks</td></tr>
+      </table></div>
     </div>
   </div>
 </section>
