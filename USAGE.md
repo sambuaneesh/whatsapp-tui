@@ -353,6 +353,157 @@ Times:
 A day without a time means 9:00; a time that's passed today means tomorrow.
 A message due while you're offline is sent as soon as you're connected again.
 
+## Your own space: lists, notes, saved
+
+Next to your chats, a space that's only yours and never goes to WhatsApp
+(it's kept in `personal.db`, apart from your WhatsApp session):
+
+- **📋 Today**, pinned on top: everything due today (and overdue, and the
+  next 7 days) from all your lists. Its badge counts what's due.
+- **Lists**, each a chat of its own: 📥 Inbox, 📝 Notes and 🔖 Saved to start
+  with, and as many as you like (`:list Shopping`, `:notebook Recipes`).
+  Open one and the usual keys work on what's in it.
+
+### Adding: type it as you'd say it
+
+Open a list, `i`, type, `enter`:
+
+| You type | You get |
+|---|---|
+| `call mom 6pm` | due today at 18:00, with a reminder then |
+| `pay rent fri` | due Friday (the day; no reminder) |
+| `dentist fri 10am` | Friday 10:00 |
+| `meet priya day after tomorrow at 4` | in two days at 16:00 |
+| `submit report by the 12th` | the 12th of this month (next month's if it's gone) |
+| `buy milk tomorrow #home` | tomorrow, tagged `#home` |
+| `renew passport !` | marked important (red, `!`) |
+| `shopping: eggs` | added to the Shopping list, from anywhere |
+| `Trip packing:` then lines (`alt+enter` between) | a checklist: the first line is its title |
+
+In 📋 Today, something without a date is for today. Times read like
+everywhere else in the app (see [the table](#later-send-snooze-nudge)),
+plus `day after tomorrow`, `by the 5th`, `in a fortnight`, `end of next
+week`, `last friday of the month`, `by eod`. A bare number isn't a time
+("buy 2 eggs" stays as it is), but `at 5` is (17:00).
+
+`:task <text>` adds from anywhere (to the Inbox, or the list it names).
+
+### Working through a list
+
+| Key | |
+|---|---|
+| `j` `k` `gg` `G` | move |
+| `x` / `space` | done (or not); done tasks fold into **DONE** at the bottom (`enter` on it shows them) |
+| `e` | edit the text (the date stays unless you type a new one) |
+| `t` | when: `t` then `tomorrow 9am`, `fri`, `none` |
+| `!` | important / not |
+| `N` | notes for the task (a page of text) |
+| `d` · `u` | delete · undo (undo works for everything: deletes, moves, edits, even a deleted list) |
+| `J` `K` | move it down / up (undated tasks; dated ones go by time) |
+| `>` `<` | into the checklist above / out of its checklist |
+| `enter` | fold or unfold a checklist; open a note page; go to a saved message |
+| `m` | move to another list (pick it by name) |
+| `y` · `Y` | copy the task · the whole list |
+| `f` | send the list to a chat, as ☐/☑ lines |
+| `c` | clear the done tasks |
+| `/` or `ctrl+f` | find in your tasks, notes and saved messages |
+
+Sections: **OVERDUE** (red), **TODAY**, **UPCOMING**, **SOMEDAY** (no date),
+**DONE**. Tasks with a time remind you through your notifications when
+they're due.
+
+The mouse: click the ☐ to tick it, click a task to select it, again to
+edit (or open) it.
+
+### Organising lists
+
+In the chat list, on a list: `P` pins it (pinned lists sit right under
+Today), `e` archives it, `d` deletes it (`:undo` brings it back). In a
+list: `:rename Groceries`, `:icon 🛒`, `:deletelist`, `:cleardone`. `ctrl+p`
+finds lists by name like chats; `ctrl+p` then `@` finds what's *in* them.
+`F1` has every list and task command.
+
+### Notes
+
+A notebook (📝 Notes, or `:notebook <name>`) holds pages. `i` and a title
+starts one (`alt+enter` for more lines); `enter` opens it to read
+(headings, lists, `- [ ]` boxes, *bold* and `code` show as such); `e`
+edits the whole page in the box, where `enter` is a new line and `esc`
+saves. `:note <title>` adds a page from anywhere.
+
+### Saved messages and tasks from chats
+
+In a chat, select a message (`v`) and:
+
+- `b` saves it to 🔖 Saved (who sent it, and where). In Saved, `enter` takes
+  you back to it in its chat.
+- `T` makes a task of it: the `:task` line opens with its text to edit; the
+  task remembers the message (`↩ Arjun`), and `enter` on it goes back
+  there. With the local model, the text comes worded as a task with its
+  date ("Send Arjun the slides before friday evening").
+
+### Sharing a list
+
+`f` sends a list to a chat once. `:share` sends it and keeps it linked to
+that chat: when someone there writes `done: eggs` (or `✅ eggs`), eggs is
+ticked off here, with a note of who did it. `:unshare` stops it.
+
+### In Obsidian (or any folder of Markdown)
+
+`:mirror <folder>` keeps a Markdown copy of your lists in that folder, in
+step both ways every couple of seconds (it's saved as `obsidian_dir`):
+
+```
+<folder>/Shopping.md        - [ ] eggs ^t12
+                            - [ ] call mom #family ⏫ 📅 2026-10-07 ⏰ 18:00 ^t14
+                            - [ ] Packing ^t15
+                            	- [x] charger ✅ 2026-10-06 ^t16
+<folder>/Notes/Wifi.md      a page per file, in a folder per notebook
+<folder>/Saved.md           your saved messages (written from here only)
+```
+
+Tick, edit, add, delete or reorder lines in Obsidian and the app follows;
+the `^t12` at the end ties a line to its task (Obsidian hides it when
+reading). The marks are the Obsidian Tasks plugin's. A new `.md` file makes
+a new list; deleting a list's file archives the list (it doesn't delete
+it). `:mirror off` stops; `:mirror` says where it goes.
+
+### From the shell and a key
+
+```sh
+whatsapp-tui todo                        # what's due today
+whatsapp-tui todo call mom 6pm '#family' # add one
+whatsapp-tui todo list Shopping
+whatsapp-tui todo done 12
+whatsapp-tui note Wifi "password: on the fridge"
+whatsapp-tui capture                     # a one-line prompt to add a task
+```
+
+`capture` shows what it read as you type (`→ Shopping  📅 Fri 9 Oct 18:00
+#weekend`); on Omarchy it's bound to **Super+Shift+T** as a small floating
+window. Scripts can use the same through the [API](docs/API.md#lists-tasks-and-notes).
+
+## The local model (AI)
+
+With [Ollama](https://ollama.com) running and `qwen3:4b` pulled (`ollama
+pull qwen3:4b`, 2.5 GB), a small model on your own machine helps where
+rules can't. About a second per answer on a mid-range GPU; it loads only
+when asked and leaves GPU memory two minutes later. Nothing leaves your
+machine.
+
+| What | How |
+|---|---|
+| A message as a task | `T` on it: the `:task` line comes worded with its date |
+| The to-dos in a chat | `:todos` (or `F1` → "find to-dos"): the requests and promises in the last 60 messages; `enter` adds each to the Inbox |
+| Catch me up | `:catchup`: a few points on what was said, and what people are waiting on you for (`enter` makes it a task) |
+| Plan my day | `:plan`: times for today's tasks around the ones that have one; "use this plan" sets them (`u` undoes) |
+| Odd dates | `t after the exams`, `:later after diwali`: when the rules can't read it, the model guesses and fills the command in for you to accept (`enter`) or change |
+
+It never does the calendar sums small models get wrong: it copies the
+time words out of a message ("before friday evening") and the app's own
+parser turns them into a date. Guesses are always shown before they're
+used. Turn it off with `ai = false`; another model with `ai_model`.
+
 ## Running in the background
 
 Like tmux or herdr, there's only ever one whatsapp-tui. The first launch
@@ -412,6 +563,9 @@ semantic_search = true         ; search by meaning when Ollama runs (see "How se
 ollama_url      = http://127.0.0.1:11434
 embed_model     = embeddinggemma
 semantic_pause_gaming = true   ; don't index while the GPU is busy (games)
+ai              = true         ; the local chat model's help (see "The local model")
+ai_model        = qwen3:4b
+obsidian_dir    =              ; mirror your lists and notes here (:mirror)
 
 [ui]
 theme            = rose-pine   ; rose-pine, rose-pine-moon, rose-pine-dawn
@@ -426,6 +580,8 @@ qr_compact       = false       ; smaller login QR code
 
 ## When something's off
 
+- **The AI commands say the model isn't available:** start Ollama
+  (`ollama serve`, or its service) and `ollama pull qwen3:4b`.
 - **A chat is archived (or pinned, or muted) here but not on your phone:**
   `:resync` (or `F1` → "resync") fetches those settings from WhatsApp again
   and makes this device match the phone. It also happens on every start,

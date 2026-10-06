@@ -149,6 +149,28 @@ Results (before → after):
       those that apply, listed first), the several-selected actions, pin /
       mute, and group admin (rename, add, remove, admin, leave, create)
 
+## Your own space (2026-10-06)
+
+- [x] 📋 Today pinned on top (due from every list, badge), lists as chats
+      (Inbox, Notes, Saved, and your own), typed tasks with dates, tags,
+      `!`, `list:` prefix, checklists; x/e/t/!/d/u/J/K/>/</m/f/Y/c keys;
+      sections; reminders; organising (pin, archive, delete, rename,
+      icon); ctrl+p finds lists, `@` finds items; F1 has it all
+- [x] Notes (pages written whole, Markdown light) and 🔖 Saved messages
+      (`b` in visual mode); `T` makes a task from a message with a link back
+- [x] Sharing a list with a chat: "done: eggs" there ticks it off here
+- [x] Obsidian mirror, both ways (Tasks plugin marks, `^t` block ids)
+- [x] `whatsapp-tui todo/note/capture`, API methods, Super+Shift+T capture
+- [x] Local model (qwen3:4b): tasks from messages, to-dos in a chat,
+      catch up, plan my day, odd dates (guessed, then confirmed); the
+      parser reads more time phrases ("by the 12th", "end of next week")
+
+## Next
+
+- [ ] Settings in the palette (`ctrl+,`): appearance and small things to
+      adjust easily, like the space between message bubbles (asked
+      2026-10-06, after the personal space)
+
 ## Known bugs
 
 - [x] A chat stayed archived here after the phone unarchived it: a full

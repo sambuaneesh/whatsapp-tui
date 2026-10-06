@@ -82,6 +82,13 @@ map --when-focus-on var:whatsapp_tui ctrl+shift+p send_text all \e[25~
 map --when-focus-on var:whatsapp_tui ctrl+shift+f send_text all \e[26~
 ```
 
+**Your own space:** 📋 Today is pinned on top of your chats, and your task
+lists, notes and saved messages are chats of their own: type `call mom
+6pm #family !` and it's a task due at 18:00; `x` ticks it off. They can
+mirror to an Obsidian vault both ways, and a small local model (Ollama,
+`qwen3:4b`) can turn messages into tasks, find the to-dos in a chat, plan
+your day and catch you up. See [USAGE.md](USAGE.md#your-own-space-lists-notes-saved).
+
 Scripts and tools can use it through a local API and hooks: see
 [docs/API.md](docs/API.md).
 
