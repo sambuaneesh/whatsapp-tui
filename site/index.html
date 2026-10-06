@@ -147,6 +147,12 @@ button { font: inherit; cursor: pointer; }
 .chat .draft { color: var(--love); }
 .msgs { overflow: hidden; padding: 6px 10px; display: flex; flex-direction: column; justify-content: flex-end; gap: 7px; min-height: 0; }
 .day { align-self: center; background: var(--overlay); color: var(--subtle); padding: 0 8px; border-radius: 4px; font-size: .88em; }
+.tlist { display: grid; gap: 2px; align-self: stretch; margin-bottom: auto; padding-top: 4px; }
+.tsec { font-weight: 700; margin: 8px 0 2px; }
+.tsec:first-child { margin-top: 0; }
+.trow { display: flex; gap: 6px; align-items: baseline; padding: 1px 4px; cursor: pointer; white-space: nowrap; overflow: hidden; }
+.trow.sel { background: var(--hl-med); }
+.trow .tm { margin-left: auto; padding-left: 12px; font-size: .92em; }
 .b { max-width: 78%; border: 1.5px solid var(--muted); border-radius: 9px; padding: 3px 9px 4px; position: relative; cursor: pointer; }
 .b.me { align-self: flex-end; border-color: var(--iris); }
 .b.sel { border-color: var(--rose); box-shadow: -6px 0 0 -3px var(--rose); }
@@ -248,6 +254,38 @@ section { padding-block: 56px 24px; border-top: 1px solid var(--hl-med); scroll-
 .pal-done { color: var(--foam); font-size: 13px; min-height: 1.3em; }
 .overlay.palov { inset: 40px 8% auto 8%; border: 1.5px solid var(--rose); border-radius: 8px; padding: 0; box-shadow: 0 10px 30px rgb(0 0 0 / .35); }
 
+/* your own space: the list demo */
+.ls-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.ls-tab { border: 1px solid var(--hl-med); background: var(--base); color: var(--subtle); border-radius: 8px; padding: 3px 10px; font: 13px var(--mono); cursor: pointer; }
+.ls-tab.on { color: var(--text); border-color: var(--rose); }
+.ls-tab .c { color: var(--gold); margin-left: 4px; }
+.ls { background: var(--base); border: 1px solid var(--hl-med); border-radius: 10px; padding: 10px 12px; font-family: var(--mono); font-size: 13.5px; min-height: 15em; }
+.ls-sec { font-weight: 700; color: var(--iris); margin: 10px 0 3px; letter-spacing: .03em; }
+.ls-sec:first-child { margin-top: 0; }
+.ls-sec.od { color: var(--love); } .ls-sec.dn { color: var(--muted); }
+.ls-row { display: flex; align-items: baseline; gap: 7px; padding: 2px 4px; border-radius: 5px; }
+.ls-row:hover { background: var(--hl-low); }
+.ls-row .bx { cursor: pointer; color: var(--subtle); user-select: none; }
+.ls-row .bx.imp { color: var(--love); } .ls-row.done .bx { color: var(--pine); }
+.ls-row.done .tx { text-decoration: line-through; color: var(--muted); }
+.ls-row .tg { color: var(--foam); } .ls-row .im { color: var(--love); font-weight: 700; }
+.ls-row .meta { margin-left: auto; padding-left: 10px; white-space: nowrap; color: var(--muted); font-size: 12.5px; }
+.ls-row .meta .d { color: var(--gold); } .ls-row .meta .d.od { color: var(--love); } .ls-row .meta .fr { color: var(--iris); }
+.ls-row .del { visibility: hidden; cursor: pointer; color: var(--muted); }
+.ls-row:hover .del { visibility: visible; }
+.ls-row.kid { padding-left: 30px; }
+.ls-preview { font-family: var(--mono); font-size: 13px; min-height: 1.4em; display: flex; gap: 10px; flex-wrap: wrap; }
+.ls-preview .l { color: var(--iris); } .ls-preview .d { color: var(--gold); } .ls-preview .t { color: var(--foam); } .ls-preview .i { color: var(--love); font-weight: 700; } .ls-preview .q { color: var(--muted); }
+.md { background: var(--base); border: 1px solid var(--hl-med); border-radius: 10px; padding: 10px 12px; font: 12.5px/1.65 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); min-height: 15em; }
+.md .fm { color: var(--muted); } .md .bid { color: var(--hl-high); } .md .em { color: var(--gold); }
+.flash-row { animation: flashrow 1.2s ease-out; }
+@keyframes flashrow { from { background: color-mix(in srgb, var(--gold) 35%, transparent); } to { background: transparent; } }
+.io { display: grid; gap: 8px; }
+.io .in, .io .out { font: 13px/1.55 var(--mono); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.io .in { background: var(--base); border: 1px solid var(--hl-med); color: var(--subtle); }
+.io .out { background: color-mix(in srgb, var(--iris) 10%, var(--base)); border: 1px solid color-mix(in srgb, var(--iris) 45%, transparent); color: var(--text); }
+.io .arrow { font: 12px var(--mono); color: var(--iris); }
+
 /* speed chart */
 .chart { overflow-x: auto; }
 .chart svg { display: block; width: 100%; height: auto; }
@@ -337,6 +375,8 @@ td.mono { white-space: nowrap; }
     <span class="brand">whatsapp-tui</span>
     <nav aria-label="Sections">
       <a href="#palette">ctrl+p</a>
+      <a href="#lists">lists</a>
+      <a href="#ai" class="opt">ai</a>
       <a href="#always-on">always on</a>
       <a href="#triage" class="opt">triage</a>
       <a href="#later">later</a>
@@ -356,7 +396,7 @@ td.mono { white-space: nowrap; }
 <div class="hero">
   <div style="display:grid;gap:18px">
     <h1>whatsapp<span class="dim">-</span>tui<span class="cur" aria-hidden="true"></span></h1>
-    <p class="lede">WhatsApp in your terminal, driven by the keyboard like vim. <b>It redraws in a third of a millisecond</b>, gets you to any chat with <kbd>ctrl+p</kbd> like VS Code, keeps running when you close the window, and does what the official apps can't: send later, snooze chats, read without blue ticks, search by meaning, and talk to your own scripts.</p>
+    <p class="lede">WhatsApp in your terminal, driven by the keyboard like vim. <b>It redraws in a third of a millisecond</b>, gets you to any chat with <kbd>ctrl+p</kbd> like VS Code, keeps running when you close the window, and does what the official apps can't: send later, snooze chats, read without blue ticks, search by meaning, and talk to your own scripts. Next to your chats sits <b>a space of your own</b>: today's tasks, lists, notes and saved messages, mirrored to Obsidian, with a small AI on your own machine.</p>
     <div class="cta-row">
       <div class="copyline"><span><span class="p">$</span> git clone git@github.com:sambuaneesh/whatsapp-tui.git &amp;&amp; cd whatsapp-tui &amp;&amp; make install</span><button class="btn" data-copy="git clone git@github.com:sambuaneesh/whatsapp-tui.git && cd whatsapp-tui && make install">copy</button></div>
     </div>
@@ -433,6 +473,158 @@ td.mono { white-space: nowrap; }
   <div class="code" style="margin-top:22px"><p class="cap">kitty.conf (optional)</p><button class="btn" data-copy-from="c0">copy</button><pre id="c0"><span class="fn">map</span> --when-focus-on var:whatsapp_tui ctrl+shift+p send_text all \e[25~
 <span class="fn">map</span> --when-focus-on var:whatsapp_tui ctrl+shift+f send_text all \e[26~</pre></div>
   <p class="note">Terminals send <kbd>ctrl+shift+p</kbd> and <kbd>ctrl+shift+f</kbd> exactly like <kbd>ctrl+p</kbd> and <kbd>ctrl+f</kbd>, so these two lines send them as F13 and F14, only inside whatsapp-tui. <kbd>F1</kbd> and <kbd>S</kbd> work without them.</p>
+</section>
+
+<section id="lists">
+  <div class="eyebrow"><span class="badge b-gold">📋 TODAY</span>your own space, next to your chats</div>
+  <h2>Your to-dos live where you already are.</h2>
+  <p class="intro">📋 Today is pinned above your chats, with a count of what's due. Every list is a chat of its own: 📥 Inbox, 📝 Notes, 🔖 Saved, and as many as you make. Type a task the way you'd say it; <kbd>x</kbd> ticks it off. It's yours alone: kept in its own local database, never sent to WhatsApp.</p>
+  <div class="two">
+    <div class="play">
+      <label for="lq">Try it. Type a task as you'd say it and press enter; click a ☐ to tick it off.</label>
+      <div class="ls-tabs" id="ls-tabs"></div>
+      <div class="field"><span class="pre">❯</span><input id="lq" type="text" value="meet priya day after tomorrow at 4 #friends" autocomplete="off" spellcheck="false" aria-label="Add a task"></div>
+      <div class="ls-preview" id="ls-pre" aria-live="polite"></div>
+      <div class="ls" id="ls"></div>
+      <div class="chips" id="ls-chips"></div>
+    </div>
+    <div class="play">
+      <label>The same list in your Obsidian vault, kept in step both ways (<code>:mirror</code>). Tick something on the left and watch.</label>
+      <div class="md" id="ls-md"></div>
+      <p class="note">Each line ends with a block id (<code>^t12</code>) that ties it to its task, hidden in Obsidian's reading view. Marks are the Obsidian Tasks plugin's: 📅 due, ⏫ important, ✅ done. Edit, tick, add, reorder or delete lines in Obsidian and the app follows within two seconds.</p>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="feat">
+      <h3>Typed like you'd say it</h3>
+      <div class="tbl"><table>
+        <tr><th>You type</th><th>You get</th></tr>
+        <tr><td><code>call mom 6pm</code></td><td>today 18:00, with a reminder</td></tr>
+        <tr><td><code>pay rent fri</code></td><td>due Friday</td></tr>
+        <tr><td><code>by the 12th</code></td><td>the 12th (next month's if it's gone)</td></tr>
+        <tr><td><code>day after tomorrow at 4</code></td><td>in two days, 16:00</td></tr>
+        <tr><td><code>end of next week</code></td><td>next Friday</td></tr>
+        <tr><td><code>a week from friday</code></td><td>the Friday after this one</td></tr>
+        <tr><td><code>first monday of november</code></td><td>2 Nov</td></tr>
+        <tr><td><code>#home</code> · <code>!</code></td><td>a tag · important</td></tr>
+        <tr><td><code>shopping: eggs</code></td><td>into Shopping, from anywhere</td></tr>
+        <tr><td><code>buy 2 eggs</code></td><td>just that: a bare number isn't a time</td></tr>
+      </table></div>
+    </div>
+    <div class="feat">
+      <h3>Every key you know</h3>
+      <p><kbd>x</kbd> done · <kbd>e</kbd> edit · <kbd>t</kbd> when (<code>t fri 5pm</code>) · <kbd>!</kbd> important · <kbd>d</kbd> delete · <kbd>u</kbd> undo (anything, even a deleted list) · <kbd>J</kbd>/<kbd>K</kbd> reorder · <kbd>&gt;</kbd>/<kbd>&lt;</kbd> into or out of a checklist · <kbd>m</kbd> move to a list · <kbd>f</kbd> send to a chat · <kbd>Y</kbd> copy · <kbd>c</kbd> clear done.</p>
+      <pre class="scr"><span class="w-love">OVERDUE  1</span>
+ ☐ pay electricity bill  <span class="w-love">yesterday</span>
+<span class="w-iris">TODAY  2</span>
+<span class="w-rose">▌</span>☐ call mom <span class="w-love">!</span> <span class="w-foam">#family</span>  <span class="w-gold">⏰ 18:00</span>
+ ☐ Packing  <span style="color:var(--subtle)">▾ 1/3</span>
+     ☐ passport
+     <span style="color:var(--pine)">☑</span> <s style="color:var(--muted)">charger</s>
+<span style="color:var(--muted)">▸ DONE  4</span></pre>
+    </div>
+    <div class="feat">
+      <h3>Checklists</h3>
+      <p>Several lines make one: the first is its title. <kbd>enter</kbd> folds it, the count shows how far along it is, and <kbd>&gt;</kbd> tucks a task under the one above.</p>
+      <pre class="scr">Trip packing:
+- passport
+- [x] charger
+- sunscreen <span class="w-foam">#beach</span></pre>
+    </div>
+    <div class="feat">
+      <h3>Organised like chats</h3>
+      <p><kbd>P</kbd> pins a list under Today, <kbd>e</kbd> archives it, <kbd>d</kbd> deletes it (and <code>:undo</code> brings it back). <code>:list Shopping</code> makes one, <code>:rename</code>, <code>:icon 🛒</code>. <kbd>ctrl+p</kbd> finds lists by name; <kbd>ctrl+p</kbd> then <kbd>@</kbd> finds what's <i>in</i> them.</p>
+    </div>
+    <div class="feat">
+      <h3>📝 Notes</h3>
+      <p>A notebook holds pages: a title, then whatever you write, in the input box that grows to the whole pane (<kbd>enter</kbd> is a new line, <kbd>esc</kbd> saves). Headings, lists, <code>- [ ]</code> boxes and <code>code</code> show as such. Each page is a file in your vault.</p>
+    </div>
+    <div class="feat">
+      <h3>🔖 Saved · ☐ from messages</h3>
+      <p>In a chat, <kbd>v</kbd> then <kbd>b</kbd> keeps a message in 🔖 Saved; <kbd>T</kbd> makes it a task that remembers where it came from (<span class="w-iris">↩ Arjun</span>), and <kbd>enter</kbd> on it takes you back to the message.</p>
+    </div>
+    <div class="feat">
+      <h3>Lists you share</h3>
+      <p><code>:share</code> sends a list to a chat and keeps them linked: when someone there writes <code>done: eggs</code>, eggs is ticked off here.</p>
+      <pre class="scr"><span class="w-iris">Priya:</span> done: eggs
+<span style="color:var(--muted)">→ Priya ticked off “eggs” in Shopping</span></pre>
+    </div>
+    <div class="feat">
+      <h3>From the shell, or a key</h3>
+      <pre class="scr"><span class="w-rose">$</span> whatsapp-tui todo call mom 6pm '#family'
+Added: ☐ call mom #family  (today 18:00 · Inbox · #14)
+<span class="w-rose">$</span> whatsapp-tui todo
+☐ call mom #family  (today 18:00 · Inbox · #14)</pre>
+      <p><b>Super+Shift+T</b> opens a small floating prompt that shows what it reads as you type: <span class="mono"><span class="w-iris">→ Shopping</span> <span class="w-gold">📅 Fri 18:00</span> <span class="w-foam">#weekend</span></span>. Scripts get the same through the local API.</p>
+    </div>
+    <div class="feat">
+      <h3>Reminders</h3>
+      <p>A task with a time pings you when it's due, through the same notifications as your messages, even with the window closed.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ai">
+  <div class="eyebrow"><span class="badge b-iris">AI</span>qwen3:4b, on your own machine</div>
+  <h2>A small model that knows when to stay quiet.</h2>
+  <p class="intro">With Ollama and <code>qwen3:4b</code> (2.5 GB), a local model helps where rules can't. About a second per answer on a mid-range GPU, loaded only when you ask, gone from GPU memory two minutes later. Nothing leaves your machine. It never does the calendar sums small models get wrong: it copies the time words out, and the app's own parser turns them into dates. Every example below is its real answer, word for word (small models have quirks, which is why everything it suggests waits for your enter).</p>
+  <div class="grid">
+    <div class="feat">
+      <h3><kbd>T</kbd> a message, as a task</h3>
+      <div class="io">
+        <div class="in">Arjun: can you send me the slides before friday evening?</div>
+        <div class="arrow">↓ the :task line, filled in for you to check</div>
+        <div class="out">:task send slides to Arjun before friday evening
+<span style="color:var(--muted)">→</span> ☐ send slides to Arjun  <span class="w-gold">⏰ Fri 18:00</span>  <span class="w-iris">↩ Arjun</span></div>
+      </div>
+    </div>
+    <div class="feat">
+      <h3><code>:todos</code> what you owe a chat</h3>
+      <div class="io">
+        <div class="in">Priya: who's booking the cab for saturday?
+You: I'll do it tonight
+Ravi: also someone send me the wifi password
+Priya: thanks for the cake yesterday!
+Arjun: @You can you bring the projector to the lab on monday morning?</div>
+        <div class="arrow">↓ enter adds each to 📥 Inbox</div>
+        <div class="out">☐ Do cab booking for Saturday   <span class="w-gold">tonight</span> · You
+☐ Send wifi password            Ravi
+☐ Bring projector to lab        <span class="w-gold">monday morning</span> · Arjun</div>
+      </div>
+    </div>
+    <div class="feat">
+      <h3><code>:catchup</code> a busy chat, in a few lines</h3>
+      <div class="io">
+        <div class="in">Priya: dinner at 8 at Paradise?
+Ravi: I'm in
+Arjun: can't, exam tomorrow
+Priya: ok 7 of us then, booking
+Priya: @You you're coming right?</div>
+        <div class="arrow">↓</div>
+        <div class="out">• Priya confirms dinner at Paradise at 8 for 7 people
+• Ravi agrees to attend
+• Arjun can't attend due to exam
+• Priya asks if @You is coming
+☐ Reply to Priya about coming to dinner   <span style="color:var(--muted)">enter: a task</span></div>
+      </div>
+    </div>
+    <div class="feat">
+      <h3><code>:plan</code> my day</h3>
+      <div class="io">
+        <div class="in">10:00 · call mom at 18:00 · finish slides ! · gym · pay electricity bill</div>
+        <div class="arrow">↓ "use this plan" sets the times (u undoes)</div>
+        <div class="out">11:00  finish slides
+12:30  gym
+14:00  pay electricity bill
+18:00  call mom</div>
+      </div>
+    </div>
+    <div class="feat">
+      <h3>What it doesn't do</h3>
+      <p>Calendar sums. Asked which day "a week from friday" is, a 4B model is wrong most of the time (we tried, with and without examples). So it only copies the time words out of a message, and the app's own parser, which reads <code>a week from friday</code>, <code>first monday of november</code>, <code>two days before the 12th</code> and the rest, works out the date. Instantly, and right.</p>
+    </div>
+  </div>
+  </div>
 </section>
 
 <section id="always-on">
@@ -854,6 +1046,13 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
 
   /* ================= the live terminal ================= */
   const chats = [
+    { id: "today", name: "📋 Today", personal: true, unread: 3, time: "Tue 6 Oct", msgs: [], tsel: 0,
+      tasks: [
+        { t: "pay electricity bill", due: "yesterday", od: true, list: "Inbox" },
+        { t: "call mom", due: "⏰ 18:00", tags: ["family"], imp: true, list: "Inbox" },
+        { t: "send slides to Arjun", due: "⏰ Fri 18:00", from: "Arjun", list: "Work" },
+        { t: "gym", due: "today", done: true, list: "Health" },
+      ] },
     { id: "hostel", name: "Hostel 4th floor", group: true, unread: 3, at: true, time: "14:05",
       msgs: [
         { who: "Priya", c: "w-love", t: "dinner at 8? 🍛", time: "14:02" },
@@ -893,6 +1092,12 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     // list
     $("#t-list").innerHTML = chats.map((c, i) => {
       const cls = ["chat", c.unread ? "unread" : "", i === S.cursor && S.focus === "list" ? "cur" : "", S.open === i ? "open" : ""].join(" ");
+      if (c.personal) {
+        const open = c.tasks.filter((x) => !x.done).length, od = c.tasks.filter((x) => x.od && !x.done).length;
+        const pv = (od ? `${od} overdue · ` : "") + `${open - od} to do today · ${(c.tasks.find((x) => !x.done) || { t: "all done" }).t}`;
+        const cnt = open ? `<span class="cnt">${open}</span>` : `<span></span>`;
+        return `<div class="${cls}" data-i="${i}"><span class="n">📋 <b style="font-weight:600">Today</b> <span style="color:var(--muted)">📌</span></span><span class="t">${c.time}</span><span class="pv">${esc(pv)}</span>${cnt}</div>`;
+      }
       const last = c.msgs[c.msgs.length - 1];
       let pv = c.draft ? `<span class="draft">Draft:</span> ${esc(c.draft)}` : esc((last.me ? "You: " : (c.group ? last.who + ": " : "")) + last.t.split("\n")[0]);
       const cnt = c.unread ? `<span class="cnt${c.at ? " at" : ""}">${c.at ? "@ " : ""}${c.unread}</span>` : `<span></span>`;
@@ -901,7 +1106,24 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     // pane
     const c = S.open == null ? null : chats[S.open];
     $("#t-head").innerHTML = c ? `<span class="w-rose">${esc(c.name)}</span> <span class="k">${c.group ? "group" : "contact"}</span>` : `<span class="k">open a chat: j k, then enter</span>`;
-    if (c) {
+    if (c && c.personal) {
+      $("#t-head").innerHTML = `<span class="w-rose">${esc(c.name)}</span> <span class="k">due from all your lists</span>`;
+      const row = (x, i) => {
+        const sel = i === c.tsel && S.focus === "chat";
+        const box = x.done ? `<span style="color:var(--pine)">☑</span>` : x.imp ? `<span style="color:var(--love)">☐</span>` : `<span style="color:var(--subtle)">☐</span>`;
+        const txt = x.done ? `<s style="color:var(--muted)">${esc(x.t)}</s>` : esc(x.t) + (x.imp ? ` <b class="w-love">!</b>` : "");
+        const tags = (x.tags || []).map((g) => ` <span class="w-foam">#${esc(g)}</span>`).join("");
+        const meta = [x.from ? `<span class="w-iris">↩ ${esc(x.from)}</span>` : "", `<span style="color:var(--muted)">${esc(x.list || "")}</span>`,
+          x.done ? "" : `<span class="${x.od ? "w-love" : "w-gold"}">${esc(x.due || "")}</span>`].filter(Boolean).join("  ");
+        return `<div class="trow${sel ? " sel" : ""}" data-t="${i}">${sel ? "▌" : "&nbsp;"} ${box} ${txt}${tags}<span class="tm">${meta}</span></div>`;
+      };
+      const sec = (title, cond, color) => {
+        const idx = c.tasks.map((x, i) => [x, i]).filter(([x]) => cond(x));
+        return idx.length ? `<div class="tsec" style="color:${color}">${title}  ${idx.length}</div>` + idx.map(([x, i]) => row(x, i)).join("") : "";
+      };
+      $("#t-msgs").innerHTML = `<div class="tlist">` + sec("OVERDUE", (x) => x.od && !x.done, "var(--love)") + sec("TODAY", (x) => !x.od && !x.done && !x.up, "var(--iris)") +
+        sec("NEXT 7 DAYS", (x) => x.up && !x.done, "var(--iris)") + sec("DONE TODAY", (x) => x.done, "var(--muted)") + `</div>`;
+    } else if (c) {
       $("#t-msgs").innerHTML = `<span class="day">Today</span>` + c.msgs.map((m, i) => {
         const cls = ["b", m.me ? "me" : "", S.mode === "VISUAL" && i === S.sel ? "sel" : "", m.rx && m.rx.length ? "has-rx" : ""].join(" ");
         const who = !m.me && c.group ? `<div class="who ${m.c}">${esc(m.who)}</div>` : "";
@@ -919,7 +1141,8 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     $("#t-reply").innerHTML = S.reply ? `<div class="reply-bar"><b>▎↩ Replying to ${esc(S.reply.who || "You")}</b> <span style="color:var(--muted)">· ${esc(S.reply.t.split("\n")[0])}</span></div>` : "";
     const comp = $("#t-compose");
     comp.className = "compose" + (S.mode === "INSERT" ? " on" : "");
-    comp.innerHTML = S.mode === "INSERT" ? `❯ ${esc(S.typing)}<span class="caret"></span>` : (c && c.draft ? `❯ ${esc(c.draft)}` : `❯ <span class="ph2">press i to type a message</span>`);
+    comp.innerHTML = S.mode === "INSERT" ? `❯ ${esc(S.typing)}<span class="caret"></span>` : (c && c.draft ? `❯ ${esc(c.draft)}` :
+      `❯ <span class="ph2">${c && c.personal ? "i to add: call mom 6pm · pay rent fri ! · shopping: eggs" : "press i to type a message"}</span>`);
     // status
     const m = $("#t-mode"); m.textContent = S.over ? S.over.toUpperCase() : S.mode;
     m.className = "m" + (S.mode === "VISUAL" || S.over ? " visual" : S.mode === "INSERT" ? " insert" : "");
@@ -931,6 +1154,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
       else if (S.mode === "VISUAL") cmd = `j/k move · <span class="kk">enter</span> reply · <span class="kk">r</span> react · <span class="kk">w</span> who reacted · e edit · f forward · y copy · esc`;
       else if (S.mode === "INSERT") cmd = `type, <span class="kk">enter</span> sends · <span class="kk">esc</span> normal mode`;
       else if (S.focus === "list") cmd = `<span class="kk">ctrl+p</span> go to chat · <span class="kk">j k</span> move · <span class="kk">enter</span> open · <span class="kk">J</span> next unread · <span class="kk">?</span> help`;
+      else if (c && c.personal) cmd = `<span class="kk">i</span> add · <span class="kk">x</span> done · <span class="kk">j k</span> move · <span class="kk">d</span> delete · <span class="kk">u</span> undo · <span class="kk">h</span> chat list`;
       else cmd = `<span class="kk">v</span> select · <span class="kk">i</span> write · <span class="kk">h</span> chat list · <span class="kk">e</span> done · <span class="kk">?</span> help`;
     }
     $("#t-cmd").innerHTML = cmd;
@@ -960,9 +1184,9 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
       ].map(([k, d]) => `<div class="row"><span class="w-gold">${k}</span><span>${d}</span></div>`).join("") + `<p style="color:var(--muted);margin-top:10px">esc closes</p>`;
     } else if (S.over === "activity") {
       ov.hidden = false;
-      const items = [["Mon 14:06", "@ Ravi mentioned you in Hostel 4th floor:", "@you can you book Paradise?", "w-love", 0, 3],
-        ["Mon 14:05", "❤️ Priya reacted in Hostel 4th floor to:", "count me in", "w-gold", 0, 2],
-        ["Sun 22:12", "↩ Arjun replied in Arjun:", "send me the location of the apartment", "w-foam", 2, 0]];
+      const items = [["Mon 14:06", "@ Ravi mentioned you in Hostel 4th floor:", "@you can you book Paradise?", "w-love", 1, 3],
+        ["Mon 14:05", "❤️ Priya reacted in Hostel 4th floor to:", "count me in", "w-gold", 1, 2],
+        ["Sun 22:12", "↩ Arjun replied in Arjun:", "send me the location of the apartment", "w-foam", 3, 0]];
       ov.innerHTML = `<h4>Activity · mentions, replies and reactions to you</h4>` + items.map((it, i) =>
         `<div class="row${i === S.overSel ? " on" : ""}" style="grid-template-columns:6.5em 1fr"><span style="color:var(--muted)">${it[0]}</span><span><span class="${it[3]}">${esc(it[1])}</span> ${esc(it[2])}</span></div>`).join("") +
         `<p style="color:var(--muted);margin-top:10px">j k move · enter open · esc close</p>`;
@@ -982,7 +1206,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
   }
   function openChat(i) {
     S.open = i; S.focus = "chat"; S.mode = "NORMAL"; S.picker = false; S.reply = null;
-    chats[i].unread = 0; chats[i].at = false; S.notice = "";
+    if (!chats[i].personal) { chats[i].unread = 0; chats[i].at = false; } S.notice = "";
   }
   function flash(t) { S.notice = t; render(); clearTimeout(flash.t); flash.t = setTimeout(() => { S.notice = ""; render(); }, 2200); }
 
@@ -1021,6 +1245,17 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     if (S.mode === "INSERT") {
       const c = chats[S.open];
       if (k === "Escape") { S.mode = "NORMAL"; c.draft = S.typing; }
+      else if (k === "Enter" && c.personal) {
+        if (S.typing.trim()) {
+          const p = parseTask(S.typing, new Date(), ["Inbox", "Shopping", "Work"]);
+          const due = p.due ? (p.dueTime ? "⏰ " : "") + dueLabelJS(p.due, p.dueTime, new Date()) : "today";
+          c.tasks.splice(c.tasks.findIndex((x) => x.done) < 0 ? c.tasks.length : c.tasks.findIndex((x) => x.done), 0,
+            { t: p.text, due, tags: p.tags, imp: p.important, list: p.list || "Inbox", up: p.due && dayStart(p.due) > dayStart(new Date()) });
+          flash("Added " + p.text + (p.list ? " to " + p.list : "") + " · " + due);
+          S.typing = ""; c.unread = c.tasks.filter((x) => !x.done).length;
+        }
+        return;
+      }
       else if (k === "Enter") {
         if (S.typing.trim()) {
           c.msgs.push({ me: true, t: S.typing, time: "14:09", st: "□□", q: S.reply ? { who: S.reply.who || "You", t: S.reply.t } : null });
@@ -1062,16 +1297,27 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
       if (k === "j" || k === "ArrowDown") S.cursor = Math.min(S.cursor + 1, chats.length - 1);
       else if (k === "k" || k === "ArrowUp") S.cursor = Math.max(S.cursor - 1, 0);
       else if (k === "Enter" || k === "l") openChat(S.cursor);
-      else if (k === "J") { const n = chats.findIndex((c, i) => c.unread && i !== S.open); if (n >= 0) { S.cursor = n; openChat(n); } else flash("no unread chats: all caught up"); }
+      else if (k === "J") { const n = chats.findIndex((c, i) => c.unread && !c.personal && i !== S.open); if (n >= 0) { S.cursor = n; openChat(n); } else flash("no unread chats: all caught up"); }
       else if (k === "G") S.cursor = chats.length - 1;
       else if (k === "l" && S.open != null) S.focus = "chat";
     } else {
       const c = chats[S.open];
+      if (c.personal) {
+        const t = c.tasks[c.tsel];
+        if (k === "j" || k === "ArrowDown") c.tsel = Math.min(c.tsel + 1, c.tasks.length - 1);
+        else if (k === "k" || k === "ArrowUp") c.tsel = Math.max(c.tsel - 1, 0);
+        else if ((k === "x" || k === " ") && t) { t.done = !t.done; c.unread = c.tasks.filter((x) => !x.done).length; flash((t.done ? "Done: " : "Not done: ") + t.t + " · u undoes"); S._undo = () => { t.done = !t.done; c.unread = c.tasks.filter((x) => !x.done).length; }; return; }
+        else if (k === "d" && t) { const at = c.tasks.indexOf(t); c.tasks.splice(at, 1); c.tsel = Math.max(0, Math.min(c.tsel, c.tasks.length - 1)); flash("Deleted " + t.t + " · u undoes"); S._undo = () => c.tasks.splice(at, 0, t); return; }
+        else if (k === "u") { if (S._undo) { S._undo(); S._undo = null; flash("Undone"); } else flash("nothing to undo"); return; }
+        else if (k === "i" || k === "a") { S.mode = "INSERT"; S.typing = ""; }
+        else if (k === "h" || k === "q") { S.focus = "list"; }
+        return render();
+      }
       if (k === "h" || k === "q") { S.focus = "list"; }
       else if (k === "v") { S.mode = "VISUAL"; S.sel = c.msgs.length - 1; }
       else if (k === "i" || k === "Enter") { S.mode = "INSERT"; S.typing = c.draft || ""; }
-      else if (k === "J") { const n = chats.findIndex((x, i) => x.unread && i !== S.open); if (n >= 0) { S.cursor = n; openChat(n); } else flash("no unread chats: all caught up"); }
-      else if (k === "e") { const name = c.name; const n = chats.findIndex((x, i) => x.unread && i !== S.open); if (n >= 0) { S.cursor = n; openChat(n); flash("Done with " + name + " (archived) · next unread"); return; } S.focus = "list"; flash("Done with " + name + " · no more unread chats"); return; }
+      else if (k === "J") { const n = chats.findIndex((x, i) => x.unread && !x.personal && i !== S.open); if (n >= 0) { S.cursor = n; openChat(n); } else flash("no unread chats: all caught up"); }
+      else if (k === "e") { const name = c.name; const n = chats.findIndex((x, i) => x.unread && !x.personal && i !== S.open); if (n >= 0) { S.cursor = n; openChat(n); flash("Done with " + name + " (archived) · next unread"); return; } S.focus = "list"; flash("Done with " + name + " · no more unread chats"); return; }
       else if (k === "U") { c.unread = 1; S.focus = "list"; flash("Marked " + c.name + " unread"); return; }
     }
     render();
@@ -1084,6 +1330,8 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
   });
   document.querySelectorAll(".keys [data-key]").forEach((b) => b.addEventListener("click", () => { key(b.dataset.key); }));
   term.addEventListener("click", (e) => {
+    const tr = e.target.closest(".trow");
+    if (tr && S.open != null && chats[S.open].personal) { const c = chats[S.open]; c.tsel = +tr.dataset.t; S.focus = "chat"; key("x"); return; }
     const ch = e.target.closest(".chat");
     if (ch) { S.cursor = +ch.dataset.i; openChat(S.cursor); render(); }
   });
@@ -1096,13 +1344,14 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     if (b && S.open != null) { e.preventDefault(); S.mode = "VISUAL"; S.sel = +b.dataset.m; S.picker = true; render(); }
   });
   // start in a chat with something to look at
-  openChat(0); S.focus = "chat"; S.cursor = 0;
+  openChat(1); S.focus = "chat"; S.cursor = 1;
   render();
 
   /* ================= time phrases (port of internal/when) ================= */
   const WD = { sun: 0, sunday: 0, mon: 1, monday: 1, tue: 2, tues: 2, tuesday: 2, wed: 3, wednesday: 3, thu: 4, thur: 4, thurs: 4, thursday: 4, fri: 5, friday: 5, sat: 6, saturday: 6 };
   const MON = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, sept: 8, oct: 9, nov: 10, dec: 11, january: 0, february: 1, march: 2, april: 3, june: 5, july: 6, august: 7, september: 8, october: 9, november: 10, december: 11 };
-  const NAMED = { noon: 12, midnight: 0, morning: 9, afternoon: 14, evening: 18, tonight: 20, eod: 18, "end of day": 18 };
+  const NAMED = { noon: 12, midnight: 0, morning: 9, afternoon: 14, evening: 18, tonight: 20, eod: 18, "end of day": 18, night: 21, lunch: 13 };
+  const LEAD = new Set(["by", "before", "on", "at", "till", "until", "due", "around", "about", "latest"]);
   const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, d.getHours(), d.getMinutes());
   function clock(s) {
@@ -1119,8 +1368,13 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
   }
   function parseWhen(input, now) {
     let s = input.toLowerCase().trim().split(/\s+/).join(" ");
-    s = s.replace("half an hour", "30m").replace("an hour", "1h").replace("a minute", "1m").replace("a day", "1d").replace("a week", "1w");
+    s = s.replace("half an hour", "30m").replace("an hour", "1h").replace("a minute", "1m").replace("a day", "1d").replace("a week", "1w")
+      .replace("a fortnight", "2w").replace("fortnight", "2w").replace("overmorrow", "day after tomorrow");
+    s = s.replace(/\bat\s+([1-7])$/, "at $1pm"); // "at 4" is the afternoon
+    for (let w = s.split(" ")[0]; s.includes(" ") && LEAD.has(w); w = s.split(" ")[0]) s = s.slice(w.length + 1);
     if (!s) return null;
+    const rel = relativeDay(s, now);
+    if (rel !== undefined) return rel;
     if (/^(?:in\s+)?((?:\d+\s*(?:w|wks?|weeks?|d|days?|h|hrs?|hours?|m|mins?|minutes?)\s*)+)$/.test(s)) {
       let ms = 0; const re = /(\d+)\s*(w|wks?|weeks?|d|days?|h|hrs?|hours?|m|mins?|minutes?)/g; let p;
       while ((p = re.exec(s))) { const n = +p[1]; ms += n * ({ w: 6048e5, d: 864e5, h: 36e5, m: 6e4 })[p[2][0]]; }
@@ -1156,6 +1410,110 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     if (t <= now) t = addDays(t, weekday ? 7 : 1);
     return t;
   }
+  // "day after tomorrow", "the 12th", "last friday of the month", "end of next week" (internal/when)
+  function relativeDay(s, now) {
+    const today = dayStart(now);
+    const at = (day, rest, hour) => {
+      let h = hour, mi = 0; rest = (rest || "").trim().replace(/^at /, "");
+      if (rest) { const c = clock(rest); if (!c) return null; [h, mi] = c; }
+      const t = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, mi);
+      return t > now ? t : "passed";
+    };
+    let m;
+    if ((m = /^(a|an|one|two|three|four|five|six|seven|ten|\d+)\s*(d|days?|w|weeks?)\s+(after|from|before)\s+(.+)$/.exec(s))) {
+      let n = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, ten: 10 }[m[1]] || +m[1];
+      if (m[2].startsWith("w")) n *= 7; if (m[3] === "before") n = -n;
+      const base = parseWhen(m[4], now); if (!base || base === "passed") return base;
+      const t = addDays(base, n); return t > now ? t : "passed";
+    }
+    if ((m = /^(first|second|third|fourth|last|1st|2nd|3rd|4th)\s+([a-z]+)\s+(?:of|in)\s+([a-z]+)\b\s*(.*)$/.exec(s)) && m[2] in WD && m[3] in MON) {
+      const mo = MON[m[3]], y = now.getFullYear() + (mo < now.getMonth() ? 1 : 0);
+      const nth = { first: 1, "1st": 1, second: 2, "2nd": 2, third: 3, "3rd": 3, fourth: 4, "4th": 4, last: -1 }[m[1]];
+      let d;
+      if (nth > 0) { d = new Date(y, mo, 1); while (d.getDay() !== WD[m[2]]) d = addDays(d, 1); d = addDays(d, 7 * (nth - 1)); }
+      else { d = new Date(y, mo + 1, 0); while (d.getDay() !== WD[m[2]]) d = addDays(d, -1); }
+      return at(d, m[4], 9);
+    }
+    if ((m = /^(?:the\s+)?([a-z]+)\s+after\s+next\b\s*(.*)$/.exec(s)) && (m[1] in WD || m[1] === "weekend")) {
+      const tgt = m[1] === "weekend" ? 6 : WD[m[1]]; let days = (tgt - now.getDay() + 7) % 7 || 7;
+      return at(addDays(today, days + 7), m[2], 9);
+    }
+    if (s.startsWith("day after tomorrow")) return at(addDays(today, 2), s.slice(18), 9);
+    if ((m = /^(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)\b\s*(.*)$/.exec(s)) && !(m[2].split(" ")[0] in MON) && m[2].split(" ")[0] !== "of") {
+      const d = +m[1]; if (d < 1 || d > 31) return undefined;
+      let day = new Date(now.getFullYear(), now.getMonth(), d);
+      if (day.getDate() !== d || day < today) day = new Date(now.getFullYear(), now.getMonth() + 1, d);
+      return at(day, m[2], 9);
+    }
+    if ((m = /^last\s+([a-z]+)\s+of\s+(?:the|this)\s+month\b\s*(.*)$/.exec(s))) {
+      let d = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      if (m[1] !== "day") { if (!(m[1] in WD)) return undefined; while (d.getDay() !== WD[m[1]]) d = addDays(d, -1); }
+      return at(d, m[2], 9);
+    }
+    if ((m = /^end\s+of\s+(?:the\s+)?(this\s+week|next\s+week|week|this\s+month|month)\b\s*(.*)$/.exec(s))) {
+      let day;
+      if (m[1].endsWith("month")) day = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      else { day = addDays(today, (5 - now.getDay() + 7) % 7); if (m[1].startsWith("next")) day = addDays(day, 7); }
+      return at(day, m[2], 18);
+    }
+    return undefined;
+  }
+
+  /* ================= tasks typed as you'd say them (port of internal/personal) ================= */
+  const AMBIG = new Set(["sun", "sat", "wed", "mon", "thu", "tue", "tues", "thur", "thurs", "may", "march"]);
+  const CLOCKRE = /\d\s*(am|pm|a|p)\b|\d:\d\d|\b(noon|midnight|morning|afternoon|evening|tonight|night|lunch|eod|end of day)\b|\bat\s+\d{1,2}$|^(in\s+)?\d+\s*(m|min|mins|minutes?|h|hrs?|hours?)\b/;
+  function readDate(words, now, sure) {
+    if (words.length > 1 && LEAD.has(words[0])) { words = words.slice(1); sure = true; }
+    let phrase = words.join(" ");
+    if (!sure) {
+      if (words.length === 1 && (/^\d+$/.test(words[0]) || AMBIG.has(words[0]))) return null;
+      if (words.length > 1 && AMBIG.has(words[0]) && !CLOCKRE.test(phrase)) return null;
+    }
+    const last = words[words.length - 1];
+    const hasTime = CLOCKRE.test(phrase) || (sure && /^\d+$/.test(last));
+    if (sure && /^[1-7]$/.test(last)) phrase += "pm";
+    const from = hasTime ? now : dayStart(now);
+    let t = parseWhen(phrase, from);
+    if (!t || t === "passed") return null;
+    if (!hasTime) t = dayStart(t);
+    return { t, hasTime };
+  }
+  function parseTask(text, now, lists) {
+    const lines = text.trim().split("\n");
+    let line = lines[0].trim(), list = "";
+    const tags = []; line = line.replace(/(^|\s)#([\p{L}\p{N}_\-\/]+)/gu, (_, a, t) => { tags.push(t.toLowerCase()); return " "; }).trim();
+    let words = line.split(/\s+/).filter(Boolean), important = false;
+    words = words.filter((w) => (w.replace(/!/g, "") === "" ? ((important = true), false) : true));
+    const low = (ws) => ws.map((w) => w.toLowerCase().replace(/^[,.?;]+|[,.?;]+$/g, ""));
+    let due = null, dueTime = false;
+    for (let n = Math.min(5, words.length - 1); n >= 1 && !due; n--) {
+      const before = words[words.length - n - 1].toLowerCase();
+      const r = readDate(low(words.slice(words.length - n)), now, LEAD.has(before) || before === "next" || before === "this");
+      if (r) { due = r.t; dueTime = r.hasTime; let cut = n; if (LEAD.has(before) && words.length - n - 1 > 0) cut++; words = words.slice(0, words.length - cut); }
+    }
+    for (let n = Math.min(5, words.length - 1); n >= 1 && !due; n--) {
+      const lead = LEAD.has(words[0].toLowerCase()) ? 1 : 0;
+      if (n + lead >= words.length) continue;
+      const r = readDate(low(words.slice(lead, lead + n)), now, lead === 1);
+      if (r) { due = r.t; dueTime = r.hasTime; words = words.slice(n + lead); }
+    }
+    let txt = words.join(" ");
+    const c = txt.indexOf(":");
+    if (c > 0 && txt.slice(c + 1).trim()) { const name = txt.slice(0, c).trim(); const hit = lists.find((l) => l.toLowerCase() === name.toLowerCase()); if (hit) { list = hit; txt = txt.slice(c + 1).trim(); } }
+    const items = lines.slice(1).filter((l) => l.trim()).map((l) => { const m = /^\s*(?:[-*•]\s+)?(?:\[( |x|X)\]\s*)?(.*)$/.exec(l); return { text: m[2].trim(), done: !!m[1] && m[1] !== " " }; });
+    if (items.length) txt = txt.replace(/:$/, "");
+    return { text: txt, due, dueTime, important, tags, list, items };
+  }
+  function dueLabelJS(t, hasTime, now) {
+    const days = Math.round((dayStart(t) - dayStart(now)) / 864e5);
+    let day = t.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    if (days === 0) day = "today"; else if (days === 1) day = "tomorrow"; else if (days === -1) day = "yesterday";
+    else if (days > 1 && days < 7) day = t.toLocaleDateString("en-GB", { weekday: "short" });
+    const hm = t.toTimeString().slice(0, 5);
+    if (!hasTime) return day;
+    return days === 0 ? hm : day + " " + hm;
+  }
+
   function describe(t, now) {
     const days = Math.round((dayStart(t) - dayStart(now)) / 864e5);
     const hm = t.toTimeString().slice(0, 5);
@@ -1169,10 +1527,10 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
   function runTime() {
     const now = new Date(), r = parseWhen(tp.value, now);
     if (r === "passed") tpOut.innerHTML = `<span class="bad">that time has passed</span>`;
-    else if (!r) tpOut.innerHTML = `<span class="bad">not a time I understand: try 9am, 21:30, tomorrow 9am, in 2h, fri 5pm, next week, 12 oct 3pm or tonight</span>`;
+    else if (!r) tpOut.innerHTML = `<span class="bad">not a time I understand: try 9am, 21:30, tomorrow 9am, in 2h, fri 5pm, next week, 12 oct 3pm or tonight (the local model can guess the rest)</span>`;
     else tpOut.innerHTML = `<span class="ok">Will send to Priya ${describe(r, now)}</span><br><span style="color:var(--muted)">${r.toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>`;
   }
-  ["9am", "tonight", "in an hour", "tomorrow 9:30", "fri 5pm", "next week", "weekend", "eod", "12 oct 3pm", "12/10", "in 2 weeks", "00:35am"].forEach((x) => {
+  ["9am", "tonight", "in an hour", "tomorrow 9:30", "fri 5pm", "next week", "day after tomorrow at 4", "by the 12th", "a week from friday", "first monday of november", "the weekend after next", "two days before the 12th", "12 oct 3pm", "00:35am"].forEach((x) => {
     const b = document.createElement("button"); b.className = "chip"; b.textContent = x; b.type = "button";
     b.addEventListener("click", () => { tp.value = x; runTime(); }); $("#tp-chips").appendChild(b);
   });
@@ -1333,6 +1691,96 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     b.addEventListener("click", () => { $("#pq").value = x; pSel = 0; $("#pq-done").textContent = ""; runPalette(); $("#pq").focus(); }); $("#pq-chips").appendChild(b);
   });
   runPalette();
+
+  /* ================= your own space: the list demo ================= */
+  const LISTS = {
+    "📥 Inbox": [{ t: "pay electricity bill", due: addDays(new Date(), -1), dt: false }, { t: "renew passport", imp: true }],
+    "🛒 Shopping": [{ t: "eggs" }, { t: "milk", tags: ["dairy"] }, { t: "coffee beans", done: true }],
+    "✈️ Trip": [{ t: "book train tickets", due: addDays(dayStart(new Date()), 3), dt: false, imp: true },
+      { t: "Packing", kids: [{ t: "passport" }, { t: "charger", done: true }, { t: "sunscreen", tags: ["beach"] }] }],
+  };
+  let lsCur = "📥 Inbox", lsId = 11, lsFlash = null;
+  for (const name in LISTS) for (const it of LISTS[name]) { it.id = lsId++; for (const k of it.kids || []) k.id = lsId++; }
+  function lsTodayList() {
+    const now = new Date(), end = addDays(dayStart(now), 1), out = [];
+    for (const name in LISTS) for (const it of LISTS[name]) if (it.due && it.due < end && !it.done) out.push({ ...it, list: name.split(" ").slice(1).join(" "), ref: it });
+    return out;
+  }
+  function lsRender() {
+    const now = new Date(), today = dayStart(now);
+    $("#ls-tabs").innerHTML = ["📋 Today", ...Object.keys(LISTS)].map((n) => {
+      const c = n === "📋 Today" ? lsTodayList().length : LISTS[n].filter((x) => !x.done).length;
+      return `<button type="button" class="ls-tab${n === lsCur ? " on" : ""}" data-n="${esc(n)}">${esc(n)}<span class="c">${c || ""}</span></button>`;
+    }).join("");
+    const items = lsCur === "📋 Today" ? lsTodayList() : LISTS[lsCur];
+    const od = (x) => x.due && !x.done && (x.dt ? x.due < now : x.due < today);
+    const row = (x, kid) => {
+      const tags = (x.tags || []).map((g) => ` <span class="tg">#${esc(g)}</span>`).join("");
+      const kids = x.kids ? ` <span style="color:var(--subtle)">▾ ${x.kids.filter((k) => k.done).length}/${x.kids.length}</span>` : "";
+      const d = x.due && !x.done ? `<span class="d${od(x) ? " od" : ""}">${x.dt ? "⏰ " : ""}${esc(dueLabelJS(x.due, x.dt, now))}</span>` : "";
+      const meta = [x.list ? esc(x.list) : "", d].filter(Boolean).join("  ");
+      return `<div class="ls-row${x.done ? " done" : ""}${kid ? " kid" : ""}${lsFlash === x.id ? " flash-row" : ""}" data-id="${x.id}">` +
+        `<span class="bx${x.imp ? " imp" : ""}" data-tick="${x.id}">${x.done ? "☑" : "☐"}</span><span class="tx">${esc(x.t)}</span>` +
+        `${x.imp && !x.done ? '<span class="im">!</span>' : ""}${tags}${kids}<span class="meta">${meta}</span><span class="del" data-del="${x.id}" title="delete">✕</span></div>` +
+        (x.kids || []).map((k) => row(k, true)).join("");
+    };
+    const sec = (title, cls, list) => list.length ? `<div class="ls-sec ${cls}">${title}  ${list.length}</div>` + list.map((x) => row(x)).join("") : "";
+    const byDue = (a, b) => a.due - b.due, end = addDays(today, 1);
+    let html;
+    if (lsCur === "📋 Today") html = sec("OVERDUE", "od", items.filter(od)) + sec("TODAY", "", items.filter((x) => !od(x)).sort(byDue));
+    else html = sec("OVERDUE", "od", items.filter(od)) + sec("TODAY", "", items.filter((x) => x.due && !x.done && !od(x) && x.due < end).sort(byDue)) +
+      sec("UPCOMING", "", items.filter((x) => x.due && !x.done && x.due >= end).sort(byDue)) + sec("SOMEDAY", "", items.filter((x) => !x.due && !x.done)) +
+      sec("DONE", "dn", items.filter((x) => x.done));
+    $("#ls").innerHTML = html || `<div style="color:var(--muted);padding:6px">${lsCur === "📋 Today" ? "Nothing due today. Tasks with a date, from any list, show up here." : "Empty. Type a task above."}</div>`;
+    lsMarkdown();
+  }
+  function lsMarkdown() {
+    const name = lsCur === "📋 Today" ? "📥 Inbox" : lsCur, [icon, ...rest] = name.split(" ");
+    const fmtDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const line = (x, kid) => {
+      let s = `${kid ? "\t" : ""}- [${x.done ? "x" : " "}] ${esc(x.t)}` + (x.tags || []).map((g) => " #" + esc(g)).join("") + (x.imp ? " ⏫" : "");
+      if (x.due) s += ` <span class="em">📅 ${fmtDay(x.due)}</span>` + (x.dt ? ` <span class="em">⏰ ${x.due.toTimeString().slice(0, 5)}</span>` : "");
+      if (x.done) s += ` <span class="em">✅ ${fmtDay(new Date())}</span>`;
+      return s + ` <span class="bid">^t${x.id}</span>\n` + (x.kids || []).map((k) => line(k, true)).join("");
+    };
+    $("#ls-md").innerHTML = `<span class="fm">WhatsApp TUI/${esc(rest.join(" "))}.md\n---\nlist-id: ${Object.keys(LISTS).indexOf(name) + 1}\nicon: ${icon}\n---</span>\n` + LISTS[name].map((x) => line(x)).join("");
+  }
+  function lsFind(id) {
+    for (const name in LISTS) for (const x of LISTS[name]) { if (x.id === id) return [LISTS[name], x]; for (const k of x.kids || []) if (k.id === id) return [x.kids, k]; }
+    return [null, null];
+  }
+  function lsPreview() {
+    const v = $("#lq").value.trim(), out = $("#ls-pre");
+    if (!v) { out.innerHTML = `<span class="q">type a task: call mom 6pm #family ! · shopping: eggs · pay rent by the 12th</span>`; return; }
+    const p = parseTask(v, new Date(), Object.keys(LISTS).map((n) => n.split(" ").slice(1).join(" ")));
+    const list = p.list || (lsCur === "📋 Today" ? "Inbox" : lsCur.split(" ").slice(1).join(" "));
+    out.innerHTML = `<span class="l">→ ${esc(list)}</span>` + (p.due ? `<span class="d">📅 ${esc(dueLabelJS(p.due, p.dueTime, new Date()))}${p.dueTime ? "" : ""}</span>` : lsCur === "📋 Today" ? `<span class="d">📅 today</span>` : "") +
+      p.tags.map((t) => `<span class="t">#${esc(t)}</span>`).join("") + (p.important ? `<span class="i">! important</span>` : "") + `<span class="q">“${esc(p.text)}”</span>`;
+  }
+  function lsAdd() {
+    const v = $("#lq").value.trim(); if (!v) return;
+    const p = parseTask(v, new Date(), Object.keys(LISTS).map((n) => n.split(" ").slice(1).join(" ")));
+    if (!p.text) return;
+    let target = p.list ? Object.keys(LISTS).find((n) => n.endsWith(" " + p.list)) : (lsCur === "📋 Today" ? "📥 Inbox" : lsCur);
+    let due = p.due; if (!due && lsCur === "📋 Today" && !p.list) due = dayStart(new Date());
+    const it = { id: lsId++, t: p.text, tags: p.tags, imp: p.important, due: due || undefined, dt: p.dueTime };
+    LISTS[target].push(it); lsFlash = it.id;
+    if (lsCur !== "📋 Today" || !due || due >= addDays(dayStart(new Date()), 1)) lsCur = target;
+    $("#lq").value = ""; lsPreview(); lsRender();
+  }
+  $("#ls-tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-n]"); if (b) { lsCur = b.dataset.n; lsRender(); lsPreview(); } });
+  $("#ls").addEventListener("click", (e) => {
+    const t = e.target.closest("[data-tick]"), d = e.target.closest("[data-del]");
+    if (t) { const [, x] = lsFind(+t.dataset.tick); if (x) { x.done = !x.done; lsFlash = x.id; lsRender(); } }
+    if (d) { const [arr, x] = lsFind(+d.dataset.del); if (arr) { arr.splice(arr.indexOf(x), 1); lsRender(); } }
+  });
+  $("#lq").addEventListener("input", lsPreview);
+  $("#lq").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); lsAdd(); } });
+  ["call mom 6pm #family !", "pay rent by the 12th", "shopping: oat milk", "dentist fri 10am", "submit report end of next week", "buy 2 eggs"].forEach((x) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = x;
+    b.addEventListener("click", () => { $("#lq").value = x; lsPreview(); $("#lq").focus(); }); $("#ls-chips").appendChild(b);
+  });
+  lsPreview(); lsRender();
   /* ================= speed chart (log scale, measured numbers) ================= */
   const rows = [
     ["Redraw after a change", 66, 0.35], ["j in visual mode", 69, 0.84], ["A new message", 70, 0.65],
@@ -1376,6 +1824,16 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["palette", "F1 · ctrl+shift+p", "every command, by name"], ["palette", "> · #", "in ctrl+p: commands · search messages"],
     ["palette", "enter · alt+enter", "open · open beside (split view)"], ["palette", "ctrl+f", "find in this chat"],
     ["palette", "F3 · shift+F3", "next · previous match"], ["palette", "ctrl+shift+f", "search messages in every chat"],
+    ["lists", "i then type", "add a task: call mom 6pm #family !, shopping: eggs"], ["lists", "x · e · d · u", "done · edit · delete · undo"],
+    ["lists", "t · !", "when (t tomorrow 9am) · important"], ["lists", "J K · > <", "reorder · into / out of a checklist"],
+    ["lists", "enter", "fold a checklist · open a page · go to a saved message"], ["lists", "m · f · Y · c", "move to a list · send to a chat · copy · clear done"],
+    ["lists", "P · e · d", "on a list in the chat list: pin · archive · delete"], ["lists", "ctrl+p @", "find in your tasks, notes and saved messages"],
+    ["visual", "T · b", "make a task of the message · save it to 🔖 Saved"],
+    ["command", ":task <text>", "add a task from anywhere"], ["command", ":list · :notebook <name>", "open (or make) a list · a notebook"],
+    ["command", ":note <title>", "add a note page"], ["command", ":rename · :icon · :deletelist", "the open list"],
+    ["command", ":share · :unshare", "link a list to a chat (done: eggs ticks it)"], ["command", ":mirror <folder> · off", "mirror lists and notes to Obsidian"],
+    ["ai", ":todos", "the to-dos in this chat (local model)"], ["ai", ":catchup", "what was said, and what's waiting on you"],
+    ["ai", ":plan", "times for today's tasks"], ["ai", "T", "a message worded as a task, with its date"],
     ["list", "j k · gg G", "move · top / bottom"], ["list", "ctrl+d ctrl+u", "half a page"], ["list", "enter / l", "open the chat"],
     ["list", "/", "filter chats and contacts by name or number; enter opens"], ["list", "S", "search messages in every chat"], ["list", "u", "only unread chats"],
     ["list", "A", "archived chats"], ["list", "K", "chat info: description, members, picture"], ["list", "V", "profile picture, full screen"],
@@ -1406,7 +1864,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["command", ":download-dir [dir]", "show or change where downloads go"], ["command", ":q · :q!", "close the window (keeps running) · quit for real"],
     ["command", ":logout", "unlink this device"],
   ];
-  const ctxs = ["all", "palette", "list", "triage", "chat", "write", "visual", "command"];
+  const ctxs = ["all", "palette", "lists", "ai", "list", "triage", "chat", "write", "visual", "command"];
   let ctx = "all";
   const kctx = $("#kctx");
   ctxs.forEach((c) => { const b = document.createElement("button"); b.type = "button"; b.className = "chip" + (c === "all" ? " on" : ""); b.textContent = c; b.addEventListener("click", () => { ctx = c; kctx.querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", x === b)); runKeys(); }); kctx.appendChild(b); });
