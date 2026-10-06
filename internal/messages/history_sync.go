@@ -323,21 +323,13 @@ func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
 				updated = true
 			}
 
-			// Always adopt pinned status from authoritative source
-			if isPinned != existingConv.IsPinned {
-				existingConv.IsPinned = isPinned
-				updated = true
-			}
+			// Pinned, archived and muted come from the app state sync
+			// (events.Pin/Archive/Mute) for chats we know: on-demand history
+			// replies don't carry them, and would unpin everything
 
 			// Prefer history unread count if it's higher
 			if unreadCount > existingConv.Unread {
 				existingConv.Unread = unreadCount
-				updated = true
-			}
-
-			// Adopt archived status from authoritative source
-			if isArchived != existingConv.IsArchived {
-				existingConv.IsArchived = isArchived
 				updated = true
 			}
 
@@ -359,6 +351,7 @@ func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
 				Unread:      unreadCount,
 				IsPinned:    isPinned,
 				IsArchived:  isArchived,
+				MutedUntil:  muteUntil(int64(conv.GetMuteEndTime())), // huge values (always) wrap negative
 			}
 			heap.Push(&sm.priorityQueue, newConv)
 			sm.convByJID[jidStr] = newConv
@@ -418,4 +411,16 @@ func (sm *SessionManager) loadRecentMessages(chatJID string) {
 		screen := sm.getMessages(chatJID)
 		sm.uiHandler.NewScreen(screen)
 	}
+}
+
+// muteUntil reads a mute end time (seconds or milliseconds; very large or
+// negative means always) as MutedUntil.
+func muteUntil(end int64) int64 {
+	switch {
+	case end < 0 || end > 1e15:
+		return -1
+	case end > 1e12:
+		return end / 1000
+	}
+	return end
 }

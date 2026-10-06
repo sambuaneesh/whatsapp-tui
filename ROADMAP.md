@@ -123,6 +123,12 @@ Results (before → after):
 - [x] Animated stickers and GIFs rendered striped (fixed by the image
       changes in the efficiency pass; confirm in the tray)
 
+- [x] Pinned chats weren't kept on top, and pins/archives/mutes from the
+      phone were never applied (the initial app-state sync emitted no
+      events; on-demand history also unpinned chats)
+- [x] Muted chats notified: mutes are now synced, shown (🔕, grey count)
+      and respected, except mentions of you
+
 ## Notes
 
 - Some people report bans for using unofficial WhatsApp clients: anything

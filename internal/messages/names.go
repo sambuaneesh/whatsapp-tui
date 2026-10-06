@@ -200,6 +200,10 @@ func (sm *SessionManager) syncContacts() {
 	} else {
 		sm.debugf("archive/pin/read sync done")
 	}
+	// mutes live in regular_high
+	if err := sm.fetchAppState(ctx, appstate.WAPatchRegularHigh); err != nil {
+		sm.debugf("mute sync failed: %v", err)
+	}
 	if err := sm.fetchAppState(ctx, appstate.WAPatchCriticalUnblockLow); err != nil {
 		sm.debugf("contact sync failed: %v", err)
 		sm.mu.Lock()

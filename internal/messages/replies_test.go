@@ -150,3 +150,28 @@ func TestGroupNameFromCacheAndRename(t *testing.T) {
 		t.Fatalf("after rename: %q", got)
 	}
 }
+
+func TestMuteEventsAndTimes(t *testing.T) {
+	sm := &SessionManager{uiHandler: NewMockUiHandler(), db: newTestDB(t), convByJID: map[string]*Conversation{
+		"123@g.us": {JID: "123@g.us", Name: "Hostel"},
+	}}
+	g := types.NewJID("123", types.GroupServer)
+	sm.setChatMute(g, true, 1_900_000_000_000) // ms, as app state sends it
+	if c := sm.convByJID["123@g.us"]; c.MutedUntil != 1_900_000_000 || !c.Muted(1_800_000_000) || c.Muted(1_950_000_000) {
+		t.Fatalf("muted until %d", c.MutedUntil)
+	}
+	sm.setChatMute(g, true, -1) // always
+	if c := sm.convByJID["123@g.us"]; c.MutedUntil != -1 || !c.Muted(4_000_000_000) {
+		t.Fatalf("always: %d", c.MutedUntil)
+	}
+	sm.setChatMute(g, false, 0)
+	if c := sm.convByJID["123@g.us"]; c.MutedUntil != 0 || c.Muted(1) {
+		t.Fatalf("unmuted: %d", c.MutedUntil)
+	}
+	// stored
+	sm.setChatMute(g, true, 0)
+	cs, _ := sm.db.GetConversations()
+	if len(cs) != 1 || cs[0].MutedUntil != -1 {
+		t.Fatalf("stored %+v", cs)
+	}
+}

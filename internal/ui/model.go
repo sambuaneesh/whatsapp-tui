@@ -306,6 +306,9 @@ func (m Model) dispatch(name string, params ...string) tea.Cmd {
 // sortChats orders chats by their latest message, newest first.
 func sortChats(cs []*messages.Conversation) {
 	sort.SliceStable(cs, func(i, j int) bool {
+		if cs[i].IsPinned != cs[j].IsPinned {
+			return cs[i].IsPinned // pinned chats stay on top, like on the phone
+		}
 		if cs[i].LastMsgTime != cs[j].LastMsgTime {
 			return cs[i].LastMsgTime > cs[j].LastMsgTime
 		}

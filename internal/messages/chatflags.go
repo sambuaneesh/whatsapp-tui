@@ -121,3 +121,30 @@ func (sm *SessionManager) Drafts() map[string]string {
 	}
 	return d
 }
+
+// setChatMute records a chat muted (until a time, or always) or unmuted
+// on any of your devices.
+func (sm *SessionManager) setChatMute(jid types.JID, muted bool, end int64) {
+	jid = sm.pnForLID(context.Background(), jid.ToNonAD())
+	key := jid.String()
+	until := int64(0)
+	if muted {
+		until = muteUntil(end)
+		if end == 0 {
+			until = -1
+		}
+	}
+	sm.mu.Lock()
+	conv := sm.convByJID[key]
+	if conv == nil || conv.MutedUntil == until {
+		sm.mu.Unlock()
+		return
+	}
+	conv.MutedUntil = until
+	c := *conv
+	sm.mu.Unlock()
+	if err := sm.db.UpsertConversation(c); err != nil {
+		sm.debugf("save mute for %s: %v", key, err)
+	}
+	sm.scheduleListPush()
+}

@@ -49,6 +49,7 @@ func (md *MessageDatabase) InitWithDB(db *sql.DB) error {
 	// Backward-compatible migration: add is_archived column for existing databases.
 	// SQLite ignores the ALTER if the column already exists when using this pattern.
 	md.db.Exec(`ALTER TABLE conversations ADD COLUMN is_archived BOOLEAN DEFAULT 0`)
+	md.db.Exec(`ALTER TABLE conversations ADD COLUMN muted_until INTEGER DEFAULT 0`)
 	md.db.Exec(`ALTER TABLE conversations ADD COLUMN mentioned BOOLEAN DEFAULT 0`)
 
 	_, err = md.db.Exec(`
@@ -203,8 +204,8 @@ func (md *MessageDatabase) AddMessages(msgs []Message) (failed int, err error) {
 // UpsertConversation updates or inserts a conversation
 func (md *MessageDatabase) UpsertConversation(c Conversation) error {
 	_, err := md.db.Exec(`
-	INSERT INTO conversations (jid, name, last_msg_time, preview, unread, is_pinned, is_archived, mentioned)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO conversations (jid, name, last_msg_time, preview, unread, is_pinned, is_archived, mentioned, muted_until)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(jid) DO UPDATE SET
 		name=excluded.name,
 		last_msg_time=excluded.last_msg_time,
@@ -212,14 +213,15 @@ func (md *MessageDatabase) UpsertConversation(c Conversation) error {
 		unread=excluded.unread,
 		is_pinned=excluded.is_pinned,
 		is_archived=excluded.is_archived,
-		mentioned=excluded.mentioned;
-	`, c.JID, c.Name, c.LastMsgTime, c.Preview, c.Unread, c.IsPinned, c.IsArchived, c.Mentioned)
+		mentioned=excluded.mentioned,
+		muted_until=excluded.muted_until;
+	`, c.JID, c.Name, c.LastMsgTime, c.Preview, c.Unread, c.IsPinned, c.IsArchived, c.Mentioned, c.MutedUntil)
 	return err
 }
 
 // GetConversations retrieves all conversations from the DB
 func (md *MessageDatabase) GetConversations() ([]Conversation, error) {
-	rows, err := md.db.Query("SELECT jid, name, last_msg_time, preview, unread, is_pinned, is_archived, COALESCE(mentioned, 0) FROM conversations")
+	rows, err := md.db.Query("SELECT jid, name, last_msg_time, preview, unread, is_pinned, is_archived, COALESCE(mentioned, 0), COALESCE(muted_until, 0) FROM conversations")
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +230,7 @@ func (md *MessageDatabase) GetConversations() ([]Conversation, error) {
 	var convs []Conversation
 	for rows.Next() {
 		var c Conversation
-		if err := rows.Scan(&c.JID, &c.Name, &c.LastMsgTime, &c.Preview, &c.Unread, &c.IsPinned, &c.IsArchived, &c.Mentioned); err != nil {
+		if err := rows.Scan(&c.JID, &c.Name, &c.LastMsgTime, &c.Preview, &c.Unread, &c.IsPinned, &c.IsArchived, &c.Mentioned, &c.MutedUntil); err != nil {
 			return nil, err
 		}
 		convs = append(convs, c)

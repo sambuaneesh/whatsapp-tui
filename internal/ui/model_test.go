@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -16,7 +17,7 @@ func testModel(t *testing.T) (Model, chan messages.Command) {
 	chats := []*messages.Conversation{
 		{JID: "111@s.whatsapp.net", Name: "Alice", LastMsgTime: 100, Preview: "hi"},
 		{JID: "222@g.us", Name: "Book Club", LastMsgTime: 300, Unread: 2},
-		{JID: "333@s.whatsapp.net", Name: "Bob", LastMsgTime: 200, IsPinned: true},
+		{JID: "333@s.whatsapp.net", Name: "Bob", LastMsgTime: 200},
 		{JID: "444@s.whatsapp.net", Name: "Old", LastMsgTime: 50, IsArchived: true},
 		{JID: "555@s.whatsapp.net", Name: "Never messaged", LastMsgTime: 0},
 	}
@@ -171,7 +172,7 @@ func TestListUpdateKeepsSelection(t *testing.T) {
 	next, _ := m.Update(chatListMsg{
 		{JID: "111@s.whatsapp.net", Name: "Alice", LastMsgTime: 999},
 		{JID: "222@g.us", Name: "Book Club", LastMsgTime: 300},
-		{JID: "333@s.whatsapp.net", Name: "Bob", LastMsgTime: 200, IsPinned: true},
+		{JID: "333@s.whatsapp.net", Name: "Bob", LastMsgTime: 200},
 	})
 	m = next.(Model)
 	if c := m.selectedChat(); c == nil || c.Name != "Alice" {
@@ -410,5 +411,54 @@ func TestBalancedSplit(t *testing.T) {
 	}
 	if max(h[0], h[1], h[2]) != 44 {
 		t.Fatalf("columns %v", h)
+	}
+}
+
+func TestPinnedChatsStayOnTop(t *testing.T) {
+	chats := []*messages.Conversation{
+		{JID: "1@s.whatsapp.net", Name: "Newest", LastMsgTime: 900},
+		{JID: "2@s.whatsapp.net", Name: "Pinned old", LastMsgTime: 10, IsPinned: true},
+		{JID: "3@s.whatsapp.net", Name: "Middle", LastMsgTime: 500},
+		{JID: "4@s.whatsapp.net", Name: "Pinned new", LastMsgTime: 600, IsPinned: true},
+	}
+	m := New(make(chan messages.Command, 5), chats, Options{SidebarWidth: 30})
+	var got []string
+	for _, c := range m.visibleChats() {
+		got = append(got, c.Name)
+	}
+	if s := strings.Join(got, ","); s != "Pinned new,Pinned old,Newest,Middle" {
+		t.Fatalf("order %s", s)
+	}
+}
+
+func TestMutedChatsDontNotify(t *testing.T) {
+	n := &fakeNotifier{}
+	now := time.Now().Unix()
+	chats := []*messages.Conversation{
+		{JID: "g@g.us", Name: "Muted group", LastMsgTime: 9, MutedUntil: -1},
+		{JID: "h@g.us", Name: "Muted till yesterday", LastMsgTime: 8, MutedUntil: now - 86400},
+	}
+	m := New(make(chan messages.Command, 5), chats, Options{SidebarWidth: 30, Notifications: "all", Notifier: n})
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m = next.(Model)
+	ts := uint64(now)
+	m = receive(t, m, messages.Message{Id: "a", ChatId: "g@g.us", ContactShort: "Ravi", Text: "spam", Timestamp: ts}, "Muted group")
+	if len(n.popups) != 0 {
+		t.Fatal("muted chat notified")
+	}
+	// a mention of you still does, as on the phone
+	m = receive(t, m, messages.Message{Id: "b", ChatId: "g@g.us", ContactShort: "Ravi", Text: "@919 look",
+		Mentions: map[string]string{"919": "You"}, Timestamp: ts}, "Muted group")
+	if len(n.popups) != 1 {
+		t.Fatal("mention in a muted chat didn't notify")
+	}
+	// a mute that ran out doesn't count
+	receive(t, m, messages.Message{Id: "c", ChatId: "h@g.us", ContactShort: "Sita", Text: "hi", Timestamp: ts}, "Muted till yesterday")
+	if len(n.popups) != 2 {
+		t.Fatal("expired mute still silenced")
+	}
+	v := stripANSI(m.View())
+	if !strings.Contains(v, "🔕") {
+		t.Fatalf("no muted mark in the list:\n%s", v)
 	}
 }

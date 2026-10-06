@@ -62,6 +62,9 @@ func (sm *SessionManager) getConnection() (*whatsmeow.Client, error) {
 
 		// Create client
 		client := whatsmeow.NewClient(deviceStore, logger)
+		// a full app state sync (pins, archives, mutes, read state) arrives
+		// as events too, or the first one would be lost
+		client.EmitAppStateEventsOnFullSync = true
 
 		// Set event handler
 		client.AddEventHandler(sm.eventHandler.Handle)

@@ -45,6 +45,8 @@ func (eh *eventHandler) Handle(evt interface{}) {
 	case *events.Pin:
 		pinned := v.Action.GetPinned()
 		eh.sm.setChatFlags(v.JID, nil, &pinned)
+	case *events.Mute:
+		eh.sm.setChatMute(v.JID, v.Action.GetMuted(), v.Action.GetMuteEndTimestamp())
 	case *events.GroupInfo:
 		if v.Name != nil {
 			eh.sm.renameChat(v.JID, v.Name.Name)

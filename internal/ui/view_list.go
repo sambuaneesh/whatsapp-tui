@@ -118,6 +118,10 @@ func (m Model) renderEntry(c *messages.Conversation, width int, sel, open bool, 
 	if c.IsPinned {
 		right1 = paint(styleMuted, sel).Render("📌 ") + right1
 	}
+	muted := c.Muted(now.Unix())
+	if muted {
+		right1 = paint(styleMuted, sel).Render("🔕 ") + right1
+	}
 
 	preview := paint(previewStyle, sel).Render(previewText(c))
 	switch {
@@ -133,7 +137,11 @@ func (m Model) renderEntry(c *messages.Conversation, width int, sel, open bool, 
 	left2 := marker + av[1] + fill.Render(" ") + preview
 	right2 := fill.Render(" ")
 	if unread {
-		right2 = styleBadge.Render(fmt.Sprint(c.Unread)) + fill.Render(" ")
+		badge := styleBadge
+		if muted {
+			badge = styleBadge.Background(pal.Muted) // quieter, like on the phone
+		}
+		right2 = badge.Render(fmt.Sprint(c.Unread)) + fill.Render(" ")
 	}
 	if c.Mentioned && unread {
 		right2 = styleMentionBadge.Render("@") + fill.Render(" ") + right2

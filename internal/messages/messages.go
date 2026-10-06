@@ -120,6 +120,12 @@ type Conversation struct {
 	Unread      uint16
 	IsPinned    bool
 	IsArchived  bool
-	Mentioned   bool // an unread message mentions you
-	Index       int  // Heap index for internal use
+	Mentioned   bool  // an unread message mentions you
+	MutedUntil  int64 // muted (on your phone) until this unix time; -1 always; 0 not muted
+	Index       int   // Heap index for internal use
+}
+
+// Muted reports whether the chat is muted at now (unix seconds).
+func (c *Conversation) Muted(now int64) bool {
+	return c.MutedUntil == -1 || c.MutedUntil > now
 }

@@ -321,7 +321,8 @@ The status bar shows what a new message does; click it, press `M`, or use
 | `🔕 off` | `off` | nothing |
 
 Switching plays a sample. There's no notification for the chat you have
-open while the window has focus. Popups use `notify-send` (any notification
+open while the window has focus, nor for chats you've muted on your phone
+(they show 🔕 and a grey unread count), except when someone @mentions you. Popups use `notify-send` (any notification
 daemon: Omarchy's, mako, dunst…); the sound is the desktop's "new message"
 sound, played with `canberra-gtk-play`, `pw-play` or `paplay`.
 

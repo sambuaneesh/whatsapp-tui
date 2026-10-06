@@ -124,6 +124,8 @@ func (m Model) notifyIncoming(in incomingMsg) (tea.Model, tea.Cmd) {
 		why = "notifications off"
 	case m.focused && m.screen == screenChat && m.current != nil && m.current.JID == msg.ChatId:
 		why = "its chat is on screen"
+	case m.chatMuted(msg.ChatId) && !mentionsYou(msg) && !strings.HasPrefix(msg.Text, "[REMINDER] "):
+		why = "the chat is muted" // as on the phone, a mention of you still notifies
 	case time.Since(toTime(int64(msg.Timestamp))) > maxNotifyAge:
 		why = fmt.Sprintf("sent %s ago", time.Since(toTime(int64(msg.Timestamp))).Round(time.Second))
 	}
@@ -240,4 +242,15 @@ func (m Model) privateBadgeAt(x, y int) bool {
 	w := lipgloss.Width(m.privateBadge())
 	start := m.width - lipgloss.Width(m.statusRight())
 	return w > 0 && x >= start && x < start+w
+}
+
+// chatMuted reports a chat muted on your phone (now).
+func (m Model) chatMuted(jid string) bool {
+	now := time.Now().Unix()
+	for _, c := range m.chats {
+		if c.JID == jid {
+			return c.Muted(now)
+		}
+	}
+	return false
 }
