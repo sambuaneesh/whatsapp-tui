@@ -471,8 +471,9 @@ td.mono { white-space: nowrap; }
     </div>
   </div>
   <div class="code" style="margin-top:22px"><p class="cap">kitty.conf (optional)</p><button class="btn" data-copy-from="c0">copy</button><pre id="c0"><span class="fn">map</span> --when-focus-on var:whatsapp_tui ctrl+shift+p send_text all \e[25~
-<span class="fn">map</span> --when-focus-on var:whatsapp_tui ctrl+shift+f send_text all \e[26~</pre></div>
-  <p class="note">Terminals send <kbd>ctrl+shift+p</kbd> and <kbd>ctrl+shift+f</kbd> exactly like <kbd>ctrl+p</kbd> and <kbd>ctrl+f</kbd>, so these two lines send them as F13 and F14, only inside whatsapp-tui. <kbd>F1</kbd> and <kbd>S</kbd> work without them.</p>
+<span class="fn">map</span> --when-focus-on var:whatsapp_tui ctrl+shift+f send_text all \e[26~
+<span class="fn">map</span> --when-focus-on var:whatsapp_tui ctrl+comma send_text all \e[28~</pre></div>
+  <p class="note">Terminals send <kbd>ctrl+shift+p</kbd> and <kbd>ctrl+shift+f</kbd> exactly like <kbd>ctrl+p</kbd> and <kbd>ctrl+f</kbd>, and <kbd>ctrl+,</kbd> not at all, so these lines send them as F13, F14 and F15, only inside whatsapp-tui. <kbd>F1</kbd>, <kbd>S</kbd> and <code>:settings</code> work without them.</p>
 </section>
 
 <section id="lists">
@@ -959,6 +960,35 @@ f.write(json.dumps({<span class="s">"id"</span>: <span class="v">1</span>, <span
 <section id="settings">
   <div class="eyebrow"><span class="badge b-pine">CONFIG</span>~/.config/whatsapp-tui/config.ini</div>
   <h2>Make it yours.</h2>
+  <p class="intro"><kbd>ctrl+,</kbd> (or <code>:settings</code>) opens every setting on one screen: <kbd>j</kbd>/<kbd>k</kbd> to move, <kbd>←</kbd>/<kbd>→</kbd> to change. It's saved at once and most of it applies while you watch. Try two of them:</p>
+  <div class="two">
+    <div class="play">
+      <label>Space between messages</label>
+      <div class="chips" id="st-gap"></div>
+      <label>Bubble borders</label>
+      <div class="chips" id="st-bub"></div>
+      <pre class="scr" id="st-prev" style="min-height:14em"></pre>
+    </div>
+    <pre class="scr" style="font-size:12.5px">  <span class="w-rose">Settings</span>   <span style="color:var(--muted)">j/k move · ←/→ change · esc close</span>
+
+  <span class="w-iris">Appearance</span>
+    Theme                        <span class="w-gold">rose-pine</span>
+  <span class="w-rose">▌</span> Space between messages       <span class="w-gold">‹ normal ›</span>
+    Bubble borders               <span class="w-gold">rounded</span>
+    Chat list width              <span class="w-gold">38</span>
+    Mouse                        <span class="w-gold">on</span>
+
+  <span class="w-iris">Notifications &amp; privacy</span>
+    Notifications                <span class="w-gold">all</span>
+    Private reading              <span style="color:var(--muted)">off</span>
+
+  <span class="w-iris">Search &amp; AI</span>
+    Chats left out of search     <span style="color:var(--muted)">none</span>  ›
+    AI help (local model)        <span class="w-gold">on</span>
+
+  <span class="w-iris">Your lists</span>
+    Mirror to a folder           <span class="w-gold">~/vault/WhatsApp TUI</span>  ✎</pre>
+  </div>
   <div class="two">
     <div class="code"><button class="btn" data-copy-from="c4">copy</button><pre id="c4"><span class="v">[ui]</span>
 theme             = <span class="s">rose-pine</span>   <span class="c">; rose-pine, rose-pine-moon, rose-pine-dawn</span>
@@ -966,6 +996,8 @@ images            = <span class="s">auto</span>        <span class="c">; auto, k
 avatars           = <span class="s">true</span>
 mouse             = <span class="s">true</span>
 highlight_opacity = <span class="s">0.8</span>         <span class="c">; see-through highlights in kitty</span>
+message_spacing   = <span class="s">normal</span>      <span class="c">; compact, normal, roomy</span>
+bubble_style      = <span class="s">rounded</span>     <span class="c">; rounded, square, thick, double, none</span>
 
 <span class="v">[general]</span>
 notifications   = <span class="s">all</span>       <span class="c">; all, popup, sound, off</span>
@@ -1782,6 +1814,32 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     b.addEventListener("click", () => { $("#lq").value = x; lsPreview(); $("#lq").focus(); }); $("#ls-chips").appendChild(b);
   });
   lsPreview(); lsRender();
+
+  /* ================= settings preview ================= */
+  const BUB = { rounded: "╭╮╰╯─│", square: "┌┐└┘─│", thick: "┏┓┗┛━┃", double: "╔╗╚╝═║", none: "      " };
+  let stGap = "normal", stBub = "rounded";
+  function bubble(text, me, b) {
+    const c = [...BUB[b]], w = [...text].length + 2, pad = me ? " ".repeat(14) : "";
+    const col = me ? "var(--iris)" : "var(--muted)";
+    const e = (x) => `<span style="color:${col}">${x}</span>`;
+    return [pad + e(c[0] + c[4].repeat(w) + c[1]), pad + e(c[5]) + " " + esc(text) + " " + e(c[5]), pad + e(c[2] + c[4].repeat(w) + c[3])];
+  }
+  function stRender() {
+    const gap = { compact: 0, normal: 1, roomy: 2 }[stGap];
+    const msgs = [["Priya", "dinner at 8?", false], ["Priya", "Paradise?", false], ["You", "count me in", true]];
+    const out = []; let last = "";
+    for (const [who, t, me] of msgs) {
+      for (let g = 0; g < gap; g++) out.push("");
+      if (last && who !== last) out.push("");
+      out.push(...bubble(t, me, stBub)); last = who;
+    }
+    $("#st-prev").innerHTML = out.join("\n");
+    for (const [id, cur] of [["#st-gap", stGap], ["#st-bub", stBub]]) $(id).querySelectorAll(".chip").forEach((b) => b.classList.toggle("on", b.textContent === cur));
+  }
+  for (const [id, vals, set] of [["#st-gap", ["compact", "normal", "roomy"], (v) => (stGap = v)], ["#st-bub", Object.keys(BUB), (v) => (stBub = v)]]) {
+    for (const v of vals) { const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = v; b.addEventListener("click", () => { set(v); stRender(); }); $(id).appendChild(b); }
+  }
+  stRender();
   /* ================= speed chart (log scale, measured numbers) ================= */
   const rows = [
     ["Redraw after a change", 66, 0.35], ["j in visual mode", 69, 0.84], ["A new message", 70, 0.65],
@@ -1824,7 +1882,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["palette", "ctrl+p", "go to any chat or contact (fuzzy, recent first)"], ["palette", "ctrl+p enter", "back to the previous chat"],
     ["palette", "F1 · ctrl+shift+p", "every command, by name"], ["palette", "> · #", "in ctrl+p: commands · search messages"],
     ["palette", "enter · alt+enter", "open · open beside (split view)"], ["palette", "ctrl+f", "find in this chat"],
-    ["palette", "F3 · shift+F3", "next · previous match"], ["palette", "ctrl+shift+f", "search messages in every chat"],
+    ["palette", "F3 · shift+F3", "next · previous match"], ["palette", "ctrl+, · :settings", "settings: theme, spacing, bubbles, notifications, AI"], ["palette", "ctrl+shift+f", "search messages in every chat"],
     ["lists", "i then type", "add a task: call mom 6pm #family !, shopping: eggs"], ["lists", "x · e · d · u", "done · edit · delete · undo"],
     ["lists", "t · !", "when (t tomorrow 9am) · important"], ["lists", "J K · > <", "reorder · into / out of a checklist"],
     ["lists", "enter", "fold a checklist · open a page · go to a saved message"], ["lists", "m · f · Y · c", "move to a list · send to a chat · copy · clear done"],

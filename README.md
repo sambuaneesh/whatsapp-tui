@@ -80,6 +80,7 @@ map --when-focus-on var:whatsapp_tui shift+enter send_text all \x1b\r
 map --when-focus-on var:whatsapp_tui ctrl+v
 map --when-focus-on var:whatsapp_tui ctrl+shift+p send_text all \e[25~
 map --when-focus-on var:whatsapp_tui ctrl+shift+f send_text all \e[26~
+map --when-focus-on var:whatsapp_tui ctrl+comma send_text all \e[28~
 ```
 
 **Your own space:** 📋 Today is pinned on top of your chats, and your task
@@ -92,7 +93,9 @@ your day and catch you up. See [USAGE.md](USAGE.md#your-own-space-lists-notes-sa
 Scripts and tools can use it through a local API and hooks: see
 [docs/API.md](docs/API.md).
 
-Settings live in `~/.config/whatsapp-tui/config.ini` (on macOS:
+`ctrl+,` (or `:settings`) opens the settings: theme, the space between
+messages, bubble borders, notifications, AI and more, changed with the
+arrow keys. They live in `~/.config/whatsapp-tui/config.ini` (on macOS:
 `~/Library/Application Support/whatsapp-tui/`): theme, images, mouse,
 download folder. `--debug` writes logs to `~/.cache/whatsapp-tui/debug.log`.
 

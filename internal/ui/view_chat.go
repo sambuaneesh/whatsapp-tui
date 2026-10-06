@@ -233,9 +233,12 @@ func (m Model) renderMessages(width int) ([]string, []msgSpan) {
 		if msg.FromMe {
 			sender = "me"
 		}
-		// A blank line between all messages; two when the sender changes.
-		add("")
-		if sender != lastSender && lastSender != "" {
+		// Blank lines between messages (Settings: message spacing), one more
+		// when the sender changes.
+		for g := 0; g < look.gap; g++ {
+			add("")
+		}
+		if sender != lastSender && lastSender != "" && look.senderGap {
 			add("")
 		}
 		if m.unreadID != "" && msg.Id == m.unreadID {
@@ -498,14 +501,15 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 	} else {
 		parts.quote, parts.media = parts.quote.offset(1), parts.media.offset(1) // below the top border
 		bc := lipgloss.NewStyle().Foreground(border)
-		side := bc.Render("│")
-		edge := strings.Repeat("─", inner+2)
+		ch := look.corners // Settings: bubble corners
+		side := bc.Render(ch[5])
+		edge := strings.Repeat(ch[4], inner+2)
 		blk = make([]string, 0, len(lines)+2)
-		blk = append(blk, bc.Render("╭"+edge+"╮"))
+		blk = append(blk, bc.Render(ch[0]+edge+ch[1]))
 		for _, l := range lines {
 			blk = append(blk, side+" "+padRight(l, inner)+" "+side)
 		}
-		blk = append(blk, bc.Render("╰"+edge+"╯"))
+		blk = append(blk, bc.Render(ch[2]+edge+ch[3]))
 		blkW = inner + 4
 	}
 	if r := reactionLine(msg.Reactions); r != "" {

@@ -366,10 +366,12 @@ func commandList() []command {
 		{id: "private.off", title: "Private Reading: Off", keys: ":private off",
 			when: func(m Model) bool { return m.privateRead }, run: ex("private off")},
 		{id: "resync", title: "App: Resync Archive, Pins and Mutes with the Phone", keys: ":resync", when: always, run: ex("resync")},
-		{id: "downloads", title: "Settings: Show Download Folder", keys: ":download-dir", when: always, run: ex("download-dir")},
-		{id: "downloads.set", title: "Settings: Change Download Folder…", keys: ":download-dir", when: always, run: prefill("download-dir ")},
+		{id: "downloads", title: "Downloads: Show the Folder", keys: ":download-dir", when: always, run: ex("download-dir")},
+		{id: "downloads.set", title: "Downloads: Change the Folder…", keys: ":download-dir", when: always, run: prefill("download-dir ")},
 
 		// App
+		{id: "settings", title: "Settings (Theme, Spacing, Bubbles, Notifications, AI…)", keys: "ctrl+,  :settings", when: always,
+			run: func(m Model) (tea.Model, tea.Cmd) { m.openSettings(); return m, nil }},
 		{id: "help", title: "Help: Keyboard Shortcuts", keys: "?", when: always, run: ex("help")},
 		{id: "close", title: "App: Close the Window (Keeps Running)", keys: ":q", when: always, run: ex("q")},
 		{id: "quit", title: "App: Quit for Real", keys: ":q!", when: always, run: ex("q!")},

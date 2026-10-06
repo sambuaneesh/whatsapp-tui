@@ -229,15 +229,17 @@ inside whatsapp-tui:
 ```conf
 map --when-focus-on var:whatsapp_tui shift+enter send_text all \x1b\r
 map --when-focus-on var:whatsapp_tui ctrl+v
-# VS Code's ctrl+shift+p (commands) and ctrl+shift+f (search all chats)
+# VS Code's ctrl+shift+p (commands), ctrl+shift+f (search all chats), ctrl+, (settings)
 map --when-focus-on var:whatsapp_tui ctrl+shift+p send_text all \e[25~
 map --when-focus-on var:whatsapp_tui ctrl+shift+f send_text all \e[26~
+map --when-focus-on var:whatsapp_tui ctrl+comma send_text all \e[28~
 ```
 
-The last two send `ctrl+shift+p` and `ctrl+shift+f` as F13 and F14, which
-whatsapp-tui reads as those keys (terminals can't tell them apart from
-`ctrl+p` and `ctrl+f`). Other terminals: map them to the same sequences, or
-use `F1` and `S`.
+The last three send `ctrl+shift+p`, `ctrl+shift+f` and `ctrl+,` as F13,
+F14 and F15, which whatsapp-tui reads as those keys (terminals can't tell
+them apart from `ctrl+p` and `ctrl+f`, and don't send `ctrl+,` at all).
+Other terminals: map them to the same sequences, or use `F1`, `S` and
+`:settings`.
 
 Reload with `ctrl+shift+f5` and restart whatsapp-tui. To select text with the
 mouse while it runs, hold `shift` while dragging.
@@ -560,7 +562,20 @@ sound, played with `canberra-gtk-play`, `pw-play` or `paplay`.
 
 ## Settings
 
-`~/.config/whatsapp-tui/config.ini` (macOS: `~/Library/Application
+**`ctrl+,`** (with the kitty line below), **`:settings`**, or `F1` →
+"Settings" opens them: `j`/`k` move, `←`/`→` (or `enter`) change a value.
+Changes are saved to `config.ini` at once and most apply straight away;
+the few marked ↻ apply when the app starts again (`:q!`, then open it).
+
+| Group | Settings |
+|---|---|
+| Appearance | theme (Rosé Pine, Moon, Dawn) · space between messages (compact, normal, roomy) · bubble borders (rounded ╭, square ┌, thick ┏, double ╔, none) · chat list width · paint the background · mouse · pictures ↻ · profile pictures ↻ · see-through highlights ↻ |
+| Notifications & privacy | notifications (all, popup, sound, off) · private reading |
+| The app | keep running when closed ↻ · downloads folder · media kept on disk · scripts may send ↻ |
+| Search & AI | search by meaning ↻ · pause indexing while gaming ↻ · chats left out of search · AI help · AI model ↻ |
+| Your lists | mirror to a folder |
+
+Everything is also in `~/.config/whatsapp-tui/config.ini` (macOS: `~/Library/Application
 Support/whatsapp-tui/config.ini`):
 
 ```ini
@@ -582,6 +597,8 @@ obsidian_dir    =              ; mirror your lists and notes here (:mirror)
 [ui]
 theme            = rose-pine   ; rose-pine, rose-pine-moon, rose-pine-dawn
 paint_background = false       ; true paints the theme background
+message_spacing  = normal      ; compact, normal, roomy
+bubble_style     = rounded     ; rounded, square, thick, double, none
 images           = auto        ; auto, kitty, blocks, off
 avatars          = true
 mouse            = true

@@ -79,6 +79,8 @@ type Model struct {
 	mirror     Mirrorer
 	ai         Assistant                // the local model (nil: off)
 	noindex    map[string]bool          // chats search doesn\'t index
+	settings   *settingsView            // the settings screen, when open
+	aiStash    Assistant                // the model, while AI help is turned off
 	allChats   []*messages.Conversation // every known chat and contact (forward targets)
 	archive    bool                     // showing archived chats instead of the inbox
 	unreadOnly bool                     // list shows only chats with unread messages
@@ -190,6 +192,8 @@ type Options struct {
 	SidebarWidth    int
 	Theme           string // rose-pine, rose-pine-moon or rose-pine-dawn
 	PaintBackground bool   // fill the screen with the theme's base colour
+	MessageSpacing  string // compact, normal, roomy
+	BubbleStyle     string // rounded, square, thick, double, none
 
 	Mouse bool // mouse tracking is on (turned back on after other programs)
 
@@ -250,6 +254,7 @@ const composePlaceholder = "press i to type a message"
 // initial seeds the chat list with cached conversations.
 func New(commands chan<- messages.Command, initial []*messages.Conversation, opts Options) Model {
 	ApplyTheme(opts.Theme)
+	SetLook(opts.MessageSpacing, opts.BubbleStyle)
 	sidebarWidth := opts.SidebarWidth
 	compose := newCompose()
 
@@ -1144,6 +1149,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.qo != nil {
 		return m.handlePalette(msg)
 	}
+	if m.settings != nil {
+		return m.handleSettings(msg)
+	}
 	if next, cmd, ok := m.globalKey(key); ok {
 		return next, cmd
 	}
@@ -1678,6 +1686,21 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 		return m.catchUp()
 	case "todos":
 		return m.findTasksInChat()
+	case "settings", "prefs", "preferences", "options":
+		m.openSettings()
+		return m, nil
+	case "set":
+		if len(fields) >= 3 && fields[1] == "ai_model" {
+			if err := config.Save("general", "ai_model", fields[2]); err != nil {
+				m.notice, m.noticeErr = err.Error(), true
+				return m, nil
+			}
+			config.Config.General.AiModel = fields[2]
+			m.notice, m.noticeErr = "AI model: "+fields[2]+" · applies when the app starts again (ollama pull "+fields[2]+" first)", false
+			return m, nil
+		}
+		m.notice, m.noticeErr = ":settings changes everything; :set ai_model <name>", true
+		return m, nil
 	case "noindex", "index":
 		if len(fields) > 1 && fields[1] == "list" {
 			return m.showNotIndexed()

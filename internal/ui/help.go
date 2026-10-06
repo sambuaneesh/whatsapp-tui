@@ -24,6 +24,7 @@ var helpSections = []struct {
 		{"ctrl+f", "find in this chat"},
 		{"F3 · shift+F3", "next / previous match"},
 		{"ctrl+shift+f", "search all chats"},
+		{"ctrl+, · :settings", "settings: look, notifications, AI…"},
 	}},
 	{"Your lists (📋 Today, tasks, notes)", [][2]string{
 		{"i then type", "add: call mom 6pm #family !"},

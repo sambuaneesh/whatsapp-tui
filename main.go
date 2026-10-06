@@ -153,6 +153,8 @@ func run() error {
 		SidebarWidth:    config.Config.Ui.ChatSidebarWidth,
 		Theme:           config.Config.Ui.Theme,
 		PaintBackground: config.Config.Ui.PaintBackground,
+		MessageSpacing:  config.Config.Ui.MessageSpacing,
+		BubbleStyle:     config.Config.Ui.BubbleStyle,
 		Images:          termimg.Detect(config.Config.Ui.Images),
 		Media:           mediaSource{sm, config.Config.Ui.Avatars},
 		Sender:          sm,

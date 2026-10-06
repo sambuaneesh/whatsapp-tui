@@ -174,11 +174,14 @@ Results (before → after):
       meaning vectors, skipped by all-chats search and the API; `/` in the
       chat still works by plain matching. Everything indexed by default
 
-## Next
+## Settings (2026-10-06)
 
-- [ ] Settings in the palette (`ctrl+,`): appearance and small things to
-      adjust easily, like the space between message bubbles (asked
-      2026-10-06, after the personal space)
+- [x] `ctrl+,` (kitty map → F15), `:settings`, F1: a settings screen with
+      every option, changed with ←/→ and saved at once; theme, message
+      spacing (compact/normal/roomy), bubble borders (rounded, square,
+      thick, double, none), list width, background, mouse, notifications,
+      private reading, media cache and AI apply live; the rest after a
+      restart (marked ↻)
 
 ## Known bugs
 

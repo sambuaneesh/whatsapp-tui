@@ -759,6 +759,12 @@ func (m Model) globalKey(key string) (tea.Model, tea.Cmd, bool) {
 		}
 		m.openPalette(">")
 		return m, nil, true
+	case "f15": // ctrl+, from kitty (see USAGE.md)
+		if typing {
+			return m, nil, false
+		}
+		m.openSettings()
+		return m, nil, true
 	case "f14":
 		if m.confirm != nil {
 			return m, nil, false

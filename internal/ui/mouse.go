@@ -42,13 +42,15 @@ func (m Model) leave() tea.Cmd {
 
 // overlayOpen reports screens that cover the chat list and messages.
 func (m Model) overlayOpen() bool {
-	return m.showHelp || m.emo != nil || m.reactors != nil || m.sched != nil || m.act != nil || m.info != nil || m.global != nil || m.fwd != nil || m.stk != nil || m.pic != nil || m.view != nil || m.qr != ""
+	return m.settings != nil || m.showHelp || m.emo != nil || m.reactors != nil || m.sched != nil || m.act != nil || m.info != nil || m.global != nil || m.fwd != nil || m.stk != nil || m.pic != nil || m.view != nil || m.qr != ""
 }
 
 func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case m.qo != nil:
 		return m.mousePalette(msg)
+	case m.settings != nil:
+		return m.mouseSettings(msg)
 	case m.emo != nil:
 		return m.mouseEmoji(msg)
 	case m.reactors != nil:

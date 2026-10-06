@@ -75,6 +75,8 @@ type Ui struct {
 	// HighlightOpacity: how solid highlights, bubbles and the status bar are
 	// over a see-through terminal (0..1; 1 = solid). kitty only.
 	HighlightOpacity float64
+	MessageSpacing   string // compact, normal or roomy: blank lines between messages
+	BubbleStyle      string // rounded, square, thick, double or none
 }
 
 type Colors struct {
@@ -141,6 +143,8 @@ var Config = IniFile{
 		Avatars:          true,
 		Mouse:            true,
 		HighlightOpacity: 0.8,
+		MessageSpacing:   "normal",
+		BubbleStyle:      "rounded",
 	},
 	&Colors{
 		Background:      "black",
@@ -291,6 +295,23 @@ func SetObsidianDir(dir string) error {
 		return err
 	}
 	Config.General.ObsidianDir = dir
+	return nil
+}
+
+// Save writes one key of a section ("general", "ui") to the config file,
+// keeping the rest of it as it is. The caller updates Config itself.
+func Save(section, key, value string) error {
+	if configFilePath == "" {
+		return nil
+	}
+	f, err := ini.Load(configFilePath)
+	if err != nil {
+		return fmt.Errorf("read config: %w", err)
+	}
+	f.Section(section).Key(key).SetValue(value)
+	if err := f.SaveTo(configFilePath); err != nil {
+		return fmt.Errorf("save config: %w", err)
+	}
 	return nil
 }
 

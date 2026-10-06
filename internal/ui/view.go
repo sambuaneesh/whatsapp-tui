@@ -365,6 +365,8 @@ func (m Model) View() string {
 	h := m.mainHeight()
 	var main string
 	switch {
+	case m.settings != nil:
+		main = m.renderSettings(m.width, h)
 	case m.showHelp:
 		main = m.renderHelp(m.width, h)
 	case m.emo != nil:
