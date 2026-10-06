@@ -492,8 +492,8 @@ td .ctx { font-family: var(--mono); font-size: 12px; color: var(--muted); }
       <div class="marks">
         <span style="color:var(--muted)">□□</span><span>sending</span>
         <span><span style="color:var(--subtle)">■</span><span style="color:var(--muted)">□</span></span><span>sent: it reached WhatsApp</span>
-        <span class="w-gold">■■</span><span>delivered to their phone</span>
-        <span class="w-rose">■■</span><span>read (iris when a voice note or video was played)</span>
+        <span style="color:var(--subtle)">■■</span><span>delivered to their phone</span>
+        <span class="w-foam">■■</span><span>read, in blue like WhatsApp's ticks (purple when a voice note or video was played)</span>
         <span class="w-love">✕</span><span>not sent: <kbd>v</kbd>, select it, <kbd>R</kbd> retries</span>
       </div>
     </div>
@@ -779,7 +779,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
         const ment = m.mention ? `<div class="w-love" style="font-style:italic">@ mentioned you</div>` : "";
         const q = m.q ? `<div class="q"><b>${esc(m.q.who)}</b><br>${esc(m.q.t)}</div>` : "";
         let txt = esc(m.t).replace(/\*(\S[^*]*?)\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
-        const st = `<span class="st">${m.time}${m.me ? ` <span class="w-rose">${m.st || "□□"}</span>` : ""}</span>`;
+        const st = `<span class="st">${m.time}${m.me ? ` <span class="${m.st === "■■" ? "w-foam" : ""}" style="${m.st === "■■" ? "" : "color:var(--subtle)"}">${m.st || "□□"}</span>` : ""}</span>`;
         const rx = m.rx && m.rx.length ? `<span class="rx">${summarize(m.rx)}</span>` : "";
         if (m.mention) return `<div class="${cls}" data-m="${i}" style="border-color:var(--love)">${who}${ment}${q}${txt}${st}${rx}</div>`;
         return `<div class="${cls}" data-m="${i}">${who}${q}${txt}${st}${rx}</div>`;

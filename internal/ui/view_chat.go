@@ -554,12 +554,12 @@ func padRight(line string, w int) string {
 }
 
 // statusMark shows how far one of your messages got, as two small blocks
-// that fill up in Rosé Pine colours instead of ticks:
+// that fill up, coloured like WhatsApp's ticks (grey until read, then blue):
 //
 //	□□ muted   sending
 //	■□ subtle  sent (reached WhatsApp)
-//	■■ gold    delivered
-//	■■ rose    read (iris: voice note or video played)
+//	■■ subtle  delivered
+//	■■ foam    read (iris: voice note or video played)
 //	✕  love    not sent
 func statusMark(status int) string {
 	fg := func(c lipgloss.Color, s string) string { return lipgloss.NewStyle().Foreground(c).Render(s) }
@@ -569,9 +569,9 @@ func statusMark(status int) string {
 	case messages.StatusSent:
 		return fg(pal.Subtle, "■") + fg(pal.Muted, "□")
 	case messages.StatusDelivered:
-		return fg(colorWarm, "■■")
+		return fg(pal.Subtle, "■■")
 	case messages.StatusRead:
-		return fg(pal.Rose, "■■")
+		return fg(pal.Foam, "■■")
 	case messages.StatusPlayed:
 		return fg(pal.Iris, "■■")
 	case messages.StatusFailed:

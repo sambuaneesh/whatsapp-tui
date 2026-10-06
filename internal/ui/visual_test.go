@@ -487,3 +487,23 @@ func TestDeletedMessageStaysVisible(t *testing.T) {
 		t.Fatal("note marked twice")
 	}
 }
+
+func TestStatusMarksDistinct(t *testing.T) {
+	// delivered and read must be told apart at a glance (they were gold and
+	// rose, too alike): a different look for each state, read in blue
+	prev := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor) // as in a real terminal
+	defer lipgloss.SetColorProfile(prev)
+	seen := map[string]int{}
+	for _, st := range []int{messages.StatusSent, messages.StatusDelivered, messages.StatusRead, messages.StatusPlayed} {
+		m := statusMark(st)
+		if prev, ok := seen[m]; ok {
+			t.Fatalf("status %d looks like %d: %q", st, prev, m)
+		}
+		seen[m] = st
+	}
+	blue := lipgloss.NewStyle().Foreground(pal.Foam).Render("■■")
+	if statusMark(messages.StatusRead) != blue {
+		t.Fatalf("read isn't blue: %q", statusMark(messages.StatusRead))
+	}
+}

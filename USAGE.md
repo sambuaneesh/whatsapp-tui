@@ -176,8 +176,8 @@ Your messages show two blocks instead of ticks:
 |---|---|
 | `□□` | sending |
 | `■□` | sent |
-| `■■` gold | delivered |
-| `■■` rose | read (iris: voice note played) |
+| `■■` grey | delivered |
+| `■■` blue | read (purple: voice note or video played) |
 | `✕` | not sent — `v`, select it, `R` to retry |
 
 If you turned read receipts off in WhatsApp, WhatsApp doesn't send you
