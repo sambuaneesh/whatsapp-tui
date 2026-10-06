@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/Srindot/whatsapp-tui/internal/messages"
+	"github.com/Srindot/whatsapp-tui/internal/personal"
 )
 
 // The palette, after VS Code's: ctrl+p is Quick Open (go to any chat or
@@ -32,6 +33,11 @@ type paletteState struct {
 	offset int
 	beside bool // a chat opens beside the current one (split view)
 
+	// picking a chat or list for something (sending a list, moving a task)
+	pickTitle string
+	only      func(c *messages.Conversation) bool
+	onPick    func(m Model, c *messages.Conversation) (tea.Model, tea.Cmd)
+
 	cands []palCand // chats and contacts, gathered when opened
 	items []palItem
 	// the last chat query and the candidates it matched: typing more
@@ -49,6 +55,8 @@ type palCand struct {
 }
 
 type palItem struct {
+	pitem *personal.Item // "@": one of your tasks, notes or saved messages
+	plist string
 	chat  *messages.Conversation
 	cand  *palCand
 	cmd   *command
@@ -125,7 +133,10 @@ func (m Model) recentRank() map[string]int {
 // paletteMode is what the query asks for: chats, ">" commands, "#"
 // messages.
 func (p *paletteState) mode() byte {
-	if len(p.query) > 0 && (p.query[0] == '>' || p.query[0] == '#') {
+	if p.onPick != nil {
+		return 0
+	}
+	if len(p.query) > 0 && (p.query[0] == '>' || p.query[0] == '#' || p.query[0] == '@') {
 		return byte(p.query[0])
 	}
 	return 0
@@ -151,6 +162,8 @@ func (m *Model) refilter() {
 		p.items = m.matchCommands(p.text())
 	case '#':
 		p.items = nil
+	case '@':
+		p.items = m.matchPersonal(p.text())
 	default:
 		p.items = m.matchChats(p)
 		if len(p.items) > 0 && p.text() == "" && m.current != nil && m.screen == screenChat &&
@@ -169,7 +182,7 @@ func (m Model) matchChats(p *paletteState) []palItem {
 		rank := m.recentRank()
 		var items []palItem
 		for i := range p.cands {
-			if c := &p.cands[i]; !c.contact {
+			if c := &p.cands[i]; !c.contact && (p.only == nil || p.only(c.c)) {
 				items = append(items, palItem{chat: c.c, cand: c, score: -rank[c.c.JID]})
 			}
 		}
@@ -211,6 +224,9 @@ func (m Model) matchChats(p *paletteState) []palItem {
 	kept := make([]int, 0, len(idx))
 	for _, i := range idx {
 		c := &p.cands[i]
+		if p.only != nil && !p.only(c.c) {
+			continue
+		}
 		score, ok := fuzzyScore(qr, c.lowered, c.name)
 		if !ok && digits != "" && strings.Contains(c.digits, digits) {
 			score, ok = scoreMatch*len(digits), true
@@ -371,6 +387,12 @@ func (m Model) choosePalette(beside bool) (tea.Model, tea.Cmd) {
 	}
 	it := p.items[p.cursor]
 	m.closePalette()
+	if p.onPick != nil && it.chat != nil {
+		return p.onPick(m, it.chat)
+	}
+	if it.pitem != nil {
+		return m.openPersonalItem(*it.pitem)
+	}
 	if it.cmd != nil {
 		if m.recent != nil {
 			m.recent.cmds = pushRecent(m.recent.cmds, it.cmd.id)
@@ -438,6 +460,10 @@ func (m Model) paletteLines() []string {
 		title, placeholder = " Commands ", "type to find a command"
 	case p.mode() == '#':
 		title, placeholder = " Search messages ", "type what to find in all chats"
+	case p.mode() == '@':
+		title, placeholder = " Your tasks, notes and saved ", "type to find them"
+	case p.pickTitle != "":
+		title, placeholder = " "+p.pickTitle+" ", "type a name"
 	case p.beside:
 		title = " Open beside "
 	}
@@ -476,8 +502,13 @@ func (m Model) paletteLines() []string {
 		shown = 1
 	case len(p.items) == 0:
 		msg := "no chat or contact matches"
-		if p.mode() == '>' {
+		switch {
+		case p.mode() == '>':
 			msg = "no command matches"
+		case p.mode() == '@' && p.text() == "":
+			msg = "type to search your tasks, notes and saved messages"
+		case p.mode() == '@':
+			msg = "nothing of yours matches"
 		}
 		out = append(out, side+fill(bg.Foreground(pal.Muted).Render("  "+msg), bg)+side)
 		shown = 1
@@ -496,6 +527,9 @@ func (m Model) paletteLines() []string {
 	}
 
 	hint := "↑↓ move · enter open · alt+enter beside · esc close"
+	if p.onPick != nil {
+		hint = "↑↓ move · enter picks · esc cancels"
+	}
 	switch p.mode() {
 	case '>':
 		hint = "↑↓ move · enter run · backspace: back to chats · esc close"
@@ -518,6 +552,24 @@ func (m Model) paletteRow(it palItem, width int, st lipgloss.Style, chosen bool,
 		marker = st.Foreground(pal.Rose).Render("▌ ")
 	}
 	nameSt := st.Foreground(pal.Text)
+	if it.pitem != nil {
+		x := it.pitem
+		icon := "☐ "
+		switch {
+		case x.Done:
+			icon = "☑ "
+		case x.SrcMsg != "" && x.Due == 0:
+			icon = "🔖 "
+		case x.Body != "" && x.Due == 0:
+			icon = "📄 "
+		}
+		left := marker + st.Render(icon) + nameSt.Render(x.Text)
+		right := it.plist
+		if d := dueLabel(*x, now); d != "" && !x.Done {
+			right = d + " · " + right
+		}
+		return fitRow(left, st.Foreground(pal.Muted).Render(right+" "), width, st)
+	}
 	if it.cmd != nil {
 		group, rest, ok := strings.Cut(it.title, ": ")
 		left := marker
@@ -670,6 +722,10 @@ func (m Model) globalKey(key string) (tea.Model, tea.Cmd, bool) {
 		if typing || m.mode == modeInsert || m.overlayOpen() {
 			return m, nil, false
 		}
+		if m.inPersonal() {
+			m.openPalette("@") // find in your lists
+			return m, nil, true
+		}
 		if inChat(m) {
 			m.focus = paneMessages
 			return m, m.startSearch(), true
@@ -700,4 +756,35 @@ func (m Model) mousePalette(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		m.qo.move(-1)
 	}
 	return m, nil
+}
+
+// openPicker opens the palette to pick a chat (or list) for something.
+func (m *Model) openChatPicker(title string, only func(c *messages.Conversation) bool,
+	onPick func(m Model, c *messages.Conversation) (tea.Model, tea.Cmd)) {
+	m.qo = &paletteState{pickTitle: title, only: only, onPick: onPick}
+	m.qo.cands = m.paletteCands()
+	m.refilter()
+}
+
+// matchPersonal finds your tasks, notes and saved messages ("@" in ctrl+p).
+func (m Model) matchPersonal(q string) []palItem {
+	if m.personal == nil || q == "" {
+		return nil
+	}
+	found, err := m.personal.Search(q)
+	if err != nil {
+		return nil
+	}
+	names := map[int64]string{}
+	if lists, err := m.personal.Lists(); err == nil {
+		for _, l := range lists {
+			names[l.ID] = listTitle(l)
+		}
+	}
+	items := make([]palItem, 0, len(found))
+	for i := range found {
+		x := found[i]
+		items = append(items, palItem{pitem: &x, plist: names[x.ListID]})
+	}
+	return items
 }

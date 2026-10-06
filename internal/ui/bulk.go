@@ -62,7 +62,7 @@ func (m Model) handleRange(key string) (tea.Model, tea.Cmd, bool) {
 		return m, nil, true
 	case "s":
 		return m, m.saveAll(msgs), true
-	case "enter", "p", "r", "e", "w", "o", " ", "space", "R", "P":
+	case "enter", "p", "r", "e", "w", "o", " ", "space", "R", "P", "T", "b":
 		m.notice, m.noticeErr = "with several selected: y copy · f forward · d delete · s save media · V or esc ends", true
 		return m, nil, true
 	}

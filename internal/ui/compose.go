@@ -55,14 +55,23 @@ func (m Model) composeLines() int {
 	for _, line := range strings.Split(m.compose.Value(), "\n") {
 		n += max(1, (lipgloss.Width(line)+w)/w) // +cursor room at the end
 	}
-	return min(max(n, 1), composeMaxLines)
+	return min(max(n, 1), m.composeMax())
+}
+
+// composeMax is how tall the box may grow: a few lines for a message, most
+// of the pane while writing a note page.
+func (m Model) composeMax() int {
+	if m.pv != nil && m.pv.editPage {
+		return max(composeMaxLines, m.mainHeight()-8)
+	}
+	return composeMaxLines
 }
 
 // growCompose makes the input box full height before an edit, so the
 // textarea never scrolls its first lines out of view while the box is still
 // growing; fitCompose shrinks it back afterwards.
 func (m *Model) growCompose() {
-	m.compose.SetHeight(composeMaxLines)
+	m.compose.SetHeight(m.composeMax())
 }
 
 // fitCompose resizes the input box to its content and the layout with it.

@@ -8,6 +8,7 @@ import (
 
 	"github.com/Srindot/whatsapp-tui/internal/config"
 	"github.com/Srindot/whatsapp-tui/internal/messages"
+	"github.com/Srindot/whatsapp-tui/internal/personal"
 )
 
 // The command palette's commands (F1, ctrl+shift+p, or > in ctrl+p): every
@@ -22,8 +23,17 @@ type command struct {
 	run   func(m Model) (tea.Model, tea.Cmd)
 }
 
-func inChat(m Model) bool    { return m.screen == screenChat && m.current != nil }
-func hasChat(m Model) bool   { return inChat(m) || m.selectedChat() != nil }
+// inChat: a WhatsApp chat is open (not one of your lists).
+func inChat(m Model) bool {
+	return m.screen == screenChat && m.current != nil && !isPersonal(m.current.JID)
+}
+func hasChat(m Model) bool {
+	if inChat(m) {
+		return true
+	}
+	c := m.selectedChat()
+	return c != nil && !isPersonal(c.JID) && !(m.screen == screenChat && m.focus != paneList)
+}
 func hasSplit(m Model) bool  { return m.split != nil }
 func hasSearch(m Model) bool { return inChat(m) && m.search != nil && len(m.search.matches) > 0 }
 func always(Model) bool      { return true }
@@ -73,7 +83,39 @@ func inGroup(m Model) bool { return inChat(m) && isGroup(m.current.JID) }
 func chatIs(f func(c *messages.Conversation) bool) func(Model) bool {
 	return func(m Model) bool {
 		c := m.theChat()
-		return c != nil && c.LastMsgTime > 0 && f(c)
+		return c != nil && c.LastMsgTime > 0 && !isPersonal(c.JID) && f(c)
+	}
+}
+
+func hasPersonal(m Model) bool { return m.personal != nil }
+func inList(m Model) bool      { return m.inPersonal() && m.pv.page == nil }
+func onItem(m Model) bool {
+	_, ok := m.selectedItem()
+	return inList(m) && ok
+}
+func onTask(m Model) bool { return onItem(m) && m.isTaskList() }
+func onList(m Model) bool {
+	_, ok := m.theList()
+	return ok
+}
+func onTaskList(m Model) bool {
+	l, ok := m.theList()
+	return ok && l.Kind == personal.KindTasks
+}
+
+// personalKey runs a key in the open list.
+func personalKey(k string) func(Model) (tea.Model, tea.Cmd) {
+	return func(m Model) (tea.Model, tea.Cmd) {
+		m.focus = paneMessages
+		return m.handlePersonalKey(k)
+	}
+}
+
+// listKey runs a chat list key on the list (open or selected).
+func listKey(k string) func(Model) (tea.Model, tea.Cmd) {
+	return func(m Model) (tea.Model, tea.Cmd) {
+		next, cmd, _ := m.listChatKey(m.theChat(), k)
+		return next, cmd
 	}
 }
 
@@ -232,6 +274,44 @@ func commandList() []command {
 		{id: "range.delete", title: "Selected Messages: Delete All…", keys: "d", when: severalSelected, run: visualKey("d")},
 		{id: "range.save", title: "Selected Messages: Save All Media", keys: "s", when: severalSelected, run: visualKey("s")},
 		{id: "range.end", title: "Selected Messages: Stop Selecting Several", keys: "V", when: severalSelected, run: visualKey("V")},
+
+		// Your lists, tasks, notes, saved messages
+		{id: "p.today", title: "Lists: Open 📋 Today", keys: ":today", when: hasPersonal, run: ex("today")},
+		{id: "p.task", title: "Lists: Add a Task…", keys: ":task", when: hasPersonal, run: prefill("task ")},
+		{id: "p.newlist", title: "Lists: New List (or Open One)…", keys: ":list", when: hasPersonal, run: prefill("list ")},
+		{id: "p.notebook", title: "Lists: New Notebook…", keys: ":notebook", when: hasPersonal, run: prefill("notebook ")},
+		{id: "p.note", title: "Lists: New Note Page…", keys: ":note", when: hasPersonal, run: prefill("note ")},
+		{id: "p.notes", title: "Lists: Open 📝 Notes", keys: ":notes", when: hasPersonal, run: ex("notes")},
+		{id: "p.saved", title: "Lists: Open 🔖 Saved Messages", keys: ":saved", when: hasPersonal, run: ex("saved")},
+		{id: "p.find", title: "Lists: Find in Your Tasks, Notes and Saved…", keys: "ctrl+p @", when: hasPersonal,
+			run: func(m Model) (tea.Model, tea.Cmd) { m.openPalette("@"); return m, nil }},
+		{id: "p.undo", title: "Lists: Undo", keys: "u  :undo", when: hasPersonal, run: ex("undo")},
+		{id: "p.rename", title: "List: Rename…", keys: ":rename", when: onList, run: prefill("rename ")},
+		{id: "p.icon", title: "List: Change Icon…", keys: ":icon", when: onList, run: prefill("icon ")},
+		{id: "p.pinlist", title: "List: Pin or Unpin", keys: "P (list)", when: onList, run: listKey("P")},
+		{id: "p.archivelist", title: "List: Archive or Unarchive", keys: "e (list)", when: onList, run: listKey("e")},
+		{id: "p.deletelist", title: "List: Delete…", keys: ":deletelist", when: onList, run: prefill("deletelist")},
+		{id: "p.cleardone", title: "List: Clear Done Tasks", keys: "c", when: onTaskList, run: ex("cleardone")},
+		{id: "p.send", title: "List: Send to a Chat…", keys: "f", when: inList, run: personalKey("f")},
+		{id: "p.copy", title: "List: Copy as Text", keys: "Y", when: inList, run: personalKey("Y")},
+		{id: "p.share", title: "List: Share with a Chat (Done: There Ticks Off Here)…", keys: ":share", when: onTaskList, run: ex("share")},
+		{id: "p.unshare", title: "List: Stop Sharing", keys: ":unshare", when: func(m Model) bool { l, ok := m.theList(); return ok && l.ShareChat != "" }, run: ex("unshare")},
+		{id: "p.add", title: "Task: Add Here", keys: "i", when: inList, run: personalKey("i")},
+		{id: "p.done", title: "Task: Done / Not Done", keys: "x", when: onTask, run: personalKey("x")},
+		{id: "p.edit", title: "Task: Edit", keys: "e", when: onItem, run: personalKey("e")},
+		{id: "p.due", title: "Task: Set When (Date and Time)…", keys: "t", when: onTask, run: personalKey("t")},
+		{id: "p.nodue", title: "Task: Remove the Date", keys: ":due none", when: onTask, run: ex("due none")},
+		{id: "p.important", title: "Task: Important / Not", keys: "!", when: onTask, run: personalKey("!")},
+		{id: "p.notesof", title: "Task: Notes…", keys: "N", when: onTask, run: personalKey("N")},
+		{id: "p.move", title: "Task: Move to Another List…", keys: "m", when: onItem, run: personalKey("m")},
+		{id: "p.up", title: "Task: Move Up", keys: "K", when: onItem, run: personalKey("K")},
+		{id: "p.down", title: "Task: Move Down", keys: "J", when: onItem, run: personalKey("J")},
+		{id: "p.indent", title: "Task: Into the Checklist Above", keys: ">", when: onTask, run: personalKey(">")},
+		{id: "p.outdent", title: "Task: Out of Its Checklist", keys: "<", when: onTask, run: personalKey("<")},
+		{id: "p.delete", title: "Task: Delete", keys: "d", when: onItem, run: personalKey("d")},
+		{id: "p.copyone", title: "Task: Copy", keys: "y", when: onItem, run: personalKey("y")},
+		{id: "sel.task", title: "Selected: Make a Task (to 📥 Inbox)", keys: "T", when: func(m Model) bool { return oneSelected(m) && hasPersonal(m) }, run: visualKey("T")},
+		{id: "sel.savemsg", title: "Selected: Save to 🔖 Saved", keys: "b", when: func(m Model) bool { return oneSelected(m) && hasPersonal(m) }, run: visualKey("b")},
 
 		// Pins and mutes
 		{id: "pinned", title: "Go: Pinned Message", keys: "click 📌", when: func(m Model) bool { return inChat(m) && len(m.pins) > 0 },

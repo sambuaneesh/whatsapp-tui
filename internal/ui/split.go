@@ -57,6 +57,10 @@ func (m *Model) openSplit(c *messages.Conversation) tea.Cmd {
 	if m.current == nil || m.screen != screenChat {
 		return m.openChat(c) // nothing to put it beside
 	}
+	if isPersonal(c.JID) || isPersonal(m.current.JID) {
+		m.notice, m.noticeErr = "split view is for chats", true
+		return nil
+	}
 	if c.JID == m.current.JID {
 		m.notice, m.noticeErr = "that chat is already open on the left", true
 		return nil

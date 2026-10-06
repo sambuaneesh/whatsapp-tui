@@ -21,8 +21,24 @@ var helpSections = []struct {
 		{"F1 · ctrl+shift+p", "every command, by name"},
 		{"> · #", "in ctrl+p: commands · search messages"},
 		{"enter · alt+enter", "open · open beside (split view)"},
-		{"ctrl+f · F3 shift+F3", "find in chat · next / previous"},
+		{"ctrl+f", "find in this chat"},
+		{"F3 · shift+F3", "next / previous match"},
 		{"ctrl+shift+f", "search all chats"},
+	}},
+	{"Your lists (📋 Today, tasks, notes)", [][2]string{
+		{"i then type", "add: call mom 6pm #family !"},
+		{"", "shopping: eggs → that list"},
+		{"", "lines → a checklist (alt+enter)"},
+		{"x · e · d · u", "done · edit · delete · undo"},
+		{"t · !", "when (tomorrow 9am) · important"},
+		{"J K · > <", "move · into / out of a checklist"},
+		{"enter", "fold checklist · open page or message"},
+		{"m · f · Y · c", "move · send to a chat · copy · clear done"},
+		{"T · b (in v)", "message → task · → 🔖 Saved"},
+		{"ctrl+p @", "find in your tasks, notes, saved"},
+		{":list · :notebook", "a new list · notebook"},
+		{":share · :unshare", "\"done: x\" in that chat ticks x"},
+		{"P · e · d (list)", "pin · archive · delete a list"},
 	}},
 	{"Chat list", [][2]string{
 		{"j k · gg G", "move · top / bottom"},
@@ -100,7 +116,7 @@ var helpSections = []struct {
 	{"Search", [][2]string{
 		{"/ (list)", "chat names"},
 		{"/ (chat)", "this chat, whole history"},
-		{"S · :search <text>", "every chat"},
+		{"S · :search <q>", "every chat"},
 		{"ctrl+n ctrl+p", "older / newer while typing"},
 		{"enter", "select the match (visual)"},
 		{"n N", "older / newer match"},
@@ -112,7 +128,7 @@ var helpSections = []struct {
 		{"", "p paste as sticker · esc close"},
 		{"forward (f)", "type to filter · space pick"},
 		{"", "ctrl+n/p move · enter send"},
-		{"all-chat search (S)", "j/k move · enter open · / edit"},
+		{"search all (S)", "j/k move · enter open · / edit"},
 		{"info (K)", "j/k members · o open picture"},
 		{"picture (V)", "o open in viewer · esc close"},
 		{"viewer (space)", "o open in its app · s save · esc"},
@@ -136,18 +152,21 @@ var helpSections = []struct {
 		{":attach [path…]", "attach (no path: yazi)"},
 		{":sticker [path]", "sticker tray / make one"},
 		{":gif [path]", "GIF tray / make one"},
-		{":download-dir [dir]", "show / set download folder"},
+		{":download-dir", "show / set download folder"},
 		{":notify [mode]", "notifications: all, popup, sound, off"},
 		{":later <when>", "send what you wrote then (9am, in 2h…)"},
 		{":snooze <when>", "archive the chat until then"},
 		{":nudge <when>", "remind you if no reply by then"},
 		{":scheduled", "what's scheduled (x cancels)"},
 		{":pin · :unpin", "pin the chat to the top"},
-		{":archive-chat · :unarchive", "archive (stays unread) · back to inbox"},
+		{":archive-chat", "archive the chat (stays unread)"},
+		{":unarchive", "back to the inbox"},
 		{":resync", "archive/pins/mutes: match the phone again"},
-		{":mute [8h|1w] · :unmute", "mute the chat (always without a time)"},
+		{":mute 8h · 1w", "mute (no time: always)"},
+		{":unmute", "unmute the chat"},
 		{":pinned", "jump to the pinned messages"},
-		{":split <name> · :close", "open a chat beside · close it"},
+		{":split <name>", "open a chat beside"},
+		{":close", "close the chat beside"},
 		{":activity · I", "mentions, replies and reactions to you"},
 		{":private [on|off]", "read without blue ticks (U / :read marks read)"},
 		{":read", "mark the open chat read"},
@@ -163,7 +182,7 @@ var helpSections = []struct {
 // helpLines lays the sections out in as many columns as fit, and returns
 // the lines (the screen scrolls them when they don't fit).
 func (m Model) helpLines(width int) []string {
-	keyW, descW := 20, 32
+	keyW, descW := 18, 31
 	colW := keyW + descW + 3
 	keyStyle := lipgloss.NewStyle().Foreground(colorWarm).Width(keyW)
 	title := lipgloss.NewStyle().Foreground(pal.Iris).Bold(true)

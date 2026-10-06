@@ -231,7 +231,7 @@ var muteDurations = map[string]time.Duration{
 // theChat is the chat a command acts on: the open one, else the one
 // selected in the list.
 func (m Model) theChat() *messages.Conversation {
-	if inChat(m) && m.focus != paneList {
+	if m.screen == screenChat && m.current != nil && m.focus != paneList {
 		return m.current
 	}
 	if c := m.selectedChat(); c != nil {

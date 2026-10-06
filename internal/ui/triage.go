@@ -97,7 +97,7 @@ func (m *Model) nextUnread(skip string) (tea.Cmd, bool) {
 	for step := 1; step <= n; step++ {
 		i := (m.cursor + step) % n
 		c, _ := m.itemAt(i)
-		if c == nil || c.JID == skip || (c.Unread == 0 && !c.Mentioned) {
+		if c == nil || c.JID == skip || (c.Unread == 0 && !c.Mentioned) || isPersonal(c.JID) {
 			continue
 		}
 		m.cursor = i

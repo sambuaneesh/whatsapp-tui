@@ -17,6 +17,7 @@ import (
 
 	"github.com/Srindot/whatsapp-tui/internal/config"
 	"github.com/Srindot/whatsapp-tui/internal/messages"
+	"github.com/Srindot/whatsapp-tui/internal/personal"
 	"github.com/Srindot/whatsapp-tui/internal/termimg"
 )
 
@@ -70,6 +71,11 @@ type Model struct {
 	preload    *preload
 	pins       []messages.Message       // the open chat's pinned messages, newest first
 	pinIdx     int                      // which one the pinned bar shows
+	personal   *personal.Store          // your lists, notes and saved messages (nil: off)
+	pv         *personalView            // the open list
+	pconvs     []*messages.Conversation // the lists, as chats
+	waChats    []*messages.Conversation // the chats from WhatsApp, as last received
+	pendingSrc *msgSource               // the message :task makes a task from
 	allChats   []*messages.Conversation // every known chat and contact (forward targets)
 	archive    bool                     // showing archived chats instead of the inbox
 	unreadOnly bool                     // list shows only chats with unread messages
@@ -184,11 +190,12 @@ type Options struct {
 
 	Mouse bool // mouse tracking is on (turned back on after other programs)
 
-	Drafts    DraftStore     // keeps drafts across restarts; may be nil
-	Triage    Triager        // archive / mark unread on all devices; may be nil
-	Scheduler Scheduler      // send later, snooze, nudge; may be nil
-	Activity  ActivitySource // the activity feed; may be nil
-	Chats     ChatReader     // loads a chat for split view; may be nil
+	Drafts    DraftStore      // keeps drafts across restarts; may be nil
+	Triage    Triager         // archive / mark unread on all devices; may be nil
+	Scheduler Scheduler       // send later, snooze, nudge; may be nil
+	Activity  ActivitySource  // the activity feed; may be nil
+	Chats     ChatReader      // loads a chat for split view; may be nil
+	Personal  *personal.Store // your lists, notes and saved messages; may be nil
 
 	// PrivateReading: opening a chat doesn\'t send read receipts; you mark
 	// chats read yourself (U, :read).
@@ -272,6 +279,7 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		scheduler:   opts.Scheduler,
 		activity:    opts.Activity,
 		chatReader:  opts.Chats,
+		personal:    opts.Personal,
 		privateRead: opts.PrivateReading,
 		rangeFrom:   noRange,
 		notifier:    opts.Notifier,
@@ -304,7 +312,12 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 	return m
 }
 
-func (m Model) Init() tea.Cmd { return nil }
+func (m Model) Init() tea.Cmd {
+	if m.personal != nil {
+		return tea.Batch(personalTick(), func() tea.Msg { return PersonalChangedMsg{} })
+	}
+	return nil
+}
 
 // dispatch sends a command to the backend without blocking the UI loop.
 func (m Model) dispatch(name string, params ...string) tea.Cmd {
@@ -317,7 +330,19 @@ func (m Model) dispatch(name string, params ...string) tea.Cmd {
 
 // sortChats orders chats by their latest message, newest first.
 func sortChats(cs []*messages.Conversation) {
+	rank := func(c *messages.Conversation) int {
+		switch {
+		case c.JID == todayJID:
+			return 0
+		case c.IsPinned && isPersonal(c.JID):
+			return 1
+		}
+		return 2
+	}
 	sort.SliceStable(cs, func(i, j int) bool {
+		if ri, rj := rank(cs[i]), rank(cs[j]); ri != rj {
+			return ri < rj
+		}
 		if cs[i].IsPinned != cs[j].IsPinned {
 			return cs[i].IsPinned // pinned chats stay on top, like on the phone
 		}
@@ -338,7 +363,9 @@ func (m *Model) setChats(cs []*messages.Conversation) {
 	onArchiveRow = onArchiveRow && m.chats != nil
 	// Contacts you never messaged come without a timestamp; like WhatsApp,
 	// only show actual conversations.
-	list := make([]*messages.Conversation, 0, len(cs))
+	m.waChats = cs
+	list := make([]*messages.Conversation, 0, len(cs)+len(m.pconvs))
+	list = append(list, m.pconvs...)
 	m.allChats = m.allChats[:0]
 	for _, c := range cs {
 		if c == nil {
@@ -512,7 +539,7 @@ func (m Model) chatCounts() (inbox, archived, unread int) {
 		} else {
 			inbox++
 		}
-		if c.IsArchived == m.archive && c.Unread > 0 {
+		if c.IsArchived == m.archive && c.Unread > 0 && !isPersonal(c.JID) {
 			unread++
 		}
 	}
@@ -607,6 +634,10 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 	if c == nil {
 		return nil
 	}
+	if isPersonal(c.JID) {
+		return m.openPersonal(c)
+	}
+	m.pv = nil
 	m.screen = screenChat
 	m.focus = paneMessages
 	var save tea.Cmd
@@ -658,7 +689,7 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 // screen and the terminal has focus. Called on open, when the chat list
 // changes (a new message arrived) and when the window gets focus back.
 func (m *Model) markSeen() tea.Cmd {
-	if m.screen != screenChat || m.current == nil || !m.focused || m.privateRead {
+	if m.screen != screenChat || m.current == nil || !m.focused || m.privateRead || isPersonal(m.current.JID) {
 		return nil
 	}
 	return m.markRead(m.current.JID)
@@ -904,7 +935,24 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case quoteJumpMsg:
 		return m.applyQuoteJump(msg)
 	case incomingMsg:
+		if note, ok := m.tickOffShared(msg.msg); ok {
+			m.notice, m.noticeErr = note, false
+			m.refreshPersonal()
+		}
 		return m.notifyIncoming(msg)
+	case PersonalChangedMsg:
+		m.refreshPersonal()
+		if m.inPersonal() {
+			m.refreshMessages(false)
+		}
+		return m, nil
+	case personalTickMsg:
+		remind := m.remindDue()
+		m.refreshPersonal() // Today's counts change as the day goes
+		if m.inPersonal() {
+			m.refreshMessages(false)
+		}
+		return m, tea.Batch(remind, personalTick())
 	case downloadTickMsg:
 		return m.applyDownloadTick(msg)
 	case reactorNamesMsg:
@@ -1193,7 +1241,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.pendingG {
 		m.pendingG = false
 		if key == "g" {
-			if m.focus == paneMessages && m.screen == screenChat {
+			if m.focus == paneMessages && m.inPersonal() {
+				m.pv.sel = 0
+				m.selectableRow(1)
+				m.refreshMessages(false)
+				m.vp.GotoTop()
+			} else if m.focus == paneMessages && m.screen == screenChat {
 				m.vp.GotoTop()
 			} else {
 				m.cursor = 0
@@ -1218,6 +1271,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "esc":
 		m.notice = ""
+		if m.inPersonal() && m.focus == paneMessages {
+			return m.handlePersonalKey("esc")
+		}
 		if m.search != nil { // like :noh
 			m.search = nil
 			m.refreshMessages(false)
@@ -1234,6 +1290,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleListPane(key string) (tea.Model, tea.Cmd) {
+	if next, cmd, ok := m.listChatKey(m.selectedChat(), key); ok {
+		return next, cmd
+	}
 	half := m.listRows() / 2
 	if half < 1 {
 		half = 1
@@ -1311,6 +1370,9 @@ func (m Model) handleListPane(key string) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleMessagesPane(key string) (tea.Model, tea.Cmd) {
+	if m.inPersonal() {
+		return m.handlePersonalKey(key)
+	}
 	half := m.vp.Height / 2
 	if half < 1 {
 		half = 1
@@ -1383,6 +1445,11 @@ func (m Model) handleInsert(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return next, cmd
 		}
 		m.selectAll = false // a key that keeps the text: just deselect
+	}
+	if m.inPersonal() {
+		if next, cmd, done := m.personalInsertKey(msg); done {
+			return next, cmd
+		}
 	}
 	switch msg.String() {
 	case "esc":
@@ -1517,6 +1584,9 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 	fields := strings.Fields(line)
 	if len(fields) == 0 {
 		return m, nil
+	}
+	if next, cmd, ok := m.personalCommand(fields); ok {
+		return next, cmd
 	}
 	switch fields[0] {
 	case "q", "qa", "quit", "wq", "x":

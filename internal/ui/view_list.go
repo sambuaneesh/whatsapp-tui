@@ -68,6 +68,9 @@ func (m Model) avatarCells(c *messages.Conversation, cols, rows int, sel bool) [
 		}
 		return lines
 	}
+	if isPersonal(c.JID) {
+		return personalAvatar(c, cols, rows, sel)
+	}
 	if rows == 1 {
 		return []string{paint(senderStyle(c.JID), sel).Render(ansi.Truncate(initial(chatName(c))+"  ", cols, ""))}
 	}
@@ -114,7 +117,11 @@ func (m Model) renderEntry(c *messages.Conversation, width int, sel, open bool, 
 		nameStyle = nameStyle.Bold(true).Foreground(pal.Rose)
 	}
 	left1 := marker + av[0] + fill.Render(" ") + paint(nameStyle, sel).Render(chatName(c))
-	right1 := paint(timeStyle, sel).Render(listTime(c.LastMsgTime, now)) + fill.Render(" ")
+	stamp := listTime(c.LastMsgTime, now)
+	if c.JID == todayJID {
+		stamp = now.Format("Mon 2 Jan") // Today: the date
+	}
+	right1 := paint(timeStyle, sel).Render(stamp) + fill.Render(" ")
 	if c.IsPinned {
 		right1 = paint(styleMuted, sel).Render("📌 ") + right1
 	}
@@ -251,4 +258,25 @@ func (m Model) renderArchiveRow(width int, sel bool) string {
 		right2 = styleMentionBadge.Render("@") + fill.Render(" ")
 	}
 	return fitRow(left1, right1, width, fill) + "\n" + fitRow(left2, right2, width, fill)
+}
+
+// personalAvatar is a list's icon on a soft tile.
+func personalAvatar(c *messages.Conversation, cols, rows int, sel bool) []string {
+	icon, _, _ := strings.Cut(chatName(c), " ")
+	if ansi.StringWidth(icon) > 2 || icon == "" {
+		icon = "📋"
+	}
+	tile := lipgloss.NewStyle().Background(pal.HighlightLow)
+	if sel {
+		tile = tile.Background(colorSelBg)
+	}
+	out := make([]string, rows)
+	for r := range out {
+		text := strings.Repeat(" ", cols)
+		if r == (rows-1)/2 {
+			text = ansi.Truncate(lipgloss.PlaceHorizontal(cols, lipgloss.Center, icon), cols, "")
+		}
+		out[r] = tile.Render(text)
+	}
+	return out
 }

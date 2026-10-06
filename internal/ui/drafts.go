@@ -30,7 +30,7 @@ func (m *Model) stashDraft() tea.Cmd {
 		m.drafts[jid] = text
 	}
 	store := m.draftStore
-	if store == nil {
+	if store == nil || isPersonal(jid) {
 		return nil
 	}
 	return func() tea.Msg {

@@ -122,6 +122,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if msg.Action != tea.MouseActionPress {
 			return m, nil
 		}
+		if !overList && m.inPersonal() {
+			return m.personalClick(msg.X, msg.Y)
+		}
 		if !overList && m.pinBarAt(msg.X, msg.Y) {
 			return m.jumpToPin()
 		}

@@ -115,7 +115,7 @@ func (m Model) highlighted() *messages.Conversation {
 // prefetch starts loading c once the highlight has rested on it.
 func (m Model) prefetch(c *messages.Conversation) tea.Cmd {
 	p := m.preload
-	if p == nil || c == nil || m.chatReader == nil || c.LastMsgTime == 0 || p.want == c.JID || p.loading[c.JID] {
+	if p == nil || c == nil || m.chatReader == nil || c.LastMsgTime == 0 || isPersonal(c.JID) || p.want == c.JID || p.loading[c.JID] {
 		return nil
 	}
 	if m.current != nil && m.current.JID == c.JID {

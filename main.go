@@ -22,6 +22,7 @@ import (
 	"github.com/Srindot/whatsapp-tui/internal/daemon"
 	"github.com/Srindot/whatsapp-tui/internal/messages"
 	"github.com/Srindot/whatsapp-tui/internal/notify"
+	"github.com/Srindot/whatsapp-tui/internal/personal"
 	"github.com/Srindot/whatsapp-tui/internal/semantic"
 	"github.com/Srindot/whatsapp-tui/internal/termimg"
 	"github.com/Srindot/whatsapp-tui/internal/ui"
@@ -172,6 +173,14 @@ func run() error {
 		opts.Detach = srv.Detach
 		opts.NotifyLog = os.Stderr // the background app's log
 	}
+	// your own lists, notes and saved messages, in their own database
+	ps, err := personal.Open(filepath.Join(filepath.Dir(config.GetConfigFilePath()), "personal.db"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "lists and notes are off: %v\n", err)
+	} else {
+		defer ps.Close()
+		opts.Personal = ps
+	}
 	opts.Mouse = config.Config.Ui.Mouse
 	opts.PrivateReading = config.Config.General.PrivateReading
 	opts.Notifications, opts.Notifier = config.NotificationMode(), notify.System{}
@@ -182,6 +191,10 @@ func run() error {
 	}
 	p := tea.NewProgram(model, progOpts...)
 	handler.SetSend(p.Send)
+	if ps != nil {
+		// changes from the API, the CLI or the Markdown mirror redraw
+		ps.OnChange = func() { go p.Send(ui.PersonalChangedMsg{}) }
+	}
 
 	// Mark this kitty window so kitty.conf can pass keys it normally handles
 	// itself (ctrl+v, shift+enter) to us; see the README. Also see-through

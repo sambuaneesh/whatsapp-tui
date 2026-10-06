@@ -136,7 +136,9 @@ func (m Model) mediaBlock(msg messages.Message, maxInner int) (block string, met
 
 func (m Model) renderChatPane(width, height int) string {
 	title := ""
-	if m.current != nil {
+	if m.current != nil && m.inPersonal() {
+		title = " " + styleTitle.Render(chatName(m.current)) + styleDim.Render("  "+m.personalKind())
+	} else if m.current != nil {
 		kind := "contact"
 		if isGroup(m.current.JID) {
 			kind = "group"

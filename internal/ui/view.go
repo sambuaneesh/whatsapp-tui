@@ -64,6 +64,11 @@ func (m *Model) refreshMessages(gotoBottom bool) {
 	// keep the message at the top of the screen in place: pictures loading,
 	// reactions or history arriving above would otherwise shift what you're
 	// reading (and the unread line) down the screen
+	if m.inPersonal() {
+		m.vp.SetLines(m.personalLines(m.rightWidth()))
+		m.msgSpans, m.msgLines = nil, nil
+		return
+	}
 	anchor, delta := m.topVisible()
 	lines, spans := m.renderMessages(m.rightWidth())
 	m.vp.SetLines(lines)
@@ -295,7 +300,7 @@ func (m Model) statusRight() string {
 }
 
 // visualHint lists the visual-mode actions.
-const visualHint = "j/k gg/G move · V several · enter reply · p private · r react · w who reacted · e edit · f forward · space view · y copy · s save · d delete · P pin · o open · F1 all · esc"
+const visualHint = "j/k gg/G move · V several · enter reply · p private · r react · w who reacted · e edit · f forward · space view · y copy · s save · d delete · P pin · T task · b save · o open · F1 all · esc"
 
 func (m Model) renderCommandLine() string {
 	switch {
@@ -338,6 +343,8 @@ func (m Model) renderCommandLine() string {
 		return styleErr.Render(ansi.Truncate(m.notice, m.width, "…"))
 	case m.notice != "":
 		return styleDim.Render(ansi.Truncate(m.notice, m.width, "…"))
+	case m.inPersonal() && m.mode == modeNormal && m.focus == paneMessages:
+		return styleDim.Render(ansi.Truncate(m.personalHint(), m.width, "…"))
 	}
 	return ""
 }
