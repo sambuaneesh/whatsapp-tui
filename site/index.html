@@ -87,7 +87,7 @@ kbd {
 .topbar nav { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
 .topbar nav a { color: var(--subtle); text-decoration: none; padding: 3px 9px; border-radius: 5px; }
 .topbar nav a:hover { background: var(--overlay); color: var(--text); }
-.brand { color: var(--text); font-weight: 600; }
+.brand { color: var(--text); font-weight: 600; white-space: nowrap; }
 @media (max-width: 720px) { .topbar nav a.opt { display: none; } }
 
 /* ---------- hero ---------- */
@@ -233,7 +233,7 @@ section { padding-block: 56px 24px; border-top: 1px solid var(--hl-med); scroll-
 
 /* speed chart */
 .chart { overflow-x: auto; }
-.chart svg { display: block; width: 100%; min-width: 560px; height: auto; }
+.chart svg { display: block; width: 100%; height: auto; }
 .chart text { font-family: var(--mono); fill: var(--subtle); }
 .legend { display: flex; gap: 18px; font-family: var(--mono); font-size: 13px; color: var(--subtle); flex-wrap: wrap; }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
@@ -260,6 +260,52 @@ td .ctx { font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .footer { padding-block: 40px 60px; color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: space-between; border-top: 1px solid var(--hl-med); }
 .theme-pick { display: flex; gap: 6px; }
 .note { font-size: 14px; color: var(--muted); }
+
+/* ---------- responsive ---------- */
+/* grid and flex children may shrink below their content (long lines scroll
+   or wrap inside their own box instead of widening the page) */
+.hero > *, .two > *, .grid > *, .term-shell, .play, .points, .feat, .cta-row, .copyline { min-width: 0; }
+.copyline span { min-width: 0; flex: 1; }
+.marks span:last-child { min-width: 0; }
+td.mono { white-space: nowrap; }
+.topbar nav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.topbar nav::-webkit-scrollbar { display: none; }
+.topbar nav a { white-space: nowrap; }
+
+@media (max-width: 860px) {
+  section { padding-block: 44px 16px; }
+  .grid { margin-top: 22px; gap: 14px; }
+  .two { gap: 20px; }
+}
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .topbar .wrap { gap: 10px; }
+  .topbar .badge { display: none; }
+  .topbar nav { margin-left: 0; flex: 1; }
+  .topbar nav a.opt { display: inline-block; }
+  .hero { padding-block: 32px 12px; gap: 24px; }
+  .lede { font-size: 17px; }
+  .copyline { width: 100%; align-items: flex-start; }
+  .copyline span { white-space: normal; overflow-wrap: anywhere; font-size: 13px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+  .stats b { font-size: 22px; }
+  .intro { font-size: 17px; }
+  .feat { padding: 14px 14px 16px; }
+  .play { padding: 14px; }
+  .term-body { height: 340px; }
+  .term-title .hint { display: none; }
+  .status .r > :not(:last-child) { display: none; }
+  .keys { gap: 5px; }
+  .keys .note { flex-basis: 100%; }
+  .attach { grid-template-columns: 1fr 1fr 1fr; font-size: 11.5px; }
+  .attach .win { padding: 8px 4px; }
+  .point { gap: 4px 10px; }
+  #ktable th:nth-child(3), #ktable td:nth-child(3) { display: none; }
+  #ktable th:first-child { width: auto !important; }
+  td, th { padding: 7px 9px; }
+  table { font-size: 14px; }
+  .footer { flex-direction: column; }
+}
 </style>
 </head>
 <body>
@@ -1069,27 +1115,36 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["Redraw after a change", 66, 0.35], ["j in visual mode", 69, 0.84], ["A new message", 70, 0.65],
     ["Receipts, reactions", 69, 0.78], ["One frame", 2.06, 0.26], ["Scrolling", 2.06, 0.29], ["Opening a chat", 66, 26],
   ];
-  (function chart() {
-    const W = 760, L = 190, R = 70, rowH = 46, top = 10, H = top + rows.length * rowH + 34;
+  function chart() {
+    const box = $("#chart");
+    const narrow = box.clientWidth < 560;
+    const W = narrow ? Math.max(box.clientWidth, 300) : 760;
+    const L = narrow ? 0 : 190, R = narrow ? 92 : 70;
+    const rowH = narrow ? 60 : 46, lab = narrow ? 18 : 0, top = 10;
+    const H = top + rows.length * rowH + 34;
     const min = Math.log10(0.1), max = Math.log10(100);
     const x = (v) => L + ((Math.log10(v) - min) / (max - min)) * (W - L - R);
     let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Time per action before and after, in milliseconds, log scale">`;
     [0.1, 1, 10, 100].forEach((t) => {
       s += `<line x1="${x(t)}" x2="${x(t)}" y1="${top - 4}" y2="${H - 26}" stroke="var(--hl-med)" stroke-dasharray="3 4"/>`;
-      s += `<text x="${x(t)}" y="${H - 8}" font-size="12" text-anchor="middle">${t} ms</text>`;
+      s += `<text x="${x(t)}" y="${H - 8}" font-size="12" text-anchor="${t === 0.1 && narrow ? "start" : "middle"}">${t} ms</text>`;
     });
     s += `<line x1="${x(16.7)}" x2="${x(16.7)}" y1="${top - 4}" y2="${H - 26}" stroke="var(--love)" stroke-width="1.2"/>`;
-    s += `<text x="${x(16.7) + 4}" y="${top + 6}" font-size="11" style="fill:var(--love)">one 60 Hz frame</text>`;
-    rows.forEach(([label, b, a], i) => {
-      const y = top + i * rowH + 8;
-      s += `<text x="0" y="${y + 17}" font-size="13" style="fill:var(--text)">${label}</text>`;
-      s += `<rect x="${L}" y="${y}" width="${x(b) - L}" height="12" rx="3" fill="var(--muted)"/>`;
-      s += `<text x="${x(b) + 6}" y="${y + 10}" font-size="11.5">${b} ms</text>`;
-      s += `<rect x="${L}" y="${y + 15}" width="${x(a) - L}" height="12" rx="3" fill="var(--foam)"/>`;
-      s += `<text x="${x(a) + 6}" y="${y + 25}" font-size="11.5" style="fill:var(--foam)">${a} ms · ${Math.round(b / a)}×</text>`;
+    s += `<text x="${x(16.7) + 4}" y="${top + (narrow ? 2 : 6)}" font-size="11" style="fill:var(--love)">${narrow ? "60 Hz frame" : "one 60 Hz frame"}</text>`;
+    rows.forEach(([label, bv, av], i) => {
+      const y = top + i * rowH + 8 + lab;
+      s += narrow ? `<text x="0" y="${y - 5}" font-size="12.5" style="fill:var(--text)">${label}</text>`
+                  : `<text x="0" y="${y + 17}" font-size="13" style="fill:var(--text)">${label}</text>`;
+      s += `<rect x="${L}" y="${y}" width="${x(bv) - L}" height="12" rx="3" fill="var(--muted)"/>`;
+      s += `<text x="${x(bv) + 6}" y="${y + 10}" font-size="11.5">${bv} ms</text>`;
+      s += `<rect x="${L}" y="${y + 15}" width="${x(av) - L}" height="12" rx="3" fill="var(--foam)"/>`;
+      s += `<text x="${x(av) + 6}" y="${y + 25}" font-size="11.5" style="fill:var(--foam)">${av} ms · ${Math.round(bv / av)}×</text>`;
     });
-    $("#chart").innerHTML = s + `</svg>`;
-  })();
+    box.innerHTML = s + `</svg>`;
+  }
+  chart();
+  let resizeT;
+  addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(chart, 120); });
 
   /* ================= keyboard reference ================= */
   const K = [
