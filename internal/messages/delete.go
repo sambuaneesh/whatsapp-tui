@@ -83,7 +83,7 @@ func (sm *SessionManager) DeleteForMe(ctx context.Context, m Message) error {
 	}
 	if !localOnly {
 		patch := buildDeleteForMe(chat, sender, m.Id, m.FromMe, time.Unix(int64(m.Timestamp), 0))
-		if err := client.SendAppState(ctx, patch); err != nil {
+		if err := sm.sendAppState(ctx, client, patch); err != nil {
 			return fmt.Errorf("delete: %w", err)
 		}
 	}
@@ -128,7 +128,7 @@ func (sm *SessionManager) DeleteChat(ctx context.Context, chatStr string) error 
 		return fmt.Errorf("invalid chat: %w", err)
 	}
 	lastTS, lastKey := sm.lastMessageKey(client, chat)
-	if err := client.SendAppState(ctx, appstate.BuildDeleteChat(chat, lastTS, lastKey, true)); err != nil {
+	if err := sm.sendAppState(ctx, client, appstate.BuildDeleteChat(chat, lastTS, lastKey, true)); err != nil {
 		return fmt.Errorf("delete chat: %w", err)
 	}
 	sm.removeChatLocally(chatStr)

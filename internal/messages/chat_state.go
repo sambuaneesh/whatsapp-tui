@@ -99,7 +99,7 @@ func (sm *SessionManager) sendRead(jidStr string, unread int) error {
 	// the phone's own unread badge (also covers messages this device
 	// never received)
 	lastTS, lastKey := sm.lastMessageKey(client, chat)
-	if err := client.SendAppState(ctx, appstate.BuildMarkChatAsRead(chat, true, lastTS, lastKey)); err != nil {
+	if err := sm.sendAppState(ctx, client, appstate.BuildMarkChatAsRead(chat, true, lastTS, lastKey)); err != nil {
 		errs = append(errs, fmt.Errorf("sync: %w", err))
 	}
 	return errors.Join(errs...)

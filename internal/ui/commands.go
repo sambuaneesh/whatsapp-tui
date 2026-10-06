@@ -240,6 +240,8 @@ func commandList() []command {
 			run: func(m Model) (tea.Model, tea.Cmd) { return m.pinChat(m.theChat()) }},
 		{id: "chat.unpin", title: "Chat: Unpin from the Top", keys: "P  :unpin", when: chatIs(func(c *messages.Conversation) bool { return c.IsPinned }),
 			run: func(m Model) (tea.Model, tea.Cmd) { return m.pinChat(m.theChat()) }},
+		{id: "chat.archive", title: "Chat: Archive", keys: ":archive-chat", when: chatIs(func(c *messages.Conversation) bool { return !c.IsArchived }), run: ex("archive-chat")},
+		{id: "chat.unarchive", title: "Chat: Unarchive (Back to the Inbox)", keys: "e  :unarchive", when: chatIs(func(c *messages.Conversation) bool { return c.IsArchived }), run: ex("unarchive")},
 		{id: "chat.mute8", title: "Chat: Mute for 8 Hours", keys: ":mute 8h", when: chatIs(func(c *messages.Conversation) bool { return !c.Muted(time.Now().Unix()) }), run: muteFor(8 * time.Hour)},
 		{id: "chat.mutew", title: "Chat: Mute for a Week", keys: ":mute 1w", when: chatIs(func(c *messages.Conversation) bool { return !c.Muted(time.Now().Unix()) }), run: muteFor(7 * 24 * time.Hour)},
 		{id: "chat.mute", title: "Chat: Mute Always", keys: ":mute", when: chatIs(func(c *messages.Conversation) bool { return !c.Muted(time.Now().Unix()) }), run: muteFor(-1)},

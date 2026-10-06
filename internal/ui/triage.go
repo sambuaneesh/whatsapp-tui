@@ -56,6 +56,21 @@ func (m *Model) doneChat(c *messages.Conversation, note string) tea.Cmd {
 	})
 }
 
+// archiveChat archives a chat (leaving it unread) or brings it back.
+func (m *Model) archiveChat(c *messages.Conversation, archive bool) tea.Cmd {
+	if c == nil {
+		return nil
+	}
+	jid, name := c.JID, chatName(c)
+	label := "Archived " + name + " (A shows the archive)"
+	if !archive {
+		label = "Moved " + name + " back to the inbox"
+	}
+	return m.triageCmd(label, func(ctx context.Context, t Triager) error {
+		return t.ArchiveChat(ctx, jid, archive)
+	})
+}
+
 // toggleUnread marks a read chat unread, or an unread one read.
 func (m *Model) toggleUnread(c *messages.Conversation) tea.Cmd {
 	if c == nil {

@@ -143,6 +143,7 @@ var helpSections = []struct {
 		{":nudge <when>", "remind you if no reply by then"},
 		{":scheduled", "what's scheduled (x cancels)"},
 		{":pin · :unpin", "pin the chat to the top"},
+		{":archive-chat · :unarchive", "archive (stays unread) · back to inbox"},
 		{":mute [8h|1w] · :unmute", "mute the chat (always without a time)"},
 		{":pinned", "jump to the pinned messages"},
 		{":split <name> · :close", "open a chat beside · close it"},

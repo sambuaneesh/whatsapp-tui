@@ -206,3 +206,30 @@ func TestPinAndMuteChat(t *testing.T) {
 		t.Fatal("a bad length should say what works")
 	}
 }
+
+func TestPaletteArchiveUnarchive(t *testing.T) {
+	f := &fakeTriage{}
+	m := triageModel(t, f)
+	m, _ = press(t, m, tea.KeyF1)
+	m, _ = keys(t, m, strings.Split("chat archive", "")...)
+	if m.qo.items[0].cmd.id != "chat.archive" {
+		t.Fatalf("first: %s", m.qo.items[0].title)
+	}
+	m, cmds := keys(t, m, "enter")
+	m = runAll(t, m, cmds...)
+	if strings.Join(f.calls, ",") != "archive a@s.whatsapp.net" {
+		t.Fatalf("calls %v (archive alone shouldn't mark it read)", f.calls)
+	}
+	// an archived chat offers unarchive instead
+	m.chats[0].IsArchived = true
+	m.listVer++
+	m, _ = keys(t, m, "A") // the archive, on Arjun
+	m, _ = press(t, m, tea.KeyF1)
+	ids := map[string]bool{}
+	for _, it := range m.qo.items {
+		ids[it.cmd.id] = true
+	}
+	if !ids["chat.unarchive"] || ids["chat.archive"] {
+		t.Fatalf("archived chat commands: %v", ids)
+	}
+}

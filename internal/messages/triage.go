@@ -21,7 +21,7 @@ func (sm *SessionManager) ArchiveChat(ctx context.Context, chatStr string, archi
 		return fmt.Errorf("invalid chat: %w", err)
 	}
 	lastTS, lastKey := sm.lastMessageKey(client, chat)
-	if err := client.SendAppState(ctx, appstate.BuildArchive(chat, archive, lastTS, lastKey)); err != nil {
+	if err := sm.sendAppState(ctx, client, appstate.BuildArchive(chat, archive, lastTS, lastKey)); err != nil {
 		return fmt.Errorf("archive: %w", err)
 	}
 	sm.setChatFlags(chat, &archive, nil)
@@ -44,7 +44,7 @@ func (sm *SessionManager) MarkChatUnread(ctx context.Context, chatStr string, un
 		return fmt.Errorf("invalid chat: %w", err)
 	}
 	lastTS, lastKey := sm.lastMessageKey(client, chat)
-	if err := client.SendAppState(ctx, appstate.BuildMarkChatAsRead(chat, false, lastTS, lastKey)); err != nil {
+	if err := sm.sendAppState(ctx, client, appstate.BuildMarkChatAsRead(chat, false, lastTS, lastKey)); err != nil {
 		return fmt.Errorf("mark unread: %w", err)
 	}
 	sm.setChatRead(chat, false)
@@ -75,7 +75,7 @@ func (sm *SessionManager) PinChat(ctx context.Context, chatStr string, pin bool)
 			return errors.New("WhatsApp allows 3 pinned chats: unpin one first")
 		}
 	}
-	if err := client.SendAppState(ctx, appstate.BuildPin(chat, pin)); err != nil {
+	if err := sm.sendAppState(ctx, client, appstate.BuildPin(chat, pin)); err != nil {
 		return fmt.Errorf("pin: %w", err)
 	}
 	sm.setChatFlags(chat, nil, &pin)
@@ -98,7 +98,7 @@ func (sm *SessionManager) MuteChat(ctx context.Context, chatStr string, d time.D
 		e := time.Now().Add(d).UnixMilli()
 		end = &e
 	}
-	if err := client.SendAppState(ctx, appstate.BuildMuteAbs(chat, d != 0, end)); err != nil {
+	if err := sm.sendAppState(ctx, client, appstate.BuildMuteAbs(chat, d != 0, end)); err != nil {
 		return fmt.Errorf("mute: %w", err)
 	}
 	if d == 0 {

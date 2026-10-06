@@ -1603,6 +1603,12 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m.pinChat(c)
+	case "archive-chat", "unarchive":
+		c := m.theChat()
+		if c == nil || c.LastMsgTime == 0 {
+			return m, nil
+		}
+		return m, m.archiveChat(c, fields[0] == "archive-chat")
 	case "pinned":
 		if !inChat(m) {
 			m.notice, m.noticeErr = ":pinned works in a chat", true

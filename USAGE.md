@@ -266,6 +266,10 @@ none left). `e` in the list does the same for the selected chat (in the
 archive, `e` brings it back), and `U` marks a chat unread, or read. These
 change the chat on your phone too.
 
+To **unarchive** a chat: `A` (or click **Archived**), select it, `e`; or
+`F1` → "unarchive", or `:unarchive` in it. `:archive-chat` (or `F1` →
+"archive") archives a chat without marking it read, unlike `e`.
+
 `P` in the list pins the selected chat to the top (WhatsApp allows three) or
 unpins it; `:pin` / `:unpin` do it for the open chat. `:mute 8h`, `:mute 1w`
 or `:mute` (always) mutes a chat, `:unmute` unmutes it; muted chats show 🔕
