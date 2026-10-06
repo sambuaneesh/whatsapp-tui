@@ -246,7 +246,11 @@ func run() error {
 	}
 	// search by meaning, if a local model runs (does nothing otherwise)
 	if g := config.Config.General; g.SemanticSearch && g.OllamaUrl != "" {
-		sm.StartSemantic(semantic.Ollama{URL: strings.TrimRight(g.OllamaUrl, "/"), Model: g.EmbedModel})
+		var busy func() bool
+		if g.SemanticPauseGaming {
+			busy = func() bool { return semantic.GPUBusy(50) }
+		}
+		sm.StartSemanticGentle(semantic.Ollama{URL: strings.TrimRight(g.OllamaUrl, "/"), Model: g.EmbedModel}, busy)
 	}
 	// the local API for scripts and hooks (docs/API.md)
 	apiOpts := api.Options{

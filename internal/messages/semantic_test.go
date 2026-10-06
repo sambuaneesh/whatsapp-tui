@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -117,5 +118,48 @@ func TestQuantizedSimilarity(t *testing.T) {
 	}
 	if len(semantic.Quantize(make([]float32, 768))) != semantic.Dims {
 		t.Fatal("not shortened")
+	}
+}
+
+func TestOllamaRequestsAreGentle(t *testing.T) {
+	var got []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		got = append(got, req)
+		_ = json.NewEncoder(w).Encode(map[string]any{"embeddings": [][]float32{{1, 2, 3}}})
+	}))
+	defer srv.Close()
+	o := semantic.Ollama{URL: srv.URL, Model: "embeddinggemma"}
+	_, _ = o.Embed(context.Background(), []string{"a message"}, false)
+	_, _ = o.Embed(context.Background(), []string{"a search"}, true)
+	if got[0]["keep_alive"] != "10s" || got[1]["keep_alive"] != "2m" {
+		t.Fatalf("keep_alive %v / %v", got[0]["keep_alive"], got[1]["keep_alive"])
+	}
+	if opts, _ := got[0]["options"].(map[string]any); opts["num_thread"] != float64(2) {
+		t.Fatalf("options %v", got[0]["options"])
+	}
+}
+
+func TestIndexingWaitsWhileGPUBusy(t *testing.T) {
+	srv := fakeOllama(t)
+	defer srv.Close()
+	sm := &SessionManager{uiHandler: NewMockUiHandler(), db: newTestDB(t), convByJID: map[string]*Conversation{}}
+	_ = sm.db.AddMessage(Message{Id: "a", ChatId: "c@g.us", Text: "the flat address is 12B", Timestamp: 1})
+	var mu sync.Mutex
+	gaming := true
+	busy := func() bool { mu.Lock(); defer mu.Unlock(); return gaming }
+	sm.StartSemanticGentle(semantic.Ollama{URL: srv.URL, Model: "embeddinggemma"}, busy)
+	time.Sleep(300 * time.Millisecond)
+	if left, _ := sm.db.UnembeddedMessages(10); len(left) != 1 {
+		t.Fatal("indexed while the GPU was busy")
+	}
+	// game over: the next pass indexes
+	mu.Lock()
+	gaming = false
+	mu.Unlock()
+	sm.indexMeaning()
+	if left, _ := sm.db.UnembeddedMessages(10); len(left) != 0 {
+		t.Fatal("didn't catch up")
 	}
 }

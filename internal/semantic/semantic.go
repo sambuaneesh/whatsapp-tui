@@ -11,7 +11,10 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"os/exec"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -25,12 +28,23 @@ type Embedder interface {
 	Embed(ctx context.Context, texts []string, query bool) ([][]float32, error)
 }
 
-// Ollama embeds with an Ollama server.
+// Ollama embeds with an Ollama server, gently: a couple of CPU threads, and
+// the model unloaded soon after (so it doesn't hold GPU memory, e.g. while
+// gaming).
 type Ollama struct {
 	URL   string // e.g. http://127.0.0.1:11434
 	Model string // e.g. embeddinggemma
 	HTTP  *http.Client
 }
+
+// How long Ollama keeps the model loaded after a request: briefly after
+// indexing (enough to bridge consecutive batches), a little longer after a
+// search (you may search again).
+const (
+	keepAfterIndex  = "10s"
+	keepAfterSearch = "2m"
+	embedThreads    = 2 // CPU threads Ollama may use (it would take one per core)
+)
 
 // Available reports whether the server answers and has the model.
 func (o Ollama) Available(ctx context.Context) bool {
@@ -49,7 +63,12 @@ func (o Ollama) Embed(ctx context.Context, texts []string, query bool) ([][]floa
 			in[i] = "title: none | text: " + t
 		}
 	}
-	body, _ := json.Marshal(map[string]any{"model": o.Model, "input": in})
+	keep := keepAfterIndex
+	if query {
+		keep = keepAfterSearch
+	}
+	body, _ := json.Marshal(map[string]any{"model": o.Model, "input": in, "keep_alive": keep,
+		"options": map[string]any{"num_thread": embedThreads}})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, o.URL+"/api/embed", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
@@ -154,4 +173,19 @@ func (t *Top) Add(id string, score float64) {
 func (t *Top) Best() []Scored {
 	sort.Slice(t.items, func(i, j int) bool { return t.items[i].Score > t.items[j].Score })
 	return t.items
+}
+
+// GPUBusy reports whether the GPU is busy with something else (a game):
+// over threshold percent in use. Unknown (no nvidia-smi) counts as not busy.
+func GPUBusy(threshold int) bool {
+	out, err := exec.Command("nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits").Output()
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if n, err := strconv.Atoi(strings.TrimSpace(line)); err == nil && n > threshold {
+			return true
+		}
+	}
+	return false
 }

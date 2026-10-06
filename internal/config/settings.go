@@ -36,6 +36,7 @@ type General struct {
 	SemanticSearch      bool   // search by meaning with a local model (Ollama)
 	OllamaUrl           string // where Ollama listens
 	EmbedModel          string // its embedding model
+	SemanticPauseGaming bool   // don't index while the GPU is busy (over 50%)
 	NotificationTimeout int64
 	BacklogMsgQuantity  int
 }
@@ -104,6 +105,7 @@ var Config = IniFile{
 		SemanticSearch:      true,
 		OllamaUrl:           "http://127.0.0.1:11434",
 		EmbedModel:          "embeddinggemma",
+		SemanticPauseGaming: true,
 		BacklogMsgQuantity:  10,
 	},
 	&Keymap{

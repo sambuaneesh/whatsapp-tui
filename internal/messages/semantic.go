@@ -19,12 +19,14 @@ const (
 	embedMinText     = 12               // shorter texts say too little to embed
 	similarMax       = 20               // messages added by meaning per search
 	similarThreshold = 0.45             // how close in meaning they must be
-	embedSoon        = 30 * time.Second // after new messages, index them this much later
+	embedSoon        = 15 * time.Minute // new messages are indexed at most this often
+	busyEvery        = 30               // during a long index, check the GPU every this many batches
 	reprobeEvery     = 5 * time.Minute  // a search retries a model that wasn't running
 )
 
 type semanticState struct {
 	mu      sync.Mutex
+	gpuBusy func() bool       // set: indexing waits while it says so (gaming)
 	cfg     semantic.Embedder // the model set up (maybe not running yet)
 	probed  time.Time         // when cfg was last tried
 	e       semantic.Embedder
@@ -36,8 +38,19 @@ type semanticState struct {
 // StartSemantic turns on search by meaning with this model: if it answers,
 // messages get indexed in the background (newest first).
 func (sm *SessionManager) StartSemantic(e semantic.Embedder) {
+	sm.startSemantic(e, nil)
+}
+
+// StartSemanticGentle is StartSemantic, but background indexing waits while
+// busy() says the GPU is in use by something else.
+func (sm *SessionManager) StartSemanticGentle(e semantic.Embedder, busy func() bool) {
+	sm.startSemantic(e, busy)
+}
+
+func (sm *SessionManager) startSemantic(e semantic.Embedder, busy func() bool) {
 	s := &sm.semantic
 	s.mu.Lock()
+	s.gpuBusy = busy
 	s.cfg, s.probed = e, time.Now()
 	s.mu.Unlock()
 	go func() {
@@ -80,14 +93,25 @@ func (sm *SessionManager) indexMeaning() {
 		return
 	}
 	s.running = true
-	e := s.e
+	e, busy := s.e, s.gpuBusy
 	s.mu.Unlock()
 	defer func() {
 		s.mu.Lock()
 		s.running = false
 		s.mu.Unlock()
 	}()
-	for {
+	for batch := 0; ; batch++ {
+		// the GPU is someone else's (a game): try again later
+		if busy != nil && batch%busyEvery == 0 {
+			if batch > 0 {
+				time.Sleep(time.Second) // let our own work drop out of the reading
+			}
+			if busy() {
+				sm.debugf("index by meaning: GPU busy, later")
+				sm.indexMeaningSoon()
+				return
+			}
+		}
 		msgs, err := sm.db.UnembeddedMessages(embedBatch)
 		if err != nil || len(msgs) == 0 {
 			return
@@ -135,7 +159,7 @@ func (sm *SessionManager) similar(ctx context.Context, query string) []semantic.
 	cfg := s.cfg
 	s.mu.Unlock()
 	if retry {
-		sm.StartSemantic(cfg) // the model may have been started since
+		sm.startSemantic(cfg, s.gpuBusy) // the model may have been started since
 	}
 	if !ready || len(strings.TrimSpace(query)) < 3 {
 		return nil

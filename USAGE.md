@@ -242,8 +242,12 @@ ollama pull embeddinggemma         # ~620 MB
 ```
 
 The app indexes your messages in the background (newest first; a few
-minutes for tens of thousands) and new ones as they arrive. Without Ollama it
-does nothing. `semantic_search = false` turns it off.
+minutes for tens of thousands), then new ones every 15 minutes. It's gentle
+on a gaming machine: Ollama gets 2 CPU threads, unloads the model from the
+GPU 10 seconds after indexing (2 minutes after a search), and indexing waits
+while the GPU is over 50% busy (`semantic_pause_gaming = false` to index
+anyway). Without Ollama it does nothing. `semantic_search = false` turns it
+off.
 
 ## Two chats side by side
 
@@ -342,6 +346,7 @@ api_allow_send  = false        ; true: scripts may send through the local API
 semantic_search = true         ; search by meaning when Ollama runs (see "How search matches")
 ollama_url      = http://127.0.0.1:11434
 embed_model     = embeddinggemma
+semantic_pause_gaming = true   ; don't index while the GPU is busy (games)
 
 [ui]
 theme            = rose-pine   ; rose-pine, rose-pine-moon, rose-pine-dawn
