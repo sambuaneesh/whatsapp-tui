@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/Srindot/whatsapp-tui/internal/config"
 	"github.com/Srindot/whatsapp-tui/internal/messages"
 	"github.com/Srindot/whatsapp-tui/internal/personal"
 )
@@ -1635,6 +1636,9 @@ func (m Model) personalCommand(fields []string) (tea.Model, tea.Cmd, bool) {
 		}
 		m.afterChange(m.personal.DeleteList(l.ID), "Deleted the list "+l.Name+" · :undo brings it back")
 		return m, nil, true
+	case "mirror", "obsidian":
+		next, cmd := m.setMirror(arg)
+		return next, cmd, true
 	case "undo":
 		next, cmd := m.undoPersonal()
 		return next, cmd, true
@@ -1810,4 +1814,46 @@ func (m Model) personalHint() string {
 		return "enter go to the message · d delete · u undo · y copy · i jot · F1 all"
 	}
 	return "i add · x done · e edit · t when · ! important · d delete · u undo · J/K move · >/< checklist · m list · f send · F1 all"
+}
+
+// Mirrorer keeps a Markdown folder in step with your lists
+// (*personal.Mirror).
+type Mirrorer interface {
+	Dir() string
+	SetDir(dir string) error
+}
+
+// setMirror shows, sets or turns off (":mirror off") the Markdown folder.
+func (m Model) setMirror(arg string) (tea.Model, tea.Cmd) {
+	if m.mirror == nil {
+		m.notice, m.noticeErr = "the Markdown mirror isn't available", true
+		return m, nil
+	}
+	switch arg {
+	case "":
+		if d := m.mirror.Dir(); d != "" {
+			m.notice, m.noticeErr = "Your lists and notes are mirrored to "+tildePath(d)+" (:mirror off stops)", false
+		} else {
+			m.notice, m.noticeErr = "Not mirrored: :mirror <folder> keeps a Markdown copy there (an Obsidian vault folder)", false
+		}
+		return m, nil
+	case "off":
+		arg = ""
+	default:
+		arg = config.ExpandPath(arg)
+	}
+	if err := m.mirror.SetDir(arg); err != nil {
+		m.notice, m.noticeErr = "mirror: "+err.Error(), true
+		return m, nil
+	}
+	if err := config.SetObsidianDir(arg); err != nil {
+		m.notice, m.noticeErr = err.Error(), true
+		return m, nil
+	}
+	if arg == "" {
+		m.notice, m.noticeErr = "Stopped mirroring (the files stay where they are)", false
+	} else {
+		m.notice, m.noticeErr = "Mirroring your lists and notes to "+tildePath(arg)+": edit them there too", false
+	}
+	return m, nil
 }

@@ -11,6 +11,7 @@ import (
 	runtimedebug "runtime/debug"
 	"strings"
 	"sync"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -180,6 +181,11 @@ func run() error {
 	} else {
 		defer ps.Close()
 		opts.Personal = ps
+		mirror := personal.NewMirror(ps, config.ExpandPath(config.Config.General.ObsidianDir))
+		mirror.Log = func(format string, args ...any) { fmt.Fprintf(os.Stderr, format+"\n", args...) }
+		mirror.Start(2 * time.Second)
+		defer mirror.Stop()
+		opts.Mirror = mirror
 	}
 	opts.Mouse = config.Config.Ui.Mouse
 	opts.PrivateReading = config.Config.General.PrivateReading

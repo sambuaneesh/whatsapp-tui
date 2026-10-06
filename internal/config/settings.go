@@ -37,6 +37,9 @@ type General struct {
 	OllamaUrl           string // where Ollama listens
 	EmbedModel          string // its embedding model
 	SemanticPauseGaming bool   // don't index while the GPU is busy (over 50%)
+	ObsidianDir         string // mirror your lists and notes to this folder as Markdown ("" off)
+	Ai                  bool   // let the local chat model help (dates, tasks from chats, plans, summaries)
+	AiModel             string // the Ollama chat model for that
 	NotificationTimeout int64
 	BacklogMsgQuantity  int
 }
@@ -106,6 +109,8 @@ var Config = IniFile{
 		OllamaUrl:           "http://127.0.0.1:11434",
 		EmbedModel:          "embeddinggemma",
 		SemanticPauseGaming: true,
+		Ai:                  true,
+		AiModel:             "qwen3:4b",
 		BacklogMsgQuantity:  10,
 	},
 	&Keymap{
@@ -277,6 +282,15 @@ func SetPrivateReading(on bool) error {
 		return err
 	}
 	Config.General.PrivateReading = on
+	return nil
+}
+
+// SetObsidianDir sets (and saves) the folder lists are mirrored to.
+func SetObsidianDir(dir string) error {
+	if err := saveGeneral("obsidian_dir", dir); err != nil {
+		return err
+	}
+	Config.General.ObsidianDir = dir
 	return nil
 }
 

@@ -76,6 +76,7 @@ type Model struct {
 	pconvs     []*messages.Conversation // the lists, as chats
 	waChats    []*messages.Conversation // the chats from WhatsApp, as last received
 	pendingSrc *msgSource               // the message :task makes a task from
+	mirror     Mirrorer
 	allChats   []*messages.Conversation // every known chat and contact (forward targets)
 	archive    bool                     // showing archived chats instead of the inbox
 	unreadOnly bool                     // list shows only chats with unread messages
@@ -196,6 +197,7 @@ type Options struct {
 	Activity  ActivitySource  // the activity feed; may be nil
 	Chats     ChatReader      // loads a chat for split view; may be nil
 	Personal  *personal.Store // your lists, notes and saved messages; may be nil
+	Mirror    Mirrorer        // keeps a Markdown folder in step with them; may be nil
 
 	// PrivateReading: opening a chat doesn\'t send read receipts; you mark
 	// chats read yourself (U, :read).
@@ -280,6 +282,7 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		activity:    opts.Activity,
 		chatReader:  opts.Chats,
 		personal:    opts.Personal,
+		mirror:      opts.Mirror,
 		privateRead: opts.PrivateReading,
 		rangeFrom:   noRange,
 		notifier:    opts.Notifier,

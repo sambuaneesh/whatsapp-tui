@@ -285,6 +285,8 @@ func commandList() []command {
 		{id: "p.saved", title: "Lists: Open 🔖 Saved Messages", keys: ":saved", when: hasPersonal, run: ex("saved")},
 		{id: "p.find", title: "Lists: Find in Your Tasks, Notes and Saved…", keys: "ctrl+p @", when: hasPersonal,
 			run: func(m Model) (tea.Model, tea.Cmd) { m.openPalette("@"); return m, nil }},
+		{id: "p.mirror", title: "Lists: Mirror to a Folder (Obsidian Vault)…", keys: ":mirror", when: hasPersonal, run: prefill("mirror ")},
+		{id: "p.mirrorshow", title: "Lists: Where Are They Mirrored?", keys: ":mirror", when: hasPersonal, run: ex("mirror")},
 		{id: "p.undo", title: "Lists: Undo", keys: "u  :undo", when: hasPersonal, run: ex("undo")},
 		{id: "p.rename", title: "List: Rename…", keys: ":rename", when: onList, run: prefill("rename ")},
 		{id: "p.icon", title: "List: Change Icon…", keys: ":icon", when: onList, run: prefill("icon ")},
