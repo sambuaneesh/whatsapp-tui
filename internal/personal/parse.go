@@ -1,6 +1,7 @@
 package personal
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"time"
@@ -202,4 +203,61 @@ func readDate(words []string, now time.Time, sure bool) (time.Time, bool, bool) 
 		t = time.Date(y, m, d, 0, 0, 0, 0, t.Location())
 	}
 	return t, hasTime, true
+}
+
+// AddTyped adds a task typed as text (see ParseTask) to a list: listID,
+// or the list it names ("shopping: eggs"), else the Inbox. dueToday gives
+// an undated task today (typed in Today). from marks where it came from
+// (SrcChat, SrcMsg, SrcSender), if anywhere. It returns the task (a
+// checklist's title) and how many checklist items came with it.
+func (s *Store) AddTyped(text string, listID int64, dueToday bool, from Item) (Item, int, error) {
+	lists, err := s.Lists()
+	if err != nil {
+		return Item{}, 0, err
+	}
+	var names []string
+	for _, l := range lists {
+		if l.Kind == KindTasks {
+			names = append(names, l.Name)
+		}
+	}
+	now := s.now()
+	p := ParseTask(text, now, names)
+	if p.Text == "" && len(p.Items) == 0 {
+		return Item{}, 0, errors.New("nothing to add")
+	}
+	if p.List != "" {
+		l, _ := s.ListByName(p.List)
+		listID = l.ID
+	}
+	if listID == 0 {
+		inbox, err := s.ListOfKind(KindTasks, InboxName)
+		if err != nil {
+			return Item{}, 0, err
+		}
+		listID = inbox.ID
+	}
+	if p.Due.IsZero() && dueToday {
+		y, m, d := now.Date()
+		p.Due = time.Date(y, m, d, 0, 0, 0, 0, now.Location())
+	}
+	head := Item{ListID: listID, Text: p.Text, Tags: p.Tags, Important: p.Important,
+		SrcChat: from.SrcChat, SrcMsg: from.SrcMsg, SrcSender: from.SrcSender}
+	if !p.Due.IsZero() {
+		head.Due, head.DueTime = p.Due.Unix(), p.DueTime
+	}
+	if len(p.Items) == 0 {
+		it, err := s.AddItem(head)
+		return it, 0, err
+	}
+	var kids []Item
+	for _, k := range p.Items {
+		c := Item{Text: k.Text, Tags: k.Tags, Important: k.Important, Done: k.Done}
+		if !k.Due.IsZero() {
+			c.Due, c.DueTime = k.Due.Unix(), k.DueTime
+		}
+		kids = append(kids, c)
+	}
+	it, err := s.AddChecklist(head, kids)
+	return it, len(kids), err
 }

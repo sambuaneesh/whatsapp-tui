@@ -130,6 +130,54 @@ with `before` set to the oldest `time` you got.
 - `deleted` is true for a message its sender deleted for everyone (the text
   is what it said before).
 
+## Lists, tasks and notes
+
+Your own lists (see [USAGE.md](../USAGE.md#your-own-space-lists-notes-saved)) are local:
+these methods never send anything to WhatsApp, and they work even when the
+app isn't running (through the command line below, which opens the lists'
+database itself).
+
+| Method | Params | Result |
+|---|---|---|
+| `lists` | – | every list: `{"id", "name", "icon", "kind": "tasks"/"notes"/"saved", "pinned", "archived", "open"}` |
+| `today` | – | open tasks due today or before, from every list ([Item](#item)) |
+| `tasks` | `list` (a name); `with_done` (optional) | the list's tasks, checklists' items after their checklist |
+| `task_add` | `text`, read like typing it in the app ("call mom 6pm #family !", "shopping: eggs", several lines for a checklist); `list` (optional) | the task; it goes to the Inbox unless a list is given or named |
+| `task_done` | `id`; `done` (optional, default true) | `"ok"` |
+| `task_update` | `id`; `text` (re-read like `task_add`), `due` (`"fri 5pm"`, `"none"`), `done` (all optional) | the task |
+| `task_delete` | `id` | `"ok"` (undo in the app with `u`) |
+| `list_add` | `text` (the name); `kind` (`tasks`, `notes`); `icon` (optional) | the list |
+| `notes` | `list` (optional, default Notes) | the notebook's pages |
+| `note_add` | `title`; `text`; `list` (optional notebook) | the page |
+
+### Item
+
+```json
+{"id": 12, "list": "Inbox", "text": "call mom", "done": false,
+ "due": "2026-10-07T18:00:00+05:30", "due_time": true, "important": true,
+ "tags": ["family"], "parent": 0, "from_chat": "", "from_message": ""}
+```
+
+- `due` is left out when there's no date; a day without a time is midnight
+  with `due_time` false.
+- `parent` is the checklist an item belongs to; `notes` is a page's text.
+- `from_chat`/`from_message` are set for tasks made from a message (`T`)
+  and saved messages.
+
+### From the shell
+
+```sh
+whatsapp-tui todo                         # what's due today (and overdue)
+whatsapp-tui todo call mom 6pm '#family'  # add (quote # in the shell)
+whatsapp-tui todo shopping: eggs          # into the Shopping list
+whatsapp-tui todo list Shopping           # a list
+whatsapp-tui todo lists                   # all lists
+whatsapp-tui todo done 12                 # tick task 12 off (undone 12)
+whatsapp-tui todo rm 12                   # delete it
+whatsapp-tui note Wifi "password: on the fridge"
+whatsapp-tui capture                      # a small prompt; bind it to a key
+```
+
 ## Events
 
 After `subscribe`, each event is one line:

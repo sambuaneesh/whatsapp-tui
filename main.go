@@ -62,6 +62,17 @@ func run() error {
 		}
 		return api.Call(api.SocketPath(daemon.SocketPath()), os.Args[2], params, os.Stdout)
 	}
+	// whatsapp-tui todo / note / capture: your lists from the shell
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "todo", "task", "tasks":
+			return todoCmd(os.Args[2:])
+		case "note":
+			return noteCmd(os.Args[2:])
+		case "capture":
+			return captureCmd()
+		}
+	}
 	debug := flag.Bool("debug", false, "write WhatsApp protocol logs to "+debugLogPath())
 	foreground := flag.Bool("foreground", false, "run in this terminal only, not in the background")
 	stop := flag.Bool("stop", false, "quit the app running in the background")
@@ -279,6 +290,7 @@ func run() error {
 	if srv != nil {
 		apiOpts.Log = func(s string) { fmt.Fprintln(os.Stderr, s) } // the background app's log
 	}
+	apiOpts.Personal = opts.Personal
 	if apiSrv, err := api.Listen(api.SocketPath(daemon.SocketPath()), sm, apiOpts); err == nil {
 		defer apiSrv.Close()
 	}

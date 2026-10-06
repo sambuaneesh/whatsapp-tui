@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/Srindot/whatsapp-tui/internal/messages"
+	"github.com/Srindot/whatsapp-tui/internal/personal"
 	"github.com/Srindot/whatsapp-tui/internal/when"
 )
 
@@ -42,6 +43,7 @@ type Options struct {
 	HooksDir    string       // run executables here on events ("" for none)
 	Log         func(string) // where hook failures go; may be nil
 	Now         func() time.Time
+	Personal    *personal.Store // your lists and notes ("lists", "task_add"…); may be nil
 }
 
 // SocketPath is where the API listens: next to the background app's socket.
@@ -168,6 +170,9 @@ func (s *Server) serve(nc net.Conn) {
 
 // call runs one method (everything but subscribe).
 func (s *Server) call(ctx context.Context, method string, raw json.RawMessage) (any, error) {
+	if res, ok, err := s.personalCall(method, raw); ok {
+		return res, err
+	}
 	var p struct {
 		Chat    string `json:"chat"`
 		Text    string `json:"text"`

@@ -1147,65 +1147,29 @@ func (m Model) submitPersonal(text string) (tea.Model, tea.Cmd) {
 // addTask adds a typed task (or checklist) to list (0: the Inbox, or the
 // list it names: "shopping: eggs"). dueToday gives an undated task today.
 func (m Model) addTask(text string, listID int64, dueToday bool) (string, error) {
-	s := m.personal
-	lists, err := s.Lists()
+	var from personal.Item
+	if m.pendingSrc != nil {
+		from.SrcChat, from.SrcMsg, from.SrcSender = m.pendingSrc.chat, m.pendingSrc.msg, m.pendingSrc.sender
+		m.pendingSrc = nil
+	}
+	it, kids, err := m.personal.AddTyped(text, listID, dueToday, from)
 	if err != nil {
 		return "", err
 	}
-	var names []string
-	for _, l := range lists {
-		if l.Kind == personal.KindTasks {
-			names = append(names, l.Name)
-		}
-	}
-	now := time.Now()
-	p := personal.ParseTask(text, now, names)
-	if p.List != "" {
-		l, _ := s.ListByName(p.List)
-		listID = l.ID
-	}
-	if listID == 0 {
-		inbox, err := s.ListOfKind(personal.KindTasks, personal.InboxName)
-		if err != nil {
-			return "", err
-		}
-		listID = inbox.ID
-	}
-	if p.Due.IsZero() && dueToday {
-		start, _ := dayBounds(now)
-		p.Due = start
-	}
-	head := personal.Item{ListID: listID, Text: p.Text, Tags: p.Tags, Important: p.Important}
-	if !p.Due.IsZero() {
-		head.Due, head.DueTime = p.Due.Unix(), p.DueTime
-	}
-	if m.pendingSrc != nil {
-		head.SrcChat, head.SrcMsg, head.SrcSender = m.pendingSrc.chat, m.pendingSrc.msg, m.pendingSrc.sender
-		m.pendingSrc = nil
-	}
-	l, _ := s.List(listID)
 	where := ""
-	if m.pv == nil || m.pv.listID != listID {
-		where = " to " + l.Name
-	}
-	if len(p.Items) > 0 {
-		var kids []personal.Item
-		for _, k := range p.Items {
-			c := personal.Item{Text: k.Text, Tags: k.Tags, Important: k.Important, Done: k.Done}
-			if !k.Due.IsZero() {
-				c.Due, c.DueTime = k.Due.Unix(), k.DueTime
-			}
-			kids = append(kids, c)
+	if m.pv == nil || m.pv.listID != it.ListID {
+		if l, err := m.personal.List(it.ListID); err == nil {
+			where = " to " + l.Name
 		}
-		_, err := s.AddChecklist(head, kids)
-		return fmt.Sprintf("Added the checklist %s (%d items)%s", p.Text, len(kids), where), err
 	}
-	_, err = s.AddItem(head)
-	msg := "Added " + p.Text + where
-	if !p.Due.IsZero() {
-		msg += " · " + dueLabel(head, now)
+	if kids > 0 {
+		return fmt.Sprintf("Added the checklist %s (%d items)%s", it.Text, kids, where), nil
 	}
-	return msg, err
+	msg := "Added " + it.Text + where
+	if it.Due > 0 {
+		msg += " · " + dueLabel(it, time.Now())
+	}
+	return msg, nil
 }
 
 func (m Model) addSavedNote(text string) error {

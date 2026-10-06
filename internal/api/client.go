@@ -10,13 +10,16 @@ import (
 	"strings"
 )
 
+// ErrNotRunning: there's no app to talk to.
+var ErrNotRunning = errors.New("whatsapp-tui isn't running (start it first)")
+
 // Call runs one API method on the socket at path and writes the result as
 // JSON to out. For "subscribe" it writes events, one per line, until the
 // connection ends. params is a JSON object, or "".
 func Call(path, method, params string, out io.Writer) error {
 	c, err := net.Dial("unix", path)
 	if err != nil {
-		return errors.New("whatsapp-tui isn't running (start it first)")
+		return ErrNotRunning
 	}
 	defer c.Close()
 	req := map[string]any{"id": 1, "method": method}
