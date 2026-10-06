@@ -316,6 +316,16 @@ func commandList() []command {
 		{id: "sel.task", title: "Selected: Make a Task (to 📥 Inbox)", keys: "T", when: func(m Model) bool { return oneSelected(m) && hasPersonal(m) }, run: visualKey("T")},
 		{id: "sel.savemsg", title: "Selected: Save to 🔖 Saved", keys: "b", when: func(m Model) bool { return oneSelected(m) && hasPersonal(m) }, run: visualKey("b")},
 
+		// Search indexing, per chat
+		{id: "noindex", title: "Search: Don't Index This Chat (Leave It Out of Search)", keys: ":noindex",
+			when: func(m Model) bool {
+				return m.indexer() != nil && chatIs(func(c *messages.Conversation) bool { return !m.noindex[c.JID] })(m)
+			}, run: ex("noindex")},
+		{id: "index", title: "Search: Index This Chat Again", keys: ":index",
+			when: func(m Model) bool { c := m.theChat(); return c != nil && m.noindex[c.JID] }, run: ex("index")},
+		{id: "noindex.list", title: "Search: Chats Not Indexed…", keys: ":noindex list",
+			when: func(m Model) bool { return len(m.noindex) > 0 }, run: ex("noindex list")},
+
 		// The local model (Ollama)
 		{id: "ai.catchup", title: "AI: Catch Me Up on This Chat", keys: ":catchup", when: aiInChat, run: ex("catchup")},
 		{id: "ai.todos", title: "AI: Find To-dos in This Chat", keys: ":todos", when: aiInChat, run: ex("todos")},

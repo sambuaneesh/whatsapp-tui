@@ -78,6 +78,7 @@ type Model struct {
 	pendingSrc *msgSource               // the message :task makes a task from
 	mirror     Mirrorer
 	ai         Assistant                // the local model (nil: off)
+	noindex    map[string]bool          // chats search doesn\'t index
 	allChats   []*messages.Conversation // every known chat and contact (forward targets)
 	archive    bool                     // showing archived chats instead of the inbox
 	unreadOnly bool                     // list shows only chats with unread messages
@@ -315,6 +316,7 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		m.scheduled = m.scheduler.ScheduledItems()
 	}
 	m.setChats(initial)
+	m.loadNoIndex()
 	return m
 }
 
@@ -1676,6 +1678,11 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 		return m.catchUp()
 	case "todos":
 		return m.findTasksInChat()
+	case "noindex", "index":
+		if len(fields) > 1 && fields[1] == "list" {
+			return m.showNotIndexed()
+		}
+		return m.setIndexed(m.theChat(), fields[0] == "index")
 	case "pin", "unpin":
 		c := m.theChat()
 		if c == nil {

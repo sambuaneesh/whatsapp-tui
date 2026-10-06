@@ -167,6 +167,13 @@ Results (before → after):
       AI date guessing was tried and dropped: qwen3:4b without thinking
       gets calendar lookups wrong most of the time
 
+## Search indexing per chat (2026-10-06)
+
+- [x] `:noindex` / `:index` per chat (F1 too), `:noindex list`: out of the
+      word index (triggers skip it; the FTS index stays consistent), no
+      meaning vectors, skipped by all-chats search and the API; `/` in the
+      chat still works by plain matching. Everything indexed by default
+
 ## Next
 
 - [ ] Settings in the palette (`ctrl+,`): appearance and small things to

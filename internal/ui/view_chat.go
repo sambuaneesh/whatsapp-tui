@@ -145,6 +145,9 @@ func (m Model) renderChatPane(width, height int) string {
 		}
 		title = " " + m.avatarCells(m.current, avatarSmallCols, avatarSmallRows, false)[0] + " " +
 			styleTitle.Render(chatName(m.current)) + styleDim.Render("  "+kind)
+		if !m.chatIndexed(m.current.JID) {
+			title += styleMuted.Render("  · not indexed for search")
+		}
 		if m.readReceiptsOff && kind == "contact" && !m.selfChat {
 			// explains why messages here stop at delivered
 			title += styleMuted.Render("  ·  your read receipts are off: ") +

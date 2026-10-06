@@ -17,19 +17,28 @@ import (
 // dropped (and the index marked stale), and with it they're restored and a
 // stale index rebuilt.
 
+// Chats you turned indexing off for (noindex) stay out of it: their
+// messages are never added, so never deleted from it either.
 var ftsTriggers = []string{
-	`CREATE TRIGGER IF NOT EXISTS messages_fts_ai AFTER INSERT ON messages BEGIN
+	`CREATE TRIGGER IF NOT EXISTS messages_fts_ai AFTER INSERT ON messages
+		WHEN new.chat_id NOT IN (SELECT jid FROM noindex) BEGIN
 		INSERT INTO messages_fts(rowid, text) VALUES (new.rowid, new.text); END`,
-	`CREATE TRIGGER IF NOT EXISTS messages_fts_ad AFTER DELETE ON messages BEGIN
+	`CREATE TRIGGER IF NOT EXISTS messages_fts_ad AFTER DELETE ON messages
+		WHEN old.chat_id NOT IN (SELECT jid FROM noindex) BEGIN
 		INSERT INTO messages_fts(messages_fts, rowid, text) VALUES ('delete', old.rowid, old.text); END`,
-	`CREATE TRIGGER IF NOT EXISTS messages_fts_au AFTER UPDATE OF text ON messages BEGIN
+	`CREATE TRIGGER IF NOT EXISTS messages_fts_au AFTER UPDATE OF text ON messages
+		WHEN old.chat_id NOT IN (SELECT jid FROM noindex) BEGIN
 		INSERT INTO messages_fts(messages_fts, rowid, text) VALUES ('delete', old.rowid, old.text);
 		INSERT INTO messages_fts(rowid, text) VALUES (new.rowid, new.text); END`,
 }
 
+// ftsTriggerVersion changes when the triggers do, so old ones are replaced.
+const ftsTriggerVersion = "2"
+
 // initFTS sets up (or safely disables) the index; md.fts says which.
 func (md *MessageDatabase) initFTS() {
 	md.db.Exec(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`)
+	md.db.Exec(`CREATE TABLE IF NOT EXISTS noindex (jid TEXT PRIMARY KEY)`)
 	if _, err := md.db.Exec(`CREATE VIRTUAL TABLE temp.fts_probe USING fts5(x)`); err != nil {
 		// no FTS5 in this build: never let the triggers break inserts
 		for _, t := range []string{"messages_fts_ai", "messages_fts_ad", "messages_fts_au"} {
@@ -45,6 +54,15 @@ func (md *MessageDatabase) initFTS() {
 		content='messages', content_rowid='rowid', tokenize='unicode61 remove_diacritics 2')`); err != nil {
 		md.fts = false
 		return
+	}
+	var tv string
+	md.db.QueryRow(`SELECT value FROM meta WHERE key = 'fts_triggers'`).Scan(&tv)
+	if tv != ftsTriggerVersion {
+		for _, t := range []string{"messages_fts_ai", "messages_fts_ad", "messages_fts_au"} {
+			md.db.Exec(`DROP TRIGGER IF EXISTS ` + t)
+		}
+		md.db.Exec(`INSERT INTO meta (key, value) VALUES ('fts_triggers', ?)
+			ON CONFLICT(key) DO UPDATE SET value = excluded.value`, ftsTriggerVersion)
 	}
 	for _, t := range ftsTriggers {
 		if _, err := md.db.Exec(t); err != nil {
@@ -101,4 +119,89 @@ func (md *MessageDatabase) searchFTS(chatID, keyword string, limit int) ([]Messa
 	}
 	defer rows.Close()
 	return collectMessages(rows)
+}
+
+// Indexed reports whether a chat's messages are indexed for search (they
+// are unless you turned it off).
+func (md *MessageDatabase) Indexed(jid string) bool {
+	var n int
+	md.db.QueryRow(`SELECT COUNT(*) FROM noindex WHERE jid = ?`, jid).Scan(&n)
+	return n == 0
+}
+
+// NotIndexed lists the chats indexing is off for.
+func (md *MessageDatabase) NotIndexed() ([]string, error) {
+	rows, err := md.db.Query(`SELECT jid FROM noindex ORDER BY jid`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var j string
+		if err := rows.Scan(&j); err != nil {
+			return nil, err
+		}
+		out = append(out, j)
+	}
+	return out, rows.Err()
+}
+
+// SetIndexed turns search indexing on or off for a chat. Off takes its
+// messages out of the word index and drops their meaning vectors; on puts
+// them back in the word index (meaning vectors come back as the
+// background indexer gets to them).
+func (md *MessageDatabase) SetIndexed(jid string, on bool) error {
+	if md.Indexed(jid) == on {
+		return nil
+	}
+	tx, err := md.db.Begin()
+	if err != nil {
+		return err
+	}
+	fail := func(err error) error { tx.Rollback(); return err }
+	if on {
+		if _, err := tx.Exec(`DELETE FROM noindex WHERE jid = ?`, jid); err != nil {
+			return fail(err)
+		}
+		if md.fts {
+			if _, err := tx.Exec(`INSERT INTO messages_fts(rowid, text) SELECT rowid, text FROM messages WHERE chat_id = ?`, jid); err != nil {
+				return fail(err)
+			}
+		}
+	} else {
+		if md.fts {
+			if _, err := tx.Exec(`INSERT INTO messages_fts(messages_fts, rowid, text)
+				SELECT 'delete', rowid, text FROM messages WHERE chat_id = ?`, jid); err != nil {
+				return fail(err)
+			}
+		}
+		if _, err := tx.Exec(`DELETE FROM embeddings WHERE msg_id IN (SELECT id FROM messages WHERE chat_id = ?)`, jid); err != nil {
+			return fail(err)
+		}
+		if _, err := tx.Exec(`INSERT OR IGNORE INTO noindex (jid) VALUES (?)`, jid); err != nil {
+			return fail(err)
+		}
+	}
+	return tx.Commit()
+}
+
+// SetChatIndexed turns search indexing on or off for a chat.
+func (sm *SessionManager) SetChatIndexed(jid string, on bool) error {
+	if err := sm.db.SetIndexed(jid, on); err != nil {
+		return err
+	}
+	if on {
+		sm.indexMeaningSoon()
+	}
+	return nil
+}
+
+// ChatIndexed reports whether a chat is indexed for search.
+func (sm *SessionManager) ChatIndexed(jid string) bool { return sm.db.Indexed(jid) }
+
+// NotIndexedChats lists the chats indexing is off for.
+func (sm *SessionManager) NotIndexedChats() []string {
+	list, _ := sm.db.NotIndexed()
+	return list
 }

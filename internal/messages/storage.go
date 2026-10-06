@@ -269,7 +269,7 @@ func (md *MessageDatabase) SearchMessages(chatId, keyword string, limit int) ([]
 	}
 	// every word, in any order; else (no index, or nothing found: a piece
 	// of a word, an emoji) the text as typed, anywhere
-	if md.fts {
+	if md.fts && (chatId == "" || md.Indexed(chatId)) {
 		if msgs, err := md.searchFTS(chatId, keyword, limit); err == nil && len(msgs) > 0 {
 			return msgs, nil
 		}
@@ -288,7 +288,7 @@ func (md *MessageDatabase) SearchMessages(chatId, keyword string, limit int) ([]
 		rows, err = md.db.Query(`
 			SELECT `+msgColumns+`
 			FROM messages
-			WHERE text LIKE ? ESCAPE '\'
+			WHERE text LIKE ? ESCAPE '\' AND chat_id NOT IN (SELECT jid FROM noindex)
 			ORDER BY timestamp DESC LIMIT ?`, likePattern, limit)
 	}
 	if err != nil {

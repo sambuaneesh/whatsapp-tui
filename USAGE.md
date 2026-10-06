@@ -308,6 +308,15 @@ while the GPU is over 50% busy (`semantic_pause_gaming = false` to index
 anyway). Without Ollama it does nothing. `semantic_search = false` turns it
 off.
 
+**Leaving a chat out.** Every chat is indexed for search unless you say
+otherwise: `:noindex` in a chat (or `F1` → "don't index", or on a chat
+selected in the list) takes its messages out of the word index, drops
+their meaning vectors and stops indexing new ones; searching all chats
+(and the API's `search`) then skips it. `/` inside that chat still finds
+things, by plain matching. `:index` puts it back; `:noindex list` shows the
+chats you left out (`enter` indexes one again). The chat's header says
+"not indexed for search".
+
 ## Two chats side by side
 
 With a chat open, open a second one beside it, on the right:

@@ -162,6 +162,8 @@ var helpSections = []struct {
 		{":archive-chat", "archive the chat (stays unread)"},
 		{":unarchive", "back to the inbox"},
 		{":resync", "archive/pins/mutes: match the phone again"},
+		{":noindex · :index", "leave a chat out of search · back in"},
+		{":noindex list", "the chats left out"},
 		{":mute 8h · 1w", "mute (no time: always)"},
 		{":unmute", "unmute the chat"},
 		{":pinned", "jump to the pinned messages"},

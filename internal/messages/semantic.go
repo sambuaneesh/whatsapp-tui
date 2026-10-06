@@ -195,6 +195,7 @@ func (md *MessageDatabase) UnembeddedMessages(n int) ([]Message, error) {
 	rows, err := md.db.Query(`SELECT `+msgColumns+` FROM messages m
 		WHERE length(text) >= ? AND text NOT LIKE '🚫%' AND text NOT LIKE '[REACTION]%'
 		AND NOT EXISTS (SELECT 1 FROM embeddings e WHERE e.msg_id = m.id)
+		AND m.chat_id NOT IN (SELECT jid FROM noindex)
 		ORDER BY timestamp DESC LIMIT ?`, embedMinText, n)
 	if err != nil {
 		return nil, err
