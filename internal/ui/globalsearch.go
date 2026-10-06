@@ -95,10 +95,11 @@ func (m Model) applyGlobalHits(r globalHitsMsg) (tea.Model, tea.Cmd) {
 		return m, nil // closed, or typed over
 	}
 	g.loading, g.err = false, r.err
-	// Narrow the database's case-insensitive LIKE with smartcase.
+	// Narrow the word matches with smartcase; matches by meaning don't
+	// contain the words, so they're kept as they are.
 	g.hits = g.hits[:0]
 	for _, h := range r.hits {
-		if matchesQuery(h.Text, g.query) {
+		if h.Similar || matchesQuery(h.Text, g.query) {
 			g.hits = append(g.hits, h)
 		}
 	}

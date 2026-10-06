@@ -208,3 +208,25 @@ func TestSnippetKeepsMatchVisible(t *testing.T) {
 		t.Fatalf("short = %q", got)
 	}
 }
+
+func TestGlobalSearchKeepsMeaningMatches(t *testing.T) {
+	m, _ := globalModel(t)
+	m, _ = keys(t, m, "S")
+	m.global.query, m.global.seq = "where is the party", 7
+	next, _ := m.Update(globalHitsMsg{seq: 7, hits: []messages.SearchHit{
+		{Message: messages.Message{Id: "w", ChatId: "a@s.whatsapp.net", Text: "where is the party tonight?"}, ChatName: "A"},
+		{Message: messages.Message{Id: "x", ChatId: "a@s.whatsapp.net", Text: "WHERE IS THE PARTY"}, ChatName: "A"}, // lowercase query: any case
+		{Message: messages.Message{Id: "s", ChatId: "b@g.us", Text: "DM for the venue, see you at 10"}, ChatName: "LE", Similar: true},
+	}})
+	m = next.(Model)
+	var ids []string
+	for _, h := range m.global.hits {
+		ids = append(ids, h.Id)
+	}
+	if strings.Join(ids, ",") != "w,x,s" {
+		t.Fatalf("hits %v", ids)
+	}
+	if v := stripANSI(m.View()); !strings.Contains(v, "≈ LE") || !strings.Contains(v, "similar in meaning") {
+		t.Fatalf("meaning match not shown:\n%s", v)
+	}
+}
