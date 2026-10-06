@@ -2,6 +2,8 @@ package ui
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -144,4 +146,35 @@ func (m Model) triageKey(key string, inChat bool) (tea.Model, tea.Cmd) {
 		return m, next
 	}
 	return m, nil
+}
+
+// Resyncer makes this device's chat settings match WhatsApp's;
+// *messages.SessionManager implements it.
+type Resyncer interface {
+	ResyncChatSettings(ctx context.Context) (int, error)
+}
+
+// resync fetches archive, pin and mute settings again in full: for when
+// the phone and this device disagree about a chat.
+func (m Model) resync() tea.Cmd {
+	r, ok := m.triage.(Resyncer)
+	if !ok {
+		r, ok = m.actions.(Resyncer)
+	}
+	if !ok {
+		return func() tea.Msg { return actionDoneMsg{err: errors.New("resync isn't available")} }
+	}
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		n, err := r.ResyncChatSettings(ctx)
+		msg := "Chat settings match your phone again"
+		switch {
+		case n == 1:
+			msg += " (1 chat fixed)"
+		case n > 1:
+			msg += fmt.Sprintf(" (%d chats fixed)", n)
+		}
+		return actionDoneMsg{ok: msg, err: err}
+	}
 }

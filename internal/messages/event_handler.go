@@ -40,12 +40,21 @@ func (eh *eventHandler) Handle(evt interface{}) {
 	case *events.DeleteChat:
 		eh.sm.handleDeleteChat(v)
 	case *events.Archive:
+		if v.FromFullSync {
+			eh.sm.noteFullSync("archive", v.JID)
+		}
 		archived := v.Action.GetArchived()
 		eh.sm.setChatFlags(v.JID, &archived, nil)
 	case *events.Pin:
+		if v.FromFullSync {
+			eh.sm.noteFullSync("pin", v.JID)
+		}
 		pinned := v.Action.GetPinned()
 		eh.sm.setChatFlags(v.JID, nil, &pinned)
 	case *events.Mute:
+		if v.FromFullSync {
+			eh.sm.noteFullSync("mute", v.JID)
+		}
 		eh.sm.setChatMute(v.JID, v.Action.GetMuted(), v.Action.GetMuteEndTimestamp())
 	case *events.GroupInfo:
 		if v.Name != nil {

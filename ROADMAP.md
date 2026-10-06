@@ -151,6 +151,12 @@ Results (before → after):
 
 ## Known bugs
 
+- [x] A chat stayed archived here after the phone unarchived it: a full
+      app state sync doesn't mention chats with no archive/pin/mute, so
+      stale ones were never cleared. Full syncs now clear them (on start,
+      on a 409 conflict, and `:resync`)
+- [x] Archive failed with 409 "conflict": resync in full and retry
+
 - [x] Polls, live location and event messages were silently dropped
 - [x] Forwarded messages weren't marked (also fixed for re-synced history)
 - [x] Animated stickers and GIFs rendered striped (fixed by the image

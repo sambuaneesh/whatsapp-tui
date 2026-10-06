@@ -1603,6 +1603,9 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m.pinChat(c)
+	case "resync", "sync":
+		m.notice, m.noticeErr = "Fetching your chat settings from WhatsApp…", false
+		return m, m.resync()
 	case "archive-chat", "unarchive":
 		c := m.theChat()
 		if c == nil || c.LastMsgTime == 0 {

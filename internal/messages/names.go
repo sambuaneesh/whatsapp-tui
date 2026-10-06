@@ -195,14 +195,11 @@ func (sm *SessionManager) syncContacts() {
 	// Archived and pinned chats live in regular_low, which may never have
 	// synced either; a full sync replays them as Archive/Pin events.
 	// regular_low also carries "chat read on the phone"
-	if err := sm.fetchAppState(ctx, appstate.WAPatchRegularLow); err != nil {
-		sm.debugf("archive/pin/read sync failed: %v", err)
+	// (mutes live in regular_high); chats they don't mention are cleared
+	if n, err := sm.ResyncChatSettings(ctx); err != nil {
+		sm.debugf("archive/pin/mute sync: %v", err)
 	} else {
-		sm.debugf("archive/pin/read sync done")
-	}
-	// mutes live in regular_high
-	if err := sm.fetchAppState(ctx, appstate.WAPatchRegularHigh); err != nil {
-		sm.debugf("mute sync failed: %v", err)
+		sm.debugf("archive/pin/mute sync done; %d stale chats fixed", n)
 	}
 	if err := sm.fetchAppState(ctx, appstate.WAPatchCriticalUnblockLow); err != nil {
 		sm.debugf("contact sync failed: %v", err)

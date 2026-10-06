@@ -19,8 +19,8 @@ func (sm *SessionManager) sendAppState(ctx context.Context, client *whatsmeow.Cl
 		return err
 	}
 	sm.debugf("app state %s out of sync (%v): fetching it again in full", patch.Type, err)
-	if ferr := client.FetchAppState(ctx, patch.Type, true, false); ferr != nil {
-		sm.debugf("full app state %s fetch failed: %v", patch.Type, ferr)
+	if _, ferr := sm.ResyncChatSettings(ctx); ferr != nil {
+		sm.debugf("full app state fetch failed: %v", ferr)
 		return err
 	}
 	return client.SendAppState(ctx, patch)

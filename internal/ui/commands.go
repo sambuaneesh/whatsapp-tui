@@ -267,6 +267,7 @@ func commandList() []command {
 			when: func(m Model) bool { return !m.privateRead }, run: ex("private on")},
 		{id: "private.off", title: "Private Reading: Off", keys: ":private off",
 			when: func(m Model) bool { return m.privateRead }, run: ex("private off")},
+		{id: "resync", title: "App: Resync Archive, Pins and Mutes with the Phone", keys: ":resync", when: always, run: ex("resync")},
 		{id: "downloads", title: "Settings: Show Download Folder", keys: ":download-dir", when: always, run: ex("download-dir")},
 		{id: "downloads.set", title: "Settings: Change Download Folder…", keys: ":download-dir", when: always, run: prefill("download-dir ")},
 

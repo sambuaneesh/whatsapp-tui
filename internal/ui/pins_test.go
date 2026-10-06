@@ -233,3 +233,26 @@ func TestPaletteArchiveUnarchive(t *testing.T) {
 		t.Fatalf("archived chat commands: %v", ids)
 	}
 }
+
+type resyncTriage struct {
+	fakeTriage
+	n int
+}
+
+func (r *resyncTriage) ResyncChatSettings(context.Context) (int, error) {
+	r.n++
+	return 1, nil
+}
+
+func TestResync(t *testing.T) {
+	f := &resyncTriage{}
+	chats := []*messages.Conversation{{JID: "a@s.whatsapp.net", Name: "Arjun", LastMsgTime: 5}}
+	m := New(make(chan messages.Command, 5), chats, Options{SidebarWidth: 30, Images: termimg.ModeOff, Triage: f})
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m = next.(Model)
+	m, cmds := keys(t, m, ":", "r", "e", "s", "y", "n", "c", "enter")
+	m = runAll(t, m, cmds...)
+	if f.n != 1 || !strings.Contains(m.notice, "match your phone again (1 chat fixed)") {
+		t.Fatalf("resync: calls %d, notice %q", f.n, m.notice)
+	}
+}

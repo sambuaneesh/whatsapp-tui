@@ -426,6 +426,10 @@ qr_compact       = false       ; smaller login QR code
 
 ## When something's off
 
+- **A chat is archived (or pinned, or muted) here but not on your phone:**
+  `:resync` (or `F1` → "resync") fetches those settings from WhatsApp again
+  and makes this device match the phone. It also happens on every start,
+  and by itself when WhatsApp rejects a change with a "conflict".
 - **Names show as numbers** or **chats are missing history:** give it a minute
   after connecting; contact names and history sync from your phone, which
   must be online.

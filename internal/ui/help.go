@@ -144,6 +144,7 @@ var helpSections = []struct {
 		{":scheduled", "what's scheduled (x cancels)"},
 		{":pin · :unpin", "pin the chat to the top"},
 		{":archive-chat · :unarchive", "archive (stays unread) · back to inbox"},
+		{":resync", "archive/pins/mutes: match the phone again"},
 		{":mute [8h|1w] · :unmute", "mute the chat (always without a time)"},
 		{":pinned", "jump to the pinned messages"},
 		{":split <name> · :close", "open a chat beside · close it"},
