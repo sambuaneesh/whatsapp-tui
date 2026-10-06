@@ -414,7 +414,7 @@ td.mono { white-space: nowrap; }
       </div>
       <div class="feat">
         <h3><kbd>F1</kbd> every command</h3>
-        <p>"snooze", "only unread", "notifications off", "send later", "split"… Only what works where you are is listed, and what you used last comes first. Commands that need a time or a folder start the <code>:</code> line for you.</p>
+        <p>"snooze", "mute", "pin", "send later", "split", "rename group"… Only what works where you are is listed. With a message selected, its actions come first, only the ones that fit it: reply, react, pin, edit (if it's yours), delete… Select several with <kbd>V</kbd> and you get what works on all of them. Commands that need a time, a folder or a number start the <code>:</code> line for you.</p>
       </div>
       <div class="feat">
         <h3>VS Code's search keys</h3>
@@ -579,6 +579,16 @@ td.mono { white-space: nowrap; }
 <span style="color:var(--muted)">[Mon 6 Oct 14:05]</span> You: count me in</pre>
     </div>
     <div class="feat">
+      <h3><kbd>P</kbd> pin it</h3>
+      <p>Pins the selected message for everyone for 7 days (24 hours or 30 days from <kbd>F1</kbd>); <kbd>P</kbd> again unpins. The newest pin sits under the chat's name: click it to jump there, again for the next one. Pins made on phones show up too.</p>
+      <pre class="scr"><span class="w-rose">Hostel 4th floor</span>  <span style="color:var(--muted)">group</span>
+<span class="w-gold">📌</span> <span class="w-iris">Ravi:</span> Wi-Fi password is on the fridge</pre>
+    </div>
+    <div class="feat">
+      <h3>Pin and mute chats</h3>
+      <p><kbd>P</kbd> in the list pins a chat to the top (three at most, like the phone). <code>:mute 8h</code>, <code>:mute 1w</code> or just <code>:mute</code>; <code>:unmute</code>. It all syncs with your phone, and a muted chat still tells you when you're @mentioned.</p>
+    </div>
+    <div class="feat">
       <h3>Read without blue ticks</h3>
       <p><code>:private</code> opens chats without sending read receipts; they stay unread until you mark them with <kbd>U</kbd> or <code>:read</code>. A <span class="mono w-iris">🙈 private</span> badge shows it's on.</p>
     </div>
@@ -666,6 +676,7 @@ td.mono { white-space: nowrap; }
     <tr><td>click ✕ on the chat beside</td><td>close the split</td></tr>
     <tr><td>click reactions under a bubble</td><td>who reacted</td></tr>
     <tr><td>click 🔔, ⏰ or 🙈 in the status bar</td><td>change notifications, see what's scheduled, stop private reading</td></tr>
+    <tr><td>click the 📌 bar under a chat's name</td><td>jump to the pinned message (again: the next one)</td></tr>
     <tr><td>click a result in the palette</td><td>open it (click outside to close)</td></tr>
     <tr><td>wheel</td><td>scroll whatever's under the pointer</td></tr>
     <tr><td><kbd>shift</kbd> + drag</td><td>select text the terminal's way</td></tr>
@@ -1256,7 +1267,10 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["Search", "Messages in All Chats", "ctrl+shift+f"], ["Search", "Find in Chat", "ctrl+f"], ["Go", "Next Unread Chat", "J"],
     ["Go", "Activity (Mentions, Replies, Reactions to You)", "I"], ["Chat", "Done (Mark Read and Archive)", "e"], ["Private Reading", "On (No Blue Ticks)", ":private on"],
     ["Message", "Attach Files…", "a"], ["Message", "Stickers & GIFs", "s"], ["Chat", "Remind Me If No Reply By…", ":nudge"],
-    ["Go", "Scheduled (Send Later, Snoozes, Reminders)", ":scheduled"], ["Help", "Keyboard Shortcuts", "?"], ["App", "Close the Window (Keeps Running)", ":q"],
+    ["Go", "Scheduled (Send Later, Snoozes, Reminders)", ":scheduled"],
+    ["Selected", "Pin for 7 Days", "P"], ["Selected", "Pin for 24 Hours", ""], ["Selected", "Delete…", "d"], ["Selected", "Reply Privately", "p"],
+    ["Selected Messages", "Delete All…", "d"], ["Selected Messages", "Copy as a Transcript", "y"], ["Chat", "Pin to the Top", "P"],
+    ["Chat", "Mute for 8 Hours", ":mute 8h"], ["Chat", "Unmute", ":unmute"], ["Group", "Rename…", ":subject"], ["Group", "Leave…", ":leave"], ["Help", "Keyboard Shortcuts", "?"], ["App", "Close the Window (Keeps Running)", ":q"],
   ];
   // the palette's results for a query: [{html, right, label}]
   function palette(query, chatList, cmdList, max) {
@@ -1310,7 +1324,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     else if (e.key === "Escape") { $("#pq").value = ""; pSel = 0; runPalette(); }
   });
   $("#pq-out").addEventListener("click", (e) => { const r = e.target.closest(".pal-row[data-i]"); if (r) { pSel = +r.dataset.i; runPalette(); choosePalette(false); } });
-  ["hrsh", "ho4", "sam", "pri", "drm", "> snooze", "> notif off", "> split", "#pizza"].forEach((x) => {
+  ["hrsh", "ho4", "sam", "pri", "drm", "> snooze", "> pin", "> mute", "> delete", "#pizza"].forEach((x) => {
     const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = x;
     b.addEventListener("click", () => { $("#pq").value = x; pSel = 0; $("#pq-done").textContent = ""; runPalette(); $("#pq").focus(); }); $("#pq-chips").appendChild(b);
   });
@@ -1361,7 +1375,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["list", "j k · gg G", "move · top / bottom"], ["list", "ctrl+d ctrl+u", "half a page"], ["list", "enter / l", "open the chat"],
     ["list", "/", "filter chats and contacts by name or number; enter opens"], ["list", "S", "search messages in every chat"], ["list", "u", "only unread chats"],
     ["list", "A", "archived chats"], ["list", "K", "chat info: description, members, picture"], ["list", "V", "profile picture, full screen"],
-    ["list", "d then enter", "delete the chat on all your devices"], ["list", "v", "open beside the current chat (split view)"],
+    ["list", "d then enter", "delete the chat on all your devices"], ["list", "P", "pin the chat to the top (or unpin)"], ["list", "v", "open beside the current chat (split view)"],
     ["triage", "J", "open the next unread chat"], ["triage", "e", "done: mark read, archive, open the next unread"], ["triage", "U", "mark unread (or read)"],
     ["triage", "I", "activity: mentions, replies and reactions to you"], ["triage", "M", "notifications: all → popup → sound → off"],
     ["chat", "j k · ctrl+d ctrl+u", "scroll"], ["chat", "h / tab", "to the chat list"], ["chat", "i / enter", "write"], ["chat", "v", "select messages"],
@@ -1375,9 +1389,14 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["visual", "w", "who reacted"], ["visual", "e", "edit your message (first 15 minutes)"], ["visual", "f", "forward (space picks several chats)"],
     ["visual", "y", "copy the text or picture"], ["visual", "s", "save media to Downloads"], ["visual", "d", "delete: enter for you, e for everyone"],
     ["visual", "space", "view full screen, play a voice note or video"], ["visual", "o", "open in its app, or open the message's link"],
-    ["visual", "V", "select several: then y copy, f forward, d delete, s save"], ["visual", "R", "retry a message that didn't send"],
+    ["visual", "V", "select several: then y copy, f forward, d delete, s save"], ["visual", "R", "retry a message that didn't send"], ["visual", "P", "pin for everyone, 7 days (again: unpin)"],
+    ["visual", "F1", "every action for what's selected, by name"],
     ["command", ":later <when>", "send what you wrote at that time"], ["command", ":snooze <when>", "archive the chat until then"],
-    ["command", ":nudge <when>", "remind you if they haven't replied by then"], ["command", ":scheduled", "what's scheduled; x cancels"],
+    ["command", ":nudge <when>", "remind you if they haven't replied by then"], ["command", ":scheduled", "what's scheduled; x cancels"], ["command", ":pin · :unpin", "pin the chat to the top"],
+    ["command", ":mute [8h|1w] · :unmute", "mute the chat (always without a time)"], ["command", ":pinned", "jump to the pinned messages"],
+    ["command", ":subject <name>", "rename the group"], ["command", ":add · :remove <number>", "add or remove a group member"],
+    ["command", ":admin · :removeadmin <number>", "make or remove a group admin"], ["command", ":leave", "leave the group"],
+    ["command", ":create <numbers> <name>", "a new group"],
     ["command", ":activity", "mentions, replies and reactions to you"], ["command", ":private [on|off]", "read without blue ticks"], ["command", ":read", "mark the open chat read"],
     ["command", ":notify <mode>", "all, popup, sound or off"], ["command", ":search <text>", "search every chat"], ["command", ":attach [path]", "attach files"],
     ["command", ":download-dir [dir]", "show or change where downloads go"], ["command", ":q · :q!", "close the window (keeps running) · quit for real"],

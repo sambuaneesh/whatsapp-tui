@@ -39,7 +39,7 @@ The fastest way to get anywhere:
 |---|---|
 | `ctrl+p` | **Go to chat:** type any part of a name, letters in order (`hrsh` finds *Hari Shankar*), or 4+ digits of a number. Chats you opened recently come first; contacts you've never written to and archived chats are found too. `enter` opens it at once, `alt+enter` opens it beside the current chat (split view). |
 | `ctrl+p` `enter` | back to the chat you were in before (like alt+tab) |
-| `F1` or `ctrl+shift+p` | **Commands:** every feature by name: "snooze", "only unread", "notifications off", "send later"… Only what works where you are is listed; the ones you used last come first. Commands that need more (a time, a folder) start the `:` line for you to finish. |
+| `F1` or `ctrl+shift+p` | **Commands:** every feature by name: "snooze", "only unread", "notifications off", "send later", "mute", "pin"… Only what works where you are is listed: with a message selected (`v`), its actions come first (reply, react, pin, delete…), and with several selected (`V`), what works on all of them. The ones you used last come next. Commands that need more (a time, a folder, a number) start the `:` line for you to finish. |
 | `>` in `ctrl+p` | switches to commands (`backspace` goes back to chats) |
 | `#` in `ctrl+p` | search messages in all chats: `#pizza` then `enter` |
 | `ctrl+f` | find in this chat (in the list: go to chat) |
@@ -137,13 +137,21 @@ you're at the bottom). Move with `j` `k`, `gg` (oldest) and `G` (newest), then:
 | `space` | view the photo, sticker or GIF full screen; play a voice note; open a video in mpv |
 | `o` | open the photo/file in its app, or the message's link |
 | `V` | select several: `j`/`k` extend, then `y` copies them as a transcript, `f` forwards them all, `d` deletes them, `s` saves their media; `V` or `esc` ends |
+| `P` | pin it for everyone in the chat for 7 days; `P` again unpins (24 hours or 30 days: from `F1`) |
 | `R` | retry a message that failed to send |
+| `F1` | every action above by name, only those that fit the selected message (or messages) |
 | `esc` | done |
 
 `ctrl+x` cancels a reply or an edit (or drops an attachment) in any mode.
 
 Edited messages show "edited" next to their time, whether you edited them here,
 on your phone, or someone else did.
+
+**Pinned messages** show 📌 next to their time, and the newest pin sits in a
+bar under the chat's name. Click the bar (or `F1` → "pinned message", or
+`:pinned`) to jump to it; with several pins each click goes to the next.
+Pins from your phone or from others show up the same way, and end when
+their time (24 hours, 7 days or 30 days) is up.
 
 ## Searching
 
@@ -257,6 +265,16 @@ archives it and opens the next unread one (back to the list when there are
 none left). `e` in the list does the same for the selected chat (in the
 archive, `e` brings it back), and `U` marks a chat unread, or read. These
 change the chat on your phone too.
+
+`P` in the list pins the selected chat to the top (WhatsApp allows three) or
+unpins it; `:pin` / `:unpin` do it for the open chat. `:mute 8h`, `:mute 1w`
+or `:mute` (always) mutes a chat, `:unmute` unmutes it; muted chats show 🔕
+and don't notify, except when you're mentioned. These sync with your phone.
+
+In groups, the palette (`F1`) also has: rename the group (`:subject`), add
+or remove a member and make or remove an admin (`:add`, `:remove`, `:admin`,
+`:removeadmin`, with a phone number), leave (`:leave`), and a new group
+(`:create <numbers,comma-separated> <name>`).
 
 ## How search matches
 

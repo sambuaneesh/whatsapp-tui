@@ -137,6 +137,18 @@ Results (before → after):
       keystroke 17 ms → 0.8 ms, list frame 2.1 → 0.5 ms; palette
       keystroke over all 8k names 1.5 ms, open 1 ms
 
+## Pins, mutes, and the palette for everything (2026-10-06)
+
+- [x] Pin messages for everyone (`P` in visual mode, 7 days; 24 h / 30 d
+      from `F1`), unpin; pins from the phone and others synced (live and
+      history), 📌 on the bubble, a pinned bar under the header (click /
+      `:pinned` jumps, cycling)
+- [x] Pin chats to the top (`P` in the list, `:pin`, max 3) and mute /
+      unmute them (`:mute 8h|1w`, `:unmute`), synced to the phone
+- [x] Palette: every visual-mode action for the selected message (only
+      those that apply, listed first), the several-selected actions, pin /
+      mute, and group admin (rename, add, remove, admin, leave, create)
+
 ## Known bugs
 
 - [x] Polls, live location and event messages were silently dropped

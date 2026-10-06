@@ -48,7 +48,7 @@ func (m Model) rightWidth() int {
 
 func (m *Model) resize() {
 	m.vp.Width = m.rightWidth()
-	m.vp.Height = m.mainHeight() - headerRows - (m.compose.Height() + 2) - m.attachRows() - m.replyRows() - m.mentionPickerRows()
+	m.vp.Height = m.mainHeight() - headerRows - m.pinRows() - (m.compose.Height() + 2) - m.attachRows() - m.replyRows() - m.mentionPickerRows()
 	if m.vp.Height < 1 {
 		m.vp.Height = 1
 	}
@@ -295,7 +295,7 @@ func (m Model) statusRight() string {
 }
 
 // visualHint lists the visual-mode actions.
-const visualHint = "j/k gg/G move · V several · enter reply · p private · r react · w who reacted · e edit · f forward · space view · y copy · s save · d delete · o open · esc"
+const visualHint = "j/k gg/G move · V several · enter reply · p private · r react · w who reacted · e edit · f forward · space view · y copy · s save · d delete · P pin · o open · F1 all · esc"
 
 func (m Model) renderCommandLine() string {
 	switch {

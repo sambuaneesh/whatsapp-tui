@@ -97,6 +97,10 @@ func (md *MessageDatabase) InitWithDB(db *sql.DB) error {
 		return fmt.Errorf("failed to create scheduled table: %w", err)
 	}
 
+	if err := md.initPins(); err != nil {
+		return fmt.Errorf("failed to create pins table: %w", err)
+	}
+
 	// What you were writing in each chat, kept until sent.
 	if _, err := md.db.Exec(`CREATE TABLE IF NOT EXISTS drafts (jid TEXT PRIMARY KEY, text TEXT)`); err != nil {
 		return fmt.Errorf("failed to create drafts table: %w", err)

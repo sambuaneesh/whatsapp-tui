@@ -150,6 +150,9 @@ func (m Model) renderChatPane(width, height int) string {
 		}
 	}
 	parts := []string{m.renderHeader(title, width, m.focus == paneMessages)}
+	if m.pinRows() > 0 {
+		parts = append(parts, m.renderPinBar(width))
+	}
 	parts = append(parts, m.vp.View()) // already padded to the pane
 	if m.replyTo != nil || m.editing != nil {
 		parts = append(parts, m.renderReplyBar(width))
@@ -437,6 +440,9 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 	}
 
 	stamp := stampStyle.Render(t.Format("15:04"))
+	if msg.Pinned {
+		stamp = "📌 " + stamp
+	}
 	if msg.Edited {
 		stamp = stampStyle.Render("edited ") + stamp
 	}

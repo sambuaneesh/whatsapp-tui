@@ -40,6 +40,7 @@ var helpSections = []struct {
 		{"K", "chat info: picture, description"},
 		{"V", "profile picture, full screen"},
 		{"d then enter", "delete the chat"},
+		{"P", "pin the chat to the top (or unpin)"},
 		{"M", "notifications: all → popup → sound → off"},
 	}},
 	{"In a chat", [][2]string{
@@ -84,6 +85,7 @@ var helpSections = []struct {
 		{"p", "reply privately (groups)"},
 		{"r", "react: 1–6, x remove, + or a name: any emoji"},
 		{"w", "who reacted (x removes yours)"},
+		{"P", "pin for everyone, 7 days (again: unpin)"},
 		{"e", "edit your message (first 15 min)"},
 		{"f", "forward (space picks several)"},
 		{"y", "copy text / image"},
@@ -125,6 +127,7 @@ var helpSections = []struct {
 		{"", "click 🔔 in the status bar: notifications"},
 		{"", "middle- or ctrl+click a chat: open beside"},
 		{"", "click ✕ on the right pane: close the split"},
+		{"", "click the 📌 bar: jump to the pinned message"},
 	}},
 	{"Commands", [][2]string{
 		{":q", "close the window (keeps running)"},
@@ -139,6 +142,9 @@ var helpSections = []struct {
 		{":snooze <when>", "archive the chat until then"},
 		{":nudge <when>", "remind you if no reply by then"},
 		{":scheduled", "what's scheduled (x cancels)"},
+		{":pin · :unpin", "pin the chat to the top"},
+		{":mute [8h|1w] · :unmute", "mute the chat (always without a time)"},
+		{":pinned", "jump to the pinned messages"},
 		{":split <name> · :close", "open a chat beside · close it"},
 		{":activity · I", "mentions, replies and reactions to you"},
 		{":private [on|off]", "read without blue ticks (U / :read marks read)"},

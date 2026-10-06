@@ -77,6 +77,7 @@ type Message struct {
 	Status int // delivery state of your own messages (Status* constants)
 
 	Edited bool // changed after sending ("edited" next to the time)
+	Pinned bool // pinned in the chat (📌 next to the time)
 
 	// Deleted for everyone (DeletedByThem / DeletedByYou); the content is
 	// kept and shown marked. 0 when not deleted. Delete-for-me removes the

@@ -256,6 +256,9 @@ func (m Model) matchCommands(q string) []palItem {
 		if !ok {
 			continue
 		}
+		if q == "" && strings.HasPrefix(c.title, "Selected") {
+			score += 500 // what you've selected comes first, then recent
+		}
 		if r := rank[c.id]; r > 0 {
 			if q == "" {
 				score += 1000 - r // recently used first, like VS Code

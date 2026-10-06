@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"go.mau.fi/whatsmeow/proto/waHistorySync"
+	"go.mau.fi/whatsmeow/proto/waWeb"
 	"go.mau.fi/whatsmeow/types"
 )
 
@@ -196,6 +198,13 @@ func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
 				continue
 			}
 
+			// a pin event comes as a stub with the pin on it
+			if pc := webMsg.GetPinInChat(); pc != nil && pc.GetKey().GetID() != "" {
+				ts := pc.GetSenderTimestampMS()
+				d := pinDuration(pc.GetMessageAddOnContextInfo().GetMessageAddOnDurationInSecs())
+				_ = sm.db.SetPin(chatJID.String(), pc.GetKey().GetID(), webMsg.GetParticipant(),
+					pc.GetType() == waWeb.PinInChat_PIN_FOR_ALL, ts, time.UnixMilli(ts).Add(d).UnixMilli())
+			}
 			evt, err := client.ParseWebMessage(chatJID, webMsg)
 			if err != nil {
 				continue
@@ -214,6 +223,10 @@ func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
 					}
 				}
 				_ = sm.db.SetReaction(evt.Info.ID, who, r.GetText(), r.GetSenderTimestampMS())
+			}
+			if p := evt.Message.GetPinInChatMessage(); p != nil {
+				sm.handlePinQuiet(evt.Info.Chat.String(), evt.Info.Sender, evt.Info.IsFromMe, evt.Message, evt.Info.Timestamp)
+				continue
 			}
 			if r := evt.Message.GetReactionMessage(); r != nil {
 				who := ""

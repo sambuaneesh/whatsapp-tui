@@ -225,6 +225,8 @@ func (m Model) handleVisual(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.openPicker()
 	case "w": // who reacted
 		return m.openReactors(sel, "")
+	case "P": // pin / unpin
+		return m.pinSelected(0)
 	case "e":
 		return m.startEdit(sel)
 	case "f":

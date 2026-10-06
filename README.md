@@ -68,7 +68,7 @@ The full guide is in [USAGE.md](USAGE.md); press `?` in the app for every key. L
 chat or contact (fuzzy: `hrsh` finds Hari Shankar) and `F1` /
 `ctrl+shift+p` runs any feature by name. The basics: `j`/`k` move, `enter` opens a
 chat, `i` writes, `esc` goes back to normal mode, `v` selects messages
-(`enter` reply, `r` react, `e` edit, `f` forward, `y` copy, `s` save, `d` delete), `/` searches,
+(`enter` reply, `r` react, `e` edit, `f` forward, `y` copy, `s` save, `d` delete, `P` pin), `/` searches,
 `S` searches all chats, `:q` closes the window (it keeps running in the
 background, like tmux; the next launch picks up where you were) and `:q!` quits.
 

@@ -122,6 +122,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if msg.Action != tea.MouseActionPress {
 			return m, nil
 		}
+		if !overList && m.pinBarAt(msg.X, msg.Y) {
+			return m.jumpToPin()
+		}
 		if !overList {
 			// a click on a link in the messages opens it
 			if url := m.linkAt(msg.X, msg.Y); url != "" {
@@ -209,7 +212,7 @@ func (m Model) messageAt(x, y int) (sp msgSpan, line int, ok bool) {
 	if m.screen != screenChat || m.current == nil {
 		return sp, 0, false
 	}
-	row := y - headerRows
+	row := y - headerRows - m.pinRows()
 	col := x - (m.sidebarW + 1) // sidebar + divider
 	if row < 0 || row >= m.vp.Height || col < 0 {
 		return sp, 0, false
@@ -360,7 +363,7 @@ func (m Model) linkAt(x, y int) string {
 	if m.screen != screenChat || m.current == nil {
 		return ""
 	}
-	row := y - headerRows
+	row := y - headerRows - m.pinRows()
 	col := x - (m.sidebarW + 1) // sidebar + divider
 	if row < 0 || row >= m.vp.Height || col < 0 {
 		return ""

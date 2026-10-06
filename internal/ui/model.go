@@ -68,6 +68,8 @@ type Model struct {
 	qo         *paletteState // the palette (ctrl+p, F1), when open
 	recent     *recents
 	preload    *preload
+	pins       []messages.Message       // the open chat's pinned messages, newest first
+	pinIdx     int                      // which one the pinned bar shows
 	allChats   []*messages.Conversation // every known chat and contact (forward targets)
 	archive    bool                     // showing archived chats instead of the inbox
 	unreadOnly bool                     // list shows only chats with unread messages
@@ -618,6 +620,7 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 		save = m.stashDraft() // what you were writing in the last chat
 		m.keepOpenChat()
 		m.current = c
+		m.pins, m.pinIdx = nil, 0
 		m.selfChat = m.privacy != nil && m.privacy.IsSelfChat(c.JID)
 		m.msgs, _ = m.preload.get(c) // drawn now; the backend's load follows
 		m.compose.SetValue("")
@@ -721,6 +724,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// load the chat that's highlighted, so enter opens it at once
 		if pc := nm.prefetch(nm.highlighted()); pc != nil {
 			cmd = tea.Batch(cmd, pc)
+		}
+		if _, ok := msg.(screenMsg); ok {
+			cmd = tea.Batch(cmd, nm.loadPins()) // pins change with the messages
 		}
 		return nm, cmd
 	}
@@ -962,6 +968,8 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.focused = false
 		return m, tea.Batch(m.blink(false), m.stashDraft())
 
+	case pinsMsg:
+		return m.applyPins(msg)
 	case screenMsg:
 		if m.current == nil {
 			return m, nil
@@ -1266,6 +1274,8 @@ func (m Model) handleListPane(key string) (tea.Model, tea.Cmd) {
 		return m, m.openActivity()
 	case "d":
 		m.askDeleteChat(m.selectedChat())
+	case "P": // pin to the top
+		return m.pinChat(m.selectedChat())
 	case "/":
 		m.mode = modeFilter
 		m.cmdline.Prompt = "/"
@@ -1583,6 +1593,40 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 		return m.scheduleCommand(messages.ScheduleNudge, fields[1:])
 	case "scheduled", "sched":
 		return m, m.openScheduled()
+	case "pin", "unpin":
+		c := m.theChat()
+		if c == nil {
+			return m, nil
+		}
+		if (fields[0] == "pin") == c.IsPinned {
+			m.notice, m.noticeErr = chatName(c)+" is already "+fields[0]+"ned", false
+			return m, nil
+		}
+		return m.pinChat(c)
+	case "pinned":
+		if !inChat(m) {
+			m.notice, m.noticeErr = ":pinned works in a chat", true
+			return m, nil
+		}
+		return m.jumpToPin()
+	case "mute", "unmute":
+		c := m.theChat()
+		if c == nil {
+			return m, nil
+		}
+		if fields[0] == "unmute" {
+			return m.muteChat(c, 0)
+		}
+		arg := "always"
+		if len(fields) > 1 {
+			arg = strings.ToLower(fields[1])
+		}
+		d, ok := muteDurations[arg]
+		if !ok {
+			m.notice, m.noticeErr = ":mute 8h, 1w, always (or :unmute)", true
+			return m, nil
+		}
+		return m.muteChat(c, d)
 	case "activity":
 		return m, m.openActivity()
 	case "only", "unsplit", "close":

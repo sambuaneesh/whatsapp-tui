@@ -174,6 +174,7 @@ func (sm *SessionManager) getMessages(wid string) []Message {
 	}
 	sm.resolveSenders(msgs)
 	sm.attachReactions(msgs)
+	sm.attachPins(wid, msgs)
 	sm.selfChatRead(wid, msgs)
 	sm.resolveMentions(msgs)
 	return msgs
@@ -276,6 +277,7 @@ func (sm *SessionManager) ChatMessages(_ context.Context, jid string) ([]Message
 	}
 	sm.resolveSenders(msgs)
 	sm.attachReactions(msgs)
+	sm.attachPins(jid, msgs)
 	sm.resolveMentions(msgs)
 	return msgs, nil
 }

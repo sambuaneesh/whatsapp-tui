@@ -393,6 +393,10 @@ func (eh *eventHandler) handleMessage(evt *events.Message) {
 			MessageID: r.GetKey().GetID(), Sender: sender, Emoji: r.GetText(), FromMe: evt.Info.IsFromMe}})
 		return
 	}
+	if evt.Message.GetPinInChatMessage() != nil {
+		eh.sm.handlePin(evt.Info.Chat.String(), evt.Info.Sender, evt.Info.IsFromMe, evt.Message, evt.Info.Timestamp)
+		return
+	}
 	if pm := evt.Message.GetProtocolMessage(); pm != nil && pm.GetType() == waE2E.ProtocolMessage_REVOKE {
 		eh.sm.handleRevoke(evt.Info.Chat.String(), pm, evt.Info.IsFromMe)
 		return
