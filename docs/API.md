@@ -90,7 +90,7 @@ for line in f:
 | `status` | – | `{"connected": bool, "send_allowed": bool}` |
 | `chats` | `limit` (optional) | chats, pinned first, then newest ([Chat](#chat)) |
 | `messages` | `chat`; `limit` (default 50, max 1000); `before` (unix seconds, for older pages) | messages, oldest first ([Message](#message)) |
-| `search` | `query`; `chat` (optional, one chat only); `limit` (optional) | matching messages across chats, newest first |
+| `search` | `query`; `chat` (optional, one chat only); `limit` (optional) | messages with every word (any order), newest first; then, if [search by meaning](../USAGE.md#how-search-matches) is set up, up to 20 close in meaning, marked `"similar": true` |
 | `send` | `chat`, `text`; `reply_to` (optional message ID) | `"sent"` — needs [sending allowed](#sending) |
 | `reply` | `chat`, `text`, `reply_to` | `"sent"` — needs [sending allowed](#sending) |
 | `mark_read` | `chat` | `"ok"`: sends read receipts, clears the unread count everywhere |

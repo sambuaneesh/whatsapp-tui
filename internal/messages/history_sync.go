@@ -124,6 +124,7 @@ func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
 	// a sync is big and rare: give its memory back to the system when done
 	// (Go would otherwise keep it reserved)
 	defer debug.FreeOSMemory()
+	defer sm.indexMeaningSoon() // new old messages to index by meaning
 	msgCount := 0
 	for _, c := range data.GetConversations() {
 		msgCount += len(c.GetMessages())

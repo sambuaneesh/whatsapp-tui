@@ -368,6 +368,7 @@ func (eh *eventHandler) processIncomingMessage(evt *events.Message, text, previe
 		eh.sm.uiHandler.Incoming(one[0], chatName)
 	}
 	eh.sm.emit(Event{Kind: EventMessage, Message: one[0], MentionsYou: mentionsMe})
+	eh.sm.indexMeaningSoon()
 
 	// Update chat list ordering
 	eh.sm.uiHandler.UpdateChatList(safeList)

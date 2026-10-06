@@ -22,6 +22,7 @@ import (
 	"github.com/Srindot/whatsapp-tui/internal/daemon"
 	"github.com/Srindot/whatsapp-tui/internal/messages"
 	"github.com/Srindot/whatsapp-tui/internal/notify"
+	"github.com/Srindot/whatsapp-tui/internal/semantic"
 	"github.com/Srindot/whatsapp-tui/internal/termimg"
 	"github.com/Srindot/whatsapp-tui/internal/ui"
 )
@@ -242,6 +243,10 @@ func run() error {
 
 	if err := sm.StartManager(); err != nil {
 		return fmt.Errorf("start: %w", err)
+	}
+	// search by meaning, if a local model runs (does nothing otherwise)
+	if g := config.Config.General; g.SemanticSearch && g.OllamaUrl != "" {
+		sm.StartSemantic(semantic.Ollama{URL: strings.TrimRight(g.OllamaUrl, "/"), Model: g.EmbedModel})
 	}
 	// the local API for scripts and hooks (docs/API.md)
 	apiOpts := api.Options{

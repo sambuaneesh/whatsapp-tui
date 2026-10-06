@@ -73,7 +73,7 @@ Results (before → after):
 
 - [ ] Voice-note transcription (whisper.cpp on the GPU; IndicConformer for
       Telugu), searchable
-- [ ] Full-text + meaning search (SQLite FTS5 + sqlite-vec + EmbeddingGemma)
+- [x] Full-text + meaning search (SQLite FTS5 + EmbeddingGemma via Ollama)
 - [ ] "Catch me up" summaries for busy groups (local 4B model; optional
       Claude)
 - [ ] Smart notifications: only what matters in muted groups
@@ -111,7 +111,10 @@ Results (before → after):
 - [x] 20a. Full-text search (SQLite FTS5, built with `-tags sqlite_fts5`):
       all words, any order, prefixes, accents ignored; 0.3 ms vs 6.7 ms;
       index +0.7 MB; safe fallback without FTS5
-- [ ] 20b. Search by meaning (local embeddings; needs Ollama)
+- [x] 20b. Search by meaning: local EmbeddingGemma via Ollama, 256-dim
+      int8 vectors (~12 MB for 50k messages), indexed in the background;
+      `S` adds "≈ similar in meaning" hits. Inactive until Ollama is
+      installed (`ollama pull embeddinggemma`).
 
 ## Known bugs
 

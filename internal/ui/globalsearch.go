@@ -307,6 +307,11 @@ func (m Model) renderGlobalSearch(width, height int) string {
 			marker = paint(styleAccent, sel).Render("▌ ")
 		}
 		chat := paint(senderStyle(h.ChatId), sel).Render(h.ChatName)
+		if h.Similar {
+			// found by meaning, not by the words typed
+			chat = paint(lipgloss.NewStyle().Foreground(pal.Iris), sel).Render("≈ ") + chat +
+				paint(styleMuted, sel).Render("  similar in meaning")
+		}
 		when := paint(styleDim, sel).Render(listTime(int64(h.Timestamp), now)+" "+toTime(int64(h.Timestamp)).Format("15:04")) + fill.Render(" ")
 		who := m.senderName(h.Message)
 		if isGroup(h.ChatId) || h.FromMe {

@@ -90,6 +90,7 @@ func (md *MessageDatabase) InitWithDB(db *sql.DB) error {
 	md.db.Exec(`DELETE FROM conversations WHERE jid LIKE '%@broadcast'`)
 
 	md.initFTS()
+	md.initEmbeddings()
 
 	if err := md.initScheduled(); err != nil {
 		return fmt.Errorf("failed to create scheduled table: %w", err)

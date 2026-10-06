@@ -46,6 +46,7 @@ func (sm *SessionManager) SearchHistory(ctx context.Context, chat, query string)
 type SearchHit struct {
 	Message
 	ChatName string
+	Similar  bool // found by meaning, not by its words
 }
 
 // searchAllLimit caps results of a search across all chats.
@@ -71,6 +72,25 @@ func (sm *SessionManager) SearchAll(ctx context.Context, query string) ([]Search
 			names[m.ChatId] = name
 		}
 		hits = append(hits, SearchHit{Message: m, ChatName: name})
+	}
+	// then messages close in meaning that the words didn't find
+	seen := make(map[string]bool, len(hits))
+	for _, h := range hits {
+		seen[h.Id] = true
+	}
+	added := 0
+	for _, f := range sm.similar(ctx, query) {
+		if seen[f.ID] || added >= similarMax {
+			continue
+		}
+		m, err := sm.db.GetMessage(f.ID)
+		if err != nil {
+			continue
+		}
+		one := []Message{m}
+		sm.resolveSenders(one)
+		hits = append(hits, SearchHit{Message: one[0], ChatName: sm.ChatName(ctx, m.ChatId), Similar: true})
+		added++
 	}
 	return hits, ctx.Err()
 }

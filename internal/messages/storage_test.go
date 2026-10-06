@@ -15,6 +15,9 @@ func newTestDB(t *testing.T) *MessageDatabase {
 	if err != nil {
 		t.Fatalf("failed to open in-memory db: %v", err)
 	}
+	// each connection to ":memory:" is its own empty database: keep one, so
+	// background goroutines (indexer, scheduler) see the same data
+	db.SetMaxOpenConns(1)
 	md := &MessageDatabase{}
 	if err := md.InitWithDB(db); err != nil {
 		t.Fatalf("InitWithDB failed: %v", err)

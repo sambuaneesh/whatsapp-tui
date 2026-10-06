@@ -230,6 +230,21 @@ doesn't either, unless you type a capital. When that finds nothing, the text
 as typed is looked for anywhere (inside words, emoji). A full-text index
 makes it fast (0.3 ms over 50,000 messages); it's built automatically.
 
+**By meaning** (optional): with a local model running, `S` also lists up to
+20 messages close in meaning to what you typed, marked **≈ similar in
+meaning**: `flat address` finds "send me the location of the apartment".
+Everything stays on your machine. Set it up once:
+
+```sh
+sudo pacman -S ollama-cuda         # or ollama (CPU); other distros: ollama.com
+sudo systemctl enable --now ollama
+ollama pull embeddinggemma         # ~620 MB
+```
+
+The app indexes your messages in the background (newest first; a few
+minutes for tens of thousands) and new ones as they arrive. Without Ollama it
+does nothing. `semantic_search = false` turns it off.
+
 ## Two chats side by side
 
 In a chat, go to the list (`h`), pick another chat and press `v`: it opens on
@@ -323,6 +338,9 @@ background    = true           ; keep running when the window closes
 private_reading = false        ; true: no read receipts until you mark a chat read
 media_cache_mb  = 1024         ; downloaded media kept on disk
 api_allow_send  = false        ; true: scripts may send through the local API
+semantic_search = true         ; search by meaning when Ollama runs (see "How search matches")
+ollama_url      = http://127.0.0.1:11434
+embed_model     = embeddinggemma
 
 [ui]
 theme            = rose-pine   ; rose-pine, rose-pine-moon, rose-pine-dawn

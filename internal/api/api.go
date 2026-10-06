@@ -232,7 +232,9 @@ func (s *Server) call(ctx context.Context, method string, raw json.RawMessage) (
 		out := make([]MessageJSON, 0, len(hits))
 		for _, h := range hits {
 			if p.Chat == "" || h.ChatId == p.Chat {
-				out = append(out, messageJSON(h.Message, h.ChatName))
+				mj := messageJSON(h.Message, h.ChatName)
+				mj.Similar = h.Similar
+				out = append(out, mj)
 			}
 		}
 		if p.Limit > 0 && len(out) > p.Limit {
