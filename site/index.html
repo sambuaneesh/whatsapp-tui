@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>whatsapp-tui</title>
+<meta name="description" content="WhatsApp in your terminal, vim-style: sub-millisecond redraws, runs in the background, send later, snooze, read without blue ticks, search by meaning, and a local API for your scripts.">
+<meta name="theme-color" content="#191724">
+<meta property="og:title" content="whatsapp-tui">
+<meta property="og:description" content="WhatsApp in your terminal, vim-style. Fast, always on, and scriptable.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Rosé Pine (dark) first, Rosé Pine Dawn for light: the app's own themes */
+:root {
+  color-scheme: dark;
+  --base: #191724; --surface: #1f1d2e; --overlay: #26233a;
+  --muted: #6e6a86; --subtle: #908caa; --text: #e0def4;
+  --love: #eb6f92; --gold: #f6c177; --rose: #ebbcba; --pine: #31748f; --foam: #9ccfd8; --iris: #c4a7e7;
+  --hl-low: #21202e; --hl-med: #403d52; --hl-high: #524f67;
+  --shadow: 0 1px 0 rgba(255,255,255,.03), 0 18px 50px -20px rgba(0,0,0,.7);
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --base: #faf4ed; --surface: #fffaf3; --overlay: #f2e9e1;
+    --muted: #9893a5; --subtle: #797593; --text: #575279;
+    --love: #b4637a; --gold: #ea9d34; --rose: #d7827e; --pine: #286983; --foam: #56949f; --iris: #907aa9;
+    --hl-low: #f4ede8; --hl-med: #dfdad9; --hl-high: #cecacd;
+    --shadow: 0 1px 0 rgba(255,255,255,.6), 0 18px 40px -22px rgba(87,82,121,.35);
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --base: #faf4ed; --surface: #fffaf3; --overlay: #f2e9e1;
+  --muted: #9893a5; --subtle: #797593; --text: #575279;
+  --love: #b4637a; --gold: #ea9d34; --rose: #d7827e; --pine: #286983; --foam: #56949f; --iris: #907aa9;
+  --hl-low: #f4ede8; --hl-med: #dfdad9; --hl-high: #cecacd;
+  --shadow: 0 1px 0 rgba(255,255,255,.6), 0 18px 40px -22px rgba(87,82,121,.35);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+body {
+  background: var(--base); color: var(--text);
+  font: 17px/1.6 var(--body);
+  padding-inline: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1120px; margin-inline: auto; }
+a { color: var(--foam); text-underline-offset: 3px; }
+a:hover { color: var(--iris); }
+:focus-visible { outline: 2px solid var(--iris); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.08; }
+h2 { font-size: clamp(30px, 4.6vw, 48px); font-weight: 800; letter-spacing: -0.02em; }
+h3 { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+p { margin: 0; }
+code, kbd, .mono { font-family: var(--mono); font-size: .86em; }
+code { background: var(--overlay); padding: .08em .38em; border-radius: 5px; color: var(--rose); }
+kbd {
+  display: inline-block; min-width: 1.6em; text-align: center;
+  padding: .05em .45em .12em; border-radius: 6px;
+  background: var(--surface); color: var(--gold);
+  border: 1px solid var(--hl-med); border-bottom-width: 3px;
+  font-weight: 600; line-height: 1.35;
+}
+
+/* ---------- top bar: the app's status line ---------- */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  margin-inline: -16px; padding: 8px 16px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--hl-med);
+}
+.topbar .wrap { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 13px; }
+.badge { padding: 1px 8px; border-radius: 4px; font-weight: 600; letter-spacing: .04em; background: var(--rose); color: var(--base); }
+.topbar nav { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+.topbar nav a { color: var(--subtle); text-decoration: none; padding: 3px 9px; border-radius: 5px; }
+.topbar nav a:hover { background: var(--overlay); color: var(--text); }
+.brand { color: var(--text); font-weight: 600; }
+@media (max-width: 720px) { .topbar nav a.opt { display: none; } }
+
+/* ---------- hero ---------- */
+.hero { padding-block: 56px 28px; display: grid; gap: 34px; }
+.hero h1 { font-size: clamp(44px, 8.5vw, 96px); font-weight: 800; letter-spacing: -0.045em; }
+.hero h1 .dim { color: var(--muted); }
+.hero h1 .cur { display: inline-block; width: .42em; height: .82em; background: var(--rose); vertical-align: -0.06em; margin-left: .08em; animation: blink 1.06s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.lede { font-size: clamp(18px, 2.1vw, 22px); max-width: 60ch; color: var(--subtle); }
+.lede b { color: var(--text); font-weight: 700; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.copyline {
+  display: flex; align-items: center; gap: 10px; max-width: 100%;
+  background: var(--surface); border: 1px solid var(--hl-med); border-radius: 10px;
+  padding: 8px 8px 8px 14px; font-family: var(--mono); font-size: 14px;
+}
+.copyline span { overflow-x: auto; white-space: nowrap; }
+.copyline .p { color: var(--iris); }
+button { font: inherit; cursor: pointer; }
+.btn {
+  border: 1px solid var(--hl-med); background: var(--overlay); color: var(--text);
+  border-radius: 7px; padding: 5px 12px; font-family: var(--mono); font-size: 13px; white-space: nowrap;
+}
+.btn:hover { border-color: var(--iris); }
+.btn.primary { background: var(--rose); color: var(--base); border-color: var(--rose); font-weight: 600; }
+.stats { display: flex; flex-wrap: wrap; gap: 10px 28px; font-family: var(--mono); font-size: 13px; color: var(--subtle); }
+.stats b { font-family: var(--display); font-size: 26px; color: var(--foam); font-weight: 800; letter-spacing: -0.02em; display: block; line-height: 1.1; }
+
+/* ---------- the live terminal ---------- */
+.term-shell { display: grid; gap: 10px; }
+.term {
+  --cell: clamp(10.5px, 1.32vw, 14px);
+  font: var(--cell)/1.45 var(--mono); color: var(--text);
+  background: var(--base); border: 1px solid var(--hl-high);
+  border-radius: 12px; box-shadow: var(--shadow); overflow: hidden;
+  outline: none; position: relative; user-select: none;
+}
+.term:focus-visible { outline: 2px solid var(--iris); outline-offset: 3px; }
+.term-title { display: flex; align-items: center; gap: 7px; padding: 7px 12px; background: var(--surface); border-bottom: 1px solid var(--hl-med); color: var(--muted); font-size: 12px; }
+.term-title i { width: 11px; height: 11px; border-radius: 50%; background: var(--hl-high); display: inline-block; }
+.term-title .hint { margin-left: auto; color: var(--subtle); }
+.term-body { display: grid; grid-template-columns: minmax(150px, 30%) 1fr; height: 380px; overflow: hidden; }
+.side { border-right: 1px solid var(--hl-med); overflow: hidden; }
+.pane { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; min-width: 0; min-height: 0; height: 100%; }
+.ph { padding: 6px 12px; border-bottom: 1px solid var(--hl-med); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ph .k { color: var(--muted); }
+.chat { padding: 8px 10px; border-bottom: 1px solid var(--hl-low); display: grid; grid-template-columns: 1fr auto; gap: 0 8px; cursor: pointer; border-left: 3px solid transparent; }
+.chat .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat .t { color: var(--muted); font-size: .9em; }
+.chat .pv { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .92em; }
+.chat .cnt { justify-self: end; background: var(--gold); color: var(--base); border-radius: 9px; padding: 0 6px; font-size: .85em; font-weight: 600; height: 1.45em; }
+.chat .at { background: var(--love); }
+.chat.unread .n { font-weight: 600; }
+.chat.unread .pv { color: var(--text); }
+.chat.cur { background: var(--hl-med); border-left-color: var(--rose); }
+.chat.open .n { color: var(--rose); }
+.chat .draft { color: var(--love); }
+.msgs { overflow: hidden; padding: 6px 10px; display: flex; flex-direction: column; justify-content: flex-end; gap: 7px; min-height: 0; }
+.day { align-self: center; background: var(--overlay); color: var(--subtle); padding: 0 8px; border-radius: 4px; font-size: .88em; }
+.b { max-width: 78%; border: 1.5px solid var(--muted); border-radius: 9px; padding: 3px 9px 4px; position: relative; cursor: pointer; }
+.b.me { align-self: flex-end; border-color: var(--iris); }
+.b.sel { border-color: var(--rose); box-shadow: -6px 0 0 -3px var(--rose); }
+.b.me.sel { box-shadow: 6px 0 0 -3px var(--rose); }
+.b .who { font-weight: 600; }
+.b .st { color: var(--muted); font-size: .86em; margin-left: 8px; white-space: nowrap; }
+.b .q { border-left: 2px solid var(--gold); padding-left: 6px; margin: 2px 0 3px; color: var(--subtle); font-size: .94em; }
+.b .q b { color: var(--gold); font-weight: 600; }
+.b .rx { position: absolute; bottom: -.9em; left: 8px; background: var(--base); padding: 0 4px; font-size: .9em; color: var(--subtle); }
+.b.me .rx { left: auto; right: 8px; }
+.b.has-rx { margin-bottom: .55em; }
+.mine { color: var(--gold); }
+.w-love { color: var(--love); } .w-gold { color: var(--gold); } .w-foam { color: var(--foam); } .w-iris { color: var(--iris); } .w-pine { color: var(--pine); } .w-rose { color: var(--rose); }
+.reply-bar { padding: 3px 12px; border-top: 1px solid var(--hl-low); color: var(--subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reply-bar b { color: var(--foam); }
+.compose { margin: 4px 8px 6px; border: 1.5px solid var(--muted); border-radius: 8px; padding: 2px 9px; white-space: nowrap; overflow: hidden; }
+.compose.on { border-color: var(--gold); }
+.compose .ph2 { color: var(--muted); }
+.compose .caret { display: inline-block; width: .6em; height: 1.1em; background: var(--rose); vertical-align: -0.2em; animation: blink 1.06s steps(1) infinite; }
+.status { display: flex; gap: 10px; align-items: center; background: var(--surface); padding: 2px 10px 2px 0; white-space: nowrap; overflow: hidden; }
+.status .m { padding: 0 8px; font-weight: 600; color: var(--base); background: var(--pine); }
+.status .m.visual { background: var(--rose); } .status .m.insert { background: var(--gold); } .status .m.cmd { background: var(--iris); }
+.status .r { margin-left: auto; display: flex; gap: 10px; }
+.cmdline { padding: 2px 10px; color: var(--subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.5em; }
+.cmdline .kk { color: var(--gold); }
+.overlay { position: absolute; inset: 31px 0 calc(2.95em) 0; background: var(--base); padding: 12px 18px; overflow: auto; }
+.overlay h4 { margin: 0 0 8px; font-family: var(--mono); font-size: 1em; color: var(--iris); }
+.overlay .row { display: grid; grid-template-columns: 9em 1fr; gap: 10px; padding: 2px 0; }
+.overlay .row.on { background: var(--hl-med); }
+.keys { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 14px; color: var(--subtle); }
+.keys button { border: 1px solid var(--hl-med); border-bottom-width: 3px; background: var(--surface); color: var(--gold); border-radius: 6px; padding: 2px 10px; font-family: var(--mono); font-weight: 600; font-size: 13px; }
+.keys button:active { transform: translateY(1px); border-bottom-width: 2px; }
+@media (max-width: 560px) { .term-body { grid-template-columns: 1fr; } .side { display: none; } .term-body.listview .side { display: block; } .term-body.listview .pane { display: none; } }
+
+/* ---------- sections ---------- */
+section { padding-block: 56px 24px; border-top: 1px solid var(--hl-med); scroll-margin-top: 56px; }
+.eyebrow { display: inline-flex; gap: 8px; align-items: center; font-family: var(--mono); font-size: 12.5px; letter-spacing: .06em; margin-bottom: 14px; color: var(--subtle); }
+.eyebrow .badge { letter-spacing: .08em; }
+.b-pine { background: var(--pine); } .b-gold { background: var(--gold); } .b-iris { background: var(--iris); } .b-love { background: var(--love); } .b-foam { background: var(--foam); } .b-rose { background: var(--rose); }
+.intro { color: var(--subtle); font-size: 19px; max-width: 62ch; margin-top: 12px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-top: 30px; }
+.feat { background: var(--surface); border: 1px solid var(--hl-med); border-radius: 12px; padding: 18px 18px 20px; display: grid; gap: 10px; align-content: start; }
+.feat p { color: var(--subtle); }
+.feat p b { color: var(--text); }
+.feat .how { font-size: 14.5px; color: var(--subtle); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.feat.wide { grid-column: 1 / -1; }
+.scr {
+  font: 12.5px/1.5 var(--mono); background: var(--base); border: 1px solid var(--hl-med); border-radius: 8px;
+  padding: 10px 12px; overflow-x: auto; white-space: pre; color: var(--text); margin: 2px 0 0;
+}
+.two { display: grid; grid-template-columns: 1.05fr 1fr; gap: 26px; align-items: start; margin-top: 30px; }
+@media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+.points { display: grid; gap: 16px; }
+.point { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
+.point .k { grid-row: span 2; padding-top: 2px; }
+.point h3 { font-size: 19px; }
+.point p { color: var(--subtle); }
+
+/* diagram: windows attach to one app */
+.attach { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-items: center; font-family: var(--mono); font-size: 13px; }
+.attach .win { border: 1px solid var(--hl-high); border-radius: 8px; padding: 10px; text-align: center; background: var(--surface); }
+.attach .win.gone { opacity: .45; border-style: dashed; }
+.attach .app { grid-column: 1 / -1; border: 1.5px solid var(--foam); border-radius: 10px; padding: 12px; text-align: center; color: var(--foam); background: color-mix(in srgb, var(--foam) 8%, var(--surface)); }
+.attach .arrow { grid-column: 1 / -1; text-align: center; color: var(--muted); font-size: 12px; }
+
+/* playground */
+.play { background: var(--surface); border: 1px solid var(--hl-med); border-radius: 12px; padding: 18px; display: grid; gap: 12px; }
+.play label { font-family: var(--mono); font-size: 13px; color: var(--subtle); }
+.field { display: flex; align-items: center; gap: 8px; background: var(--base); border: 1.5px solid var(--hl-high); border-radius: 9px; padding: 8px 12px; font-family: var(--mono); }
+.field:focus-within { border-color: var(--gold); }
+.field .pre { color: var(--iris); }
+.field input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--text); font: 15px var(--mono); outline: none; }
+.result { font-family: var(--mono); font-size: 14px; min-height: 2.6em; }
+.result .ok { color: var(--foam); } .result .bad { color: var(--love); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--hl-med); background: var(--base); color: var(--subtle); border-radius: 999px; padding: 2px 10px; font-family: var(--mono); font-size: 12.5px; }
+.chip:hover, .chip.on { color: var(--text); border-color: var(--iris); }
+.hits { display: grid; gap: 6px; }
+.hit { font-size: 15px; padding: 6px 10px; border-radius: 7px; background: var(--base); border: 1px solid var(--hl-low); }
+.hit .meta { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.hit mark { background: var(--gold); color: var(--base); border-radius: 3px; padding: 0 1px; }
+.hit.sim { border-style: dashed; border-color: var(--iris); }
+.hit.sim .meta { color: var(--iris); }
+
+/* speed chart */
+.chart { overflow-x: auto; }
+.chart svg { display: block; width: 100%; min-width: 560px; height: auto; }
+.chart text { font-family: var(--mono); fill: var(--subtle); }
+.legend { display: flex; gap: 18px; font-family: var(--mono); font-size: 13px; color: var(--subtle); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+
+/* status marks */
+.marks { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-family: var(--mono); font-size: 14px; }
+
+/* tables */
+.tbl { overflow-x: auto; border: 1px solid var(--hl-med); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--hl-low); vertical-align: top; }
+th { font-family: var(--mono); font-size: 12.5px; letter-spacing: .05em; color: var(--muted); font-weight: 600; background: var(--surface); }
+tr:last-child td { border-bottom: 0; }
+td.k { white-space: nowrap; }
+td .ctx { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+/* code */
+.code { position: relative; }
+.code pre { margin: 0; font: 13px/1.6 var(--mono); background: var(--base); border: 1px solid var(--hl-med); border-radius: 10px; padding: 14px 16px; overflow-x: auto; color: var(--text); }
+.code .btn { position: absolute; top: 8px; right: 8px; }
+.code .c { color: var(--muted); } .code .s { color: var(--gold); } .code .kw { color: var(--pine); } .code .fn { color: var(--rose); } .code .v { color: var(--foam); }
+.code .cap { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+
+.footer { padding-block: 40px 60px; color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: space-between; border-top: 1px solid var(--hl-med); }
+.theme-pick { display: flex; gap: 6px; }
+.note { font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <span class="badge">NORMAL</span>
+    <span class="brand">whatsapp-tui</span>
+    <nav aria-label="Sections">
+      <a href="#always-on">always on</a>
+      <a href="#triage" class="opt">triage</a>
+      <a href="#later">later</a>
+      <a href="#messages" class="opt">messages</a>
+      <a href="#search">search</a>
+      <a href="#speed">speed</a>
+      <a href="#scripts" class="opt">scripts</a>
+      <a href="#keys">keys</a>
+      <a href="#install">install</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ======================= HERO ======================= -->
+<div class="hero">
+  <div style="display:grid;gap:18px">
+    <h1>whatsapp<span class="dim">-</span>tui<span class="cur" aria-hidden="true"></span></h1>
+    <p class="lede">WhatsApp in your terminal, driven by the keyboard like vim. <b>It redraws in a third of a millisecond</b>, keeps running when you close the window, and does what the official apps can't: send later, snooze chats, read without blue ticks, search by meaning, and talk to your own scripts.</p>
+    <div class="cta-row">
+      <div class="copyline"><span><span class="p">$</span> git clone git@github.com:sambuaneesh/whatsapp-tui.git &amp;&amp; cd whatsapp-tui &amp;&amp; make install</span><button class="btn" data-copy="git clone git@github.com:sambuaneesh/whatsapp-tui.git && cd whatsapp-tui && make install">copy</button></div>
+    </div>
+    <div class="stats">
+      <div><b>0.35 ms</b>to redraw a 400-message chat</div>
+      <div><b>~0%</b>CPU with the window closed</div>
+      <div><b>1</b>app, however many windows you open</div>
+      <div><b>0</b>bytes leave your machine for search</div>
+    </div>
+  </div>
+
+  <div class="term-shell">
+    <div class="term" id="term" tabindex="0" aria-label="Interactive demo of whatsapp-tui. Focus it and press keys like j, k, enter, v, r, i and question mark.">
+      <div class="term-title"><i></i><i></i><i></i><span>kitty — whatsapp-tui</span><span class="hint" id="t-hint">click here, then press keys</span></div>
+      <div class="term-body" id="t-body">
+        <div class="side">
+          <div class="ph">Chats <span class="k">6 · 2 unread</span></div>
+          <div id="t-list"></div>
+        </div>
+        <div class="pane">
+          <div class="ph" id="t-head"></div>
+          <div class="msgs" id="t-msgs"></div>
+          <div id="t-reply"></div>
+          <div class="compose" id="t-compose"></div>
+        </div>
+      </div>
+      <div class="status"><span class="m" id="t-mode">NORMAL</span><span id="t-where">chats</span><span class="r"><span class="w-gold">⏰ 1</span><span class="w-gold">🔔 all</span><span class="w-foam">● online</span><span class="w-muted" style="color:var(--muted)">? help</span></span></div>
+      <div class="cmdline" id="t-cmd"></div>
+      <div class="overlay" id="t-over" hidden></div>
+    </div>
+    <div class="keys" aria-label="Keys you can press in the demo">
+      <span>try:</span>
+      <button data-key="j">j</button><button data-key="k">k</button><button data-key="Enter">enter</button><button data-key="h">h</button><button data-key="v">v</button><button data-key="r">r</button><button data-key="2">2</button><button data-key="w">w</button><button data-key="i">i</button><button data-key="Escape">esc</button><button data-key="I">I</button><button data-key="?">?</button>
+      <span class="note">or double-click a bubble to reply, right-click to react</span>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= ALWAYS ON ======================= -->
+<section id="always-on">
+  <div class="eyebrow"><span class="badge b-foam">BACKGROUND</span>one app, any number of windows</div>
+  <h2>Close the window. It keeps working.</h2>
+  <p class="intro">The first launch starts whatsapp-tui in the background, like tmux or herdr. Every launch after that is just a window onto it. Close the window and it stays connected: it still gets your messages, still notifies you, still sends what you scheduled. Open it again and you're exactly where you were.</p>
+
+  <div class="two">
+    <div class="points">
+      <div class="point"><span class="k"><kbd>q</kbd></span><h3>Closing only detaches</h3><p><kbd>q</kbd>, <kbd>:q</kbd>, <kbd>ctrl+c</kbd> or the window's close button leave the app running. <kbd>:q!</kbd> or <code>whatsapp-tui --stop</code> quit it for real.</p></div>
+      <div class="point"><span class="k"><kbd>↺</kbd></span><h3>Reopen and resume</h3><p>Same chat, same scroll position, same half-written message, the same selection. Pictures redraw in the new window.</p></div>
+      <div class="point"><span class="k"><kbd>⇄</kbd></span><h3>A second window takes over</h3><p>Open it from another workspace and it moves there; the old window closes. It's never open twice, never logged in twice.</p></div>
+      <div class="point"><span class="k"><kbd>↑</kbd></span><h3>Updates itself on the next launch</h3><p>Install a new build and the next launch notices, restarts the background app on it and attaches. No stale version left behind.</p></div>
+      <div class="point"><span class="k"><kbd>0%</kbd></span><h3>Costs nothing while it waits</h3><p>With no window attached it stops drawing altogether. Idle, it does no work you'd notice.</p></div>
+    </div>
+    <div style="display:grid;gap:16px">
+      <div class="attach" aria-label="Diagram: windows attach to one background app">
+        <div class="win gone">kitty #1<br><span style="color:var(--muted)">closed</span></div>
+        <div class="win gone">kitty #2<br><span style="color:var(--muted)">moved away</span></div>
+        <div class="win" style="border-color:var(--rose)">kitty #3<br><span style="color:var(--rose)">attached</span></div>
+        <div class="arrow">↓ one socket in /run/user/1000 ↓</div>
+        <div class="app">whatsapp-tui --server<br><span style="color:var(--subtle)">connected · notifying · sending what's scheduled</span></div>
+      </div>
+      <div class="feat">
+        <h3>Notifications, your way</h3>
+        <p>The bell in the status bar says what a new message does. <b>Click it</b> or press <kbd>M</kbd> to cycle; the choice is saved.</p>
+        <div class="tbl"><table>
+          <tr><th>Badge</th><th>New message</th></tr>
+          <tr><td class="mono">🔔 all</td><td>popup in the notification drawer, and a sound</td></tr>
+          <tr><td class="mono">💬 popup</td><td>a silent popup</td></tr>
+          <tr><td class="mono">🔊 sound</td><td>only a sound</td></tr>
+          <tr><td class="mono">🔕 off</td><td>nothing</td></tr>
+        </table></div>
+        <p class="note">No notification for the chat you're looking at, or for chats you muted on your phone (they show 🔕) unless someone mentions you. Reactions to your messages notify too ("Priya: Reacted ❤️ to: dinner at 8?").</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= TRIAGE ======================= -->
+<section id="triage">
+  <div class="eyebrow"><span class="badge b-pine">NORMAL</span>moving through your chats</div>
+  <h2>Treat chats like an inbox.</h2>
+  <p class="intro">Every chat has a next step: read it and archive it, come back later, or jump to the next one. Three keys do most of it, and they sync to your phone.</p>
+  <div class="grid">
+    <div class="feat">
+      <h3><kbd>J</kbd> next unread</h3>
+      <p>Opens the next chat with unread messages, wherever you are.</p>
+    </div>
+    <div class="feat">
+      <h3><kbd>e</kbd> done</h3>
+      <p>Marks the chat read, archives it, and <b>opens the next unread one</b>. When there's nothing left you're back at the list: inbox zero. In the archive, <kbd>e</kbd> brings a chat back.</p>
+    </div>
+    <div class="feat">
+      <h3><kbd>U</kbd> mark unread</h3>
+      <p>For "deal with this later". Inside a chat it also leaves it, so opening doesn't mark it read again.</p>
+    </div>
+    <div class="feat">
+      <h3><kbd>I</kbd> activity</h3>
+      <p>One list, across all chats: messages that <b>@mention you</b>, <b>replies</b> to your messages, and <b>reactions</b> to them. <kbd>enter</kbd> opens the message in its chat, even years back.</p>
+      <pre class="scr"><span class="w-iris">Mon 6 Oct 14:05</span> <span class="w-gold">❤️ Priya reacted in Hostel to:</span> dinner at 8?
+<span class="w-iris">Mon 6 Oct 13:40</span> <span class="w-love">@ Ravi mentioned you in Lab:</span> @you push the fix
+<span class="w-iris">Sun 5 Oct 22:12</span> <span class="w-foam">↩ Arjun replied in Arjun:</span> yes, 8 works</pre>
+    </div>
+    <div class="feat">
+      <h3><kbd>v</kbd> in the list: side by side</h3>
+      <p>Opens a second chat beside the one you're in; it stays live as messages arrive. <kbd>W</kbd> swaps which one you write in, <kbd>:only</kbd> closes it.</p>
+      <pre class="scr">│ <span class="w-rose">Arjun</span>                │ <span class="w-rose">Hostel</span>  beside · W swap
+│ ╭────────────────╮  │ ╭──────────────╮
+│ │ coming at 8?   │  │ │ <span class="w-gold">Priya</span>        │
+│ ╰────────────────╯  │ │ yes!         │</pre>
+    </div>
+    <div class="feat">
+      <h3>Drafts that stay</h3>
+      <p>Switch chats, close the window, restart: what you were writing is still in the box. The list shows it like WhatsApp does: <span class="mono w-love">Draft:</span> <span class="mono">see you at 8</span>.</p>
+    </div>
+    <div class="feat">
+      <h3>Find, filter, archive</h3>
+      <p>Pinned chats stay on top and muted ones are marked 🔕, synced from your phone. <kbd>/</kbd> finds chats and contacts by name or number (archived ones too), <kbd>u</kbd> shows only unread, <kbd>A</kbd> the archive, <kbd>K</kbd> a chat's info and members, <kbd>V</kbd> a profile picture full screen.</p>
+    </div>
+    <div class="feat">
+      <h3>Mentions stand out</h3>
+      <p>A message that mentions you gets a red border and "@ mentioned you"; the chat gets a red <span class="mono w-love">@</span> badge. <kbd>@</kbd> jumps between them.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= LATER ======================= -->
+<section id="later">
+  <div class="eyebrow"><span class="badge b-iris">COMMAND</span>things WhatsApp can't do</div>
+  <h2>Send later. Snooze. Get nudged.</h2>
+  <p class="intro">Because the app is always running, it can act when you're not there. Write naturally; the time is read the way people say it.</p>
+  <div class="two">
+    <div class="points">
+      <div class="point"><span class="k"><kbd>:later</kbd></span><h3>Send at the right time</h3><p>Write the message, <kbd>esc</kbd>, then <code>:later tomorrow 9am</code>. It goes out then, window open or not. Due while you're offline? It's sent as soon as you reconnect.</p></div>
+      <div class="point"><span class="k"><kbd>:snooze</kbd></span><h3>Hide a chat until it matters</h3><p><code>:snooze fri</code> archives the chat; on Friday it comes back, unread, with a notification.</p></div>
+      <div class="point"><span class="k"><kbd>:nudge</kbd></span><h3>"Remind me if they don't reply"</h3><p><code>:nudge 3h</code>. If they've answered by then, nothing happens. If not: "⏰ No reply from Priya since Mon 14:05".</p></div>
+      <div class="point"><span class="k"><kbd>⏰ 3</kbd></span><h3>See what's pending</h3><p>The status bar counts them; click it or type <code>:scheduled</code> to see the list and cancel with <kbd>x</kbd>.</p></div>
+    </div>
+    <div class="play" aria-labelledby="tp-label">
+      <label id="tp-label" for="tp">Try a time. This is the same parser the app uses.</label>
+      <div class="field"><span class="pre">:later</span><input id="tp" type="text" value="next friday 5pm" autocomplete="off" spellcheck="false"></div>
+      <div class="result" id="tp-out" aria-live="polite"></div>
+      <div class="chips" id="tp-chips"></div>
+      <p class="note" id="tp-now"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= MESSAGES ======================= -->
+<section id="messages">
+  <div class="eyebrow"><span class="badge b-rose">VISUAL</span>select a message, act on it</div>
+  <h2>Every action is one key away.</h2>
+  <p class="intro"><kbd>v</kbd> selects the message you're looking at; <kbd>j</kbd> <kbd>k</kbd> move. Then:</p>
+  <div class="grid">
+    <div class="feat">
+      <h3>Reply, three ways</h3>
+      <p><kbd>enter</kbd> replies, <kbd>p</kbd> replies privately to someone in a group, or just <b>double-click</b> the message. Click a quote to jump to the message it answers, even if it's months back.</p>
+      <pre class="scr"><span class="w-foam">▎↩ Replying to Priya</span>   <span style="color:var(--muted)">ctrl+x cancel</span>
+<span class="w-foam">▎</span><span style="color:var(--subtle)">yes!</span></pre>
+    </div>
+    <div class="feat">
+      <h3>React with anything</h3>
+      <p><kbd>r</kbd> then <kbd>1</kbd>–<kbd>6</kbd> for 👍 ❤️ 😂 😮 😢 🙏, <kbd>x</kbd> to take yours back, or type a name: <code>fire</code> opens a grid of all 1,898 emoji, searched by name. Or right-click a message.</p>
+      <pre class="scr"><span class="kk w-gold">1</span> 👍  <span class="w-gold">2</span> ❤️  <span class="w-gold">3</span> 😂  <span class="w-gold">4</span> 😮  <span class="w-gold">5</span> 😢  <span class="w-gold">6</span> 🙏  <span class="w-gold">x</span> remove  <span class="w-gold">+</span> more</pre>
+    </div>
+    <div class="feat">
+      <h3>Who reacted</h3>
+      <p><kbd>w</kbd>, or click the reactions under a bubble: <span class="mono">👍 You · 👍 Arjun · ❤️ Priya</span>. Click yours to remove it.</p>
+    </div>
+    <div class="feat">
+      <h3>Edit, forward, copy, save, delete</h3>
+      <p><kbd>e</kbd> edits your message (first 15 minutes), <kbd>f</kbd> forwards to one or several chats, <kbd>y</kbd> copies text or the picture, <kbd>s</kbd> saves media to Downloads, <kbd>d</kbd> deletes for you or (<kbd>e</kbd>) for everyone. <kbd>R</kbd> retries a message that didn't send.</p>
+    </div>
+    <div class="feat">
+      <h3>Several at once</h3>
+      <p><kbd>V</kbd> starts a range, <kbd>j</kbd>/<kbd>k</kbd> grow it. Then <kbd>y</kbd> copies them as a transcript, <kbd>f</kbd> forwards them in order, <kbd>d</kbd> deletes them, <kbd>s</kbd> saves all their media.</p>
+      <pre class="scr"><span style="color:var(--muted)">[Mon 6 Oct 14:02]</span> Priya: dinner at 8?
+<span style="color:var(--muted)">[Mon 6 Oct 14:03]</span> Arjun: yes!
+<span style="color:var(--muted)">[Mon 6 Oct 14:05]</span> You: count me in</pre>
+    </div>
+    <div class="feat">
+      <h3>Read without blue ticks</h3>
+      <p><code>:private</code> opens chats without sending read receipts; they stay unread until you mark them with <kbd>U</kbd> or <code>:read</code>. A <span class="mono w-iris">🙈 private</span> badge shows it's on.</p>
+    </div>
+    <div class="feat">
+      <h3>Deleted, but still readable</h3>
+      <p>When someone deletes a message for everyone after it reached you, you can still read what it said, marked and faded. Only <b>delete for me</b> removes it.</p>
+      <pre class="scr">╭──────────────────────────╮
+│ <span class="w-love">🚫 deleted by Priya</span>      │
+│ the wifi password is 4421│
+╰──────────────────────────╯</pre>
+    </div>
+    <div class="feat">
+      <h3>Everything shows</h3>
+      <p>Polls with their options, events with time and place, live location and places as a clickable map link, contact cards, forwarded marks, edits, and WhatsApp-style formatting: <b>*bold*</b>, <i>_italic_</i>, <s>~strike~</s>, <code>`code`</code>, quotes and lists.</p>
+      <pre class="scr">📊 Poll: Dinner where?
+○ Paradise
+○ Bawarchi
+(pick up to 2)</pre>
+    </div>
+    <div class="feat wide">
+      <h3>Your messages, at a glance</h3>
+      <div class="marks">
+        <span style="color:var(--muted)">□□</span><span>sending</span>
+        <span><span style="color:var(--subtle)">■</span><span style="color:var(--muted)">□</span></span><span>sent: it reached WhatsApp</span>
+        <span class="w-gold">■■</span><span>delivered to their phone</span>
+        <span class="w-rose">■■</span><span>read (iris when a voice note or video was played)</span>
+        <span class="w-love">✕</span><span>not sent: <kbd>v</kbd>, select it, <kbd>R</kbd> retries</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= MEDIA ======================= -->
+<section id="media">
+  <div class="eyebrow"><span class="badge b-gold">INSERT</span>writing, pictures, voice</div>
+  <h2>Pictures in the terminal. Voice notes too.</h2>
+  <p class="intro">In kitty, photos, stickers and GIFs draw sharp, right in the chat; animated ones play. Other terminals get pictures made of block characters.</p>
+  <div class="grid">
+    <div class="feat"><h3>Photos, stickers, GIFs</h3><p>Inline, at the size they fit. Click one (or <kbd>space</kbd>) for full screen; <kbd>o</kbd> opens it in its app.</p></div>
+    <div class="feat"><h3>Voice notes</h3><p>Shown as <span class="mono">▶ 🎤 Voice note 0:12</span>. Click it or press <kbd>space</kbd>: it plays in the terminal with a progress bar; <kbd>space</kbd> pauses, <kbd>←</kbd> <kbd>→</kbd> seek, <kbd>q</kbd> stops.</p></div>
+    <div class="feat"><h3>Videos</h3><p>Open in their own mpv window (or your video player), so the chat stays usable.</p></div>
+    <div class="feat"><h3>Downloads you can see</h3><p>Nothing looks frozen: a live line shows <span class="mono">Downloading video ▓▓▓▓▓▓░░░░ 58% 4.1 / 7.1 MB</span>.</p></div>
+    <div class="feat"><h3>Paste, drop, pick</h3><p><kbd>ctrl+v</kbd> pastes a screenshot to send with a caption. Drag files onto the window. <kbd>a</kbd> opens yazi to pick several.</p></div>
+    <div class="feat"><h3>Stickers and GIFs</h3><p><kbd>s</kbd> opens a tray of the ones you've sent and received. <kbd>n</kbd> makes a new one from any file, <kbd>p</kbd> turns the clipboard image into a sticker.</p></div>
+    <div class="feat"><h3>Writing like a text box</h3><p><kbd>ctrl+a</kbd> selects all, <kbd>ctrl+←</kbd> <kbd>ctrl+→</kbd> jump words, <kbd>ctrl+backspace</kbd> deletes one, <kbd>shift+enter</kbd> adds a line.</p></div>
+    <div class="feat"><h3>Mentions</h3><p>Type <kbd>@</kbd> in a group: a member list pops up, <kbd>tab</kbd> picks. <span class="mono">@all</span> mentions everyone, as on the phone.</p></div>
+  </div>
+</section>
+
+<!-- ======================= SEARCH ======================= -->
+<section id="search">
+  <div class="eyebrow"><span class="badge b-foam">SEARCH</span>everything you've ever been sent</div>
+  <h2>Search that finds what you meant.</h2>
+  <p class="intro"><kbd>/</kbd> searches the chat you're in (its whole history), <kbd>S</kbd> searches every chat. Every word you type, in any order; accents ignored; capitals make it exact. A full-text index answers in <b>0.3 ms</b> over 50,000 messages. With a local model installed, it also finds messages by meaning.</p>
+  <div class="two">
+    <div class="play">
+      <label for="sq">Search a sample of chat messages</label>
+      <div class="field"><span class="pre">S</span><input id="sq" type="text" value="flat address" autocomplete="off" spellcheck="false"></div>
+      <div class="chips" id="sq-chips"></div>
+      <div class="hits" id="sq-out" aria-live="polite"></div>
+    </div>
+    <div class="points">
+      <div class="point"><span class="k"><kbd>w</kbd></span><h3>Every word, any order</h3><p><code>flat addr</code> finds "the address of the flat". Word beginnings count; nothing has to be next to anything.</p></div>
+      <div class="point"><span class="k"><kbd>é</kbd></span><h3>Accents and case</h3><p><code>cafe</code> finds "Café". Lowercase matches any case; type a capital and it's exact (vim's smartcase).</p></div>
+      <div class="point"><span class="k"><kbd>≈</kbd></span><h3>By meaning</h3><p>With Ollama and EmbeddingGemma on your machine, <kbd>S</kbd> adds up to 20 messages <b>close in meaning</b>: <code>flat address</code> also finds "send me the location of the apartment". Indexed in the background; nothing leaves your computer.</p></div>
+      <div class="point"><span class="k"><kbd>n</kbd></span><h3>Then act on it</h3><p><kbd>enter</kbd> selects the match, ready for <kbd>r</kbd> <kbd>f</kbd> <kbd>y</kbd>…; <kbd>n</kbd> <kbd>N</kbd> go to older and newer matches.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= MOUSE ======================= -->
+<section id="mouse">
+  <div class="eyebrow"><span class="badge b-pine">MOUSE</span>for when your hand's on it anyway</div>
+  <h2>Keyboard first. Mouse welcome.</h2>
+  <div class="tbl" style="margin-top:28px"><table>
+    <tr><th>Do</th><th>Get</th></tr>
+    <tr><td>click a chat</td><td>open it</td></tr>
+    <tr><td>click a link</td><td>open it in your browser (long links too, wherever they wrap)</td></tr>
+    <tr><td>click a photo, sticker or GIF</td><td>full-screen view</td></tr>
+    <tr><td>click a voice note</td><td>play it</td></tr>
+    <tr><td>click a quoted message</td><td>jump to the original</td></tr>
+    <tr><td>double-click a message</td><td>reply to it</td></tr>
+    <tr><td>right-click a message</td><td>the reaction bar; click an emoji</td></tr>
+    <tr><td>click reactions under a bubble</td><td>who reacted</td></tr>
+    <tr><td>click 🔔, ⏰ or 🙈 in the status bar</td><td>change notifications, see what's scheduled, stop private reading</td></tr>
+    <tr><td>wheel</td><td>scroll whatever's under the pointer</td></tr>
+    <tr><td><kbd>shift</kbd> + drag</td><td>select text the terminal's way</td></tr>
+  </table></div>
+</section>
+
+<!-- ======================= SPEED ======================= -->
+<section id="speed">
+  <div class="eyebrow"><span class="badge b-love">BENCH</span>measured, not promised</div>
+  <h2>Faster than the frame you're looking at.</h2>
+  <p class="intro">WhatsApp's desktop app is a browser wrapper that users report at 1–2 GB of memory. whatsapp-tui's own working memory is about 5 MB. Each message bubble is drawn once and reused until it changes, so a new message, a reaction or a key press redraws in well under a millisecond.</p>
+  <div class="play" style="margin-top:28px">
+    <div class="legend"><span><i style="background:var(--muted)"></i>before the speed work</span><span><i style="background:var(--foam)"></i>now</span><span>log scale · 400-message group chat · i7-10750H</span></div>
+    <div class="chart" id="chart"></div>
+  </div>
+  <div class="grid">
+    <div class="feat"><h3>Only what changed</h3><p>Rendered bubbles are cached by everything that affects how they look. Moving the selection rebuilds two bubbles, not four hundred.</p></div>
+    <div class="feat"><h3>Pictures as raw pixels</h3><p>Images go to kitty at exactly the size they're shown, as raw pixels: no PNG encoding. At most 300 are kept, and kitty is told to forget the rest.</p></div>
+    <div class="feat"><h3>A tidy disk</h3><p>Downloaded media is capped (1 GB by default, least recently viewed goes first); history syncs write in one transaction; search has its own index.</p></div>
+    <div class="feat"><h3>Quiet when idle</h3><p>The cursor stops blinking when the window isn't focused, and with no window attached nothing is drawn at all.</p></div>
+  </div>
+</section>
+
+<!-- ======================= SCRIPTS ======================= -->
+<section id="scripts">
+  <div class="eyebrow"><span class="badge b-iris">API</span>your chats, your scripts</div>
+  <h2>Hook it up to anything.</h2>
+  <p class="intro">The running app answers your scripts on a private local socket, and runs your hooks when something happens. Ask for chats and messages, search, schedule, subscribe to a live stream of events. Sending is off unless you allow it, and rate-limited when you do.</p>
+  <div class="two">
+    <div style="display:grid;gap:16px">
+      <div class="code"><p class="cap">from the shell</p><button class="btn" data-copy-from="c1">copy</button><pre id="c1"><span class="c"># the 5 newest chats, as JSON</span>
+<span class="fn">whatsapp-tui</span> api chats <span class="s">'{"limit": 5}'</span>
+
+<span class="c"># everything about the flat, across all chats</span>
+<span class="fn">whatsapp-tui</span> api search <span class="s">'{"query": "flat address"}'</span> | jq <span class="s">'.[].text'</span>
+
+<span class="c"># a live stream of mentions, one JSON line each</span>
+<span class="fn">whatsapp-tui</span> api subscribe <span class="s">'{"events": ["mention"]}'</span></pre></div>
+      <div class="code"><p class="cap">~/.config/whatsapp-tui/hooks/on-mention (chmod +x)</p><button class="btn" data-copy-from="c2">copy</button><pre id="c2"><span class="c">#!/bin/sh</span>
+<span class="c"># a loud notification when someone mentions you</span>
+<span class="fn">jq</span> -r <span class="s">'"\(.message.sender_name) in \(.message.chat_name): \(.message.text)"'</span> |
+  <span class="fn">xargs</span> -0 notify-send -u critical <span class="s">"You were mentioned"</span></pre></div>
+    </div>
+    <div style="display:grid;gap:16px">
+      <div class="tbl"><table>
+        <tr><th>Method</th><th>What</th></tr>
+        <tr><td class="mono">status</td><td>connected? sending allowed?</td></tr>
+        <tr><td class="mono">chats</td><td>the chat list, pinned first</td></tr>
+        <tr><td class="mono">messages</td><td>a chat's messages, page by page</td></tr>
+        <tr><td class="mono">search</td><td>words, then meaning (<span class="mono">"similar": true</span>)</td></tr>
+        <tr><td class="mono">send · reply</td><td>needs <span class="mono">api_allow_send</span>; 20 a minute</td></tr>
+        <tr><td class="mono">mark_read · mark_unread</td><td>everywhere, like on the phone</td></tr>
+        <tr><td class="mono">schedule</td><td>send, snooze or nudge at "tomorrow 9am"</td></tr>
+        <tr><td class="mono">subscribe</td><td>message · mention · reaction · reminder</td></tr>
+      </table></div>
+      <div class="code"><p class="cap">python: print every mention as it happens</p><button class="btn" data-copy-from="c3">copy</button><pre id="c3"><span class="kw">import</span> json, os, socket
+s = socket.socket(socket.AF_UNIX)
+s.connect(os.environ[<span class="s">"XDG_RUNTIME_DIR"</span>] + <span class="s">"/whatsapp-tui-api.sock"</span>)
+f = s.makefile(<span class="s">"rw"</span>)
+f.write(json.dumps({<span class="s">"id"</span>: <span class="v">1</span>, <span class="s">"method"</span>: <span class="s">"subscribe"</span>}) + <span class="s">"\n"</span>); f.flush()
+<span class="kw">for</span> line <span class="kw">in</span> f:
+    e = json.loads(line)
+    <span class="kw">if</span> e.get(<span class="s">"event"</span>) == <span class="s">"mention"</span>:
+        <span class="fn">print</span>(e[<span class="s">"message"</span>][<span class="s">"chat_name"</span>], e[<span class="s">"message"</span>][<span class="s">"text"</span>])</pre></div>
+    </div>
+  </div>
+  <p class="note" style="margin-top:16px">The full reference (every method, every field, hooks, examples) is <span class="mono">docs/API.md</span> in the repository.</p>
+</section>
+
+<!-- ======================= KEYS ======================= -->
+<section id="keys">
+  <div class="eyebrow"><span class="badge b-gold">?</span>the whole keyboard</div>
+  <h2>Every key, searchable.</h2>
+  <p class="intro">Press <kbd>?</kbd> in the app for this list. Here you can filter it.</p>
+  <div class="play" style="margin-top:24px">
+    <div class="field"><span class="pre">/</span><input id="kq" type="text" placeholder="react, forward, search, later…" autocomplete="off" spellcheck="false" aria-label="Filter keys"></div>
+    <div class="chips" id="kctx"></div>
+    <div class="tbl"><table id="ktable"><thead><tr><th style="width:9.5em">Key</th><th>Does</th><th style="width:8em">Where</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</section>
+
+<!-- ======================= SETTINGS ======================= -->
+<section id="settings">
+  <div class="eyebrow"><span class="badge b-pine">CONFIG</span>~/.config/whatsapp-tui/config.ini</div>
+  <h2>Make it yours.</h2>
+  <div class="two">
+    <div class="code"><button class="btn" data-copy-from="c4">copy</button><pre id="c4"><span class="v">[ui]</span>
+theme             = <span class="s">rose-pine</span>   <span class="c">; rose-pine, rose-pine-moon, rose-pine-dawn</span>
+images            = <span class="s">auto</span>        <span class="c">; auto, kitty, blocks, off</span>
+avatars           = <span class="s">true</span>
+mouse             = <span class="s">true</span>
+highlight_opacity = <span class="s">0.8</span>         <span class="c">; see-through highlights in kitty</span>
+
+<span class="v">[general]</span>
+notifications   = <span class="s">all</span>       <span class="c">; all, popup, sound, off</span>
+background      = <span class="s">true</span>      <span class="c">; keep running when the window closes</span>
+private_reading = <span class="s">false</span>     <span class="c">; no read receipts until you mark read</span>
+media_cache_mb  = <span class="s">1024</span>
+api_allow_send  = <span class="s">false</span>
+semantic_search = <span class="s">true</span>      <span class="c">; when Ollama runs</span>
+download_path   = <span class="s">~/Downloads</span></pre></div>
+    <div class="points">
+      <div class="point"><span class="k"><kbd>◐</kbd></span><h3>Three Rosé Pine themes</h3><p>Main, Moon and Dawn, the palette this page is in. In kitty, highlights can be see-through over a transparent window.</p></div>
+      <div class="point"><span class="k"><kbd>⌥</kbd></span><h3>kitty niceties</h3><p>Two lines in kitty.conf let <kbd>shift+enter</kbd> make a new line and <kbd>ctrl+v</kbd> paste images, only inside whatsapp-tui.</p></div>
+      <div class="point"><span class="k"><kbd>⌂</kbd></span><h3>Omarchy and app launchers</h3><p><code>make install</code> adds a launcher entry, so it opens from rofi, Omarchy's menu or any app menu.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= INSTALL ======================= -->
+<section id="install">
+  <div class="eyebrow"><span class="badge b-rose">:q</span>get it running</div>
+  <h2>Two minutes to your chats.</h2>
+  <div class="two">
+    <div class="code"><p class="cap">install (Go and a C compiler; kitty recommended)</p><button class="btn" data-copy-from="c5">copy</button><pre id="c5"><span class="fn">git</span> clone git@github.com:sambuaneesh/whatsapp-tui.git
+<span class="kw">cd</span> whatsapp-tui
+<span class="fn">make</span> install         <span class="c"># to ~/.local/bin, plus a launcher entry</span>
+<span class="fn">whatsapp-tui</span>         <span class="c"># scan the QR: WhatsApp → Settings → Linked devices</span>
+
+<span class="c"># optional, for search by meaning (all local)</span>
+<span class="fn">sudo</span> pacman -S ollama-cuda &amp;&amp; <span class="fn">sudo</span> systemctl enable --now ollama
+<span class="fn">ollama</span> pull embeddinggemma</pre></div>
+    <div class="feat">
+      <h3>Works best with</h3>
+      <div class="tbl"><table>
+        <tr><th>Package</th><th>For</th></tr>
+        <tr><td>kitty</td><td>sharp pictures, animations, profile pictures</td></tr>
+        <tr><td>mpv</td><td>voice notes and videos</td></tr>
+        <tr><td>ffmpeg</td><td>GIFs, making stickers</td></tr>
+        <tr><td>yazi</td><td>picking files to attach</td></tr>
+        <tr><td>wl-clipboard</td><td>clipboard on Wayland</td></tr>
+        <tr><td>Ollama</td><td>search by meaning (optional)</td></tr>
+      </table></div>
+      <p class="note">Linux and macOS; Windows through WSL. whatsapp-tui is an unofficial client built on whatsmeow. Some people report WhatsApp banning accounts for unofficial clients, so anything that sends on its own is opt-in, rate-limited and visible.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <span>whatsapp-tui · MIT licensed · built on whatsmeow and Bubble Tea, in Rosé Pine</span>
+  <span class="theme-pick" role="group" aria-label="Page theme"><button class="btn" data-theme-set="">system</button><button class="btn" data-theme-set="dark">pine</button><button class="btn" data-theme-set="light">dawn</button></span>
+</footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  /* ---------- copy buttons ---------- */
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-copy],[data-copy-from]");
+    if (!b) return;
+    const text = b.dataset.copy || $("#" + b.dataset.copyFrom).innerText;
+    const done = () => { const t = b.textContent; b.textContent = "copied"; setTimeout(() => (b.textContent = t), 1200); };
+    const fallback = () => {
+      const el = b.dataset.copyFrom ? $("#" + b.dataset.copyFrom) : b.previousElementSibling;
+      const r = document.createRange(); r.selectNodeContents(el);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      b.textContent = "selected: ctrl+c"; setTimeout(() => (b.textContent = "copy"), 1600);
+    };
+    try { navigator.clipboard.writeText(text).then(done, fallback); } catch (_) { fallback(); }
+  });
+
+  /* ---------- theme picker ---------- */
+  document.querySelectorAll("[data-theme-set]").forEach((b) => b.addEventListener("click", () => {
+    const v = b.dataset.themeSet;
+    if (v) document.documentElement.setAttribute("data-theme", v); else document.documentElement.removeAttribute("data-theme");
+  }));
+
+  /* ================= the live terminal ================= */
+  const chats = [
+    { id: "hostel", name: "Hostel 4th floor", group: true, unread: 3, at: true, time: "14:05",
+      msgs: [
+        { who: "Priya", c: "w-love", t: "dinner at 8? 🍛", time: "14:02" },
+        { who: "Arjun", c: "w-foam", t: "yes!", time: "14:03", rx: ["👍", "👍"] },
+        { me: true, t: "count me in", time: "14:05", st: "■■", q: { who: "Priya", t: "dinner at 8? 🍛" } },
+        { who: "Ravi", c: "w-gold", t: "@you can you book Paradise?", time: "14:06", mention: true },
+      ] },
+    { id: "priya", name: "Priya", unread: 1, time: "13:40", draft: "",
+      msgs: [
+        { who: "Priya", c: "w-love", t: "did you see the placement mail?", time: "13:38" },
+        { me: true, t: "not yet, checking", time: "13:39", st: "■■" },
+        { who: "Priya", c: "w-love", t: "▶ 🎤 Voice note 0:12", time: "13:40" },
+      ] },
+    { id: "arjun", name: "Arjun", time: "Yesterday", draft: "see you at 8",
+      msgs: [
+        { who: "Arjun", c: "w-foam", t: "send me the location of the apartment", time: "22:10" },
+        { me: true, t: "📍 Lakeview Residency\nhttps://maps.google.com/?q=17.44,78.35", time: "22:12", st: "■■" },
+      ] },
+    { id: "mom", name: "Amma", time: "Yesterday",
+      msgs: [
+        { who: "Amma", c: "w-rose", t: "📷 Photo  your favourite!", time: "19:02" },
+        { me: true, t: "wowww 😍", time: "19:04", st: "■■" },
+      ] },
+    { id: "lab", name: "Systems Lab", group: true, time: "Mon",
+      msgs: [
+        { who: "Ravi", c: "w-gold", t: "📊 Poll: Demo day?\n○ Thursday\n○ Friday", time: "11:00" },
+        { me: true, t: "*Friday* works, pushing the fix tonight", time: "11:20", st: "■■" },
+      ] },
+    { id: "cell", name: "Placement Cell", group: true, time: "Sun",
+      msgs: [{ who: "Coordinator", c: "w-iris", t: "Shortlist is out, check your mail", time: "10:00" }] },
+  ];
+  const quick = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+  const S = { cursor: 0, open: null, focus: "list", mode: "NORMAL", sel: -1, picker: false, reply: null, typing: "", over: null, notice: "", overSel: 0 };
+  const term = $("#term");
+
+  function render() {
+    // list
+    $("#t-list").innerHTML = chats.map((c, i) => {
+      const cls = ["chat", c.unread ? "unread" : "", i === S.cursor && S.focus === "list" ? "cur" : "", S.open === i ? "open" : ""].join(" ");
+      const last = c.msgs[c.msgs.length - 1];
+      let pv = c.draft ? `<span class="draft">Draft:</span> ${esc(c.draft)}` : esc((last.me ? "You: " : (c.group ? last.who + ": " : "")) + last.t.split("\n")[0]);
+      const cnt = c.unread ? `<span class="cnt${c.at ? " at" : ""}">${c.at ? "@ " : ""}${c.unread}</span>` : `<span></span>`;
+      return `<div class="${cls}" data-i="${i}"><span class="n">${esc(c.name)}</span><span class="t">${c.time}</span><span class="pv">${pv}</span>${cnt}</div>`;
+    }).join("");
+    // pane
+    const c = S.open == null ? null : chats[S.open];
+    $("#t-head").innerHTML = c ? `<span class="w-rose">${esc(c.name)}</span> <span class="k">${c.group ? "group" : "contact"}</span>` : `<span class="k">open a chat: j k, then enter</span>`;
+    if (c) {
+      $("#t-msgs").innerHTML = `<span class="day">Today</span>` + c.msgs.map((m, i) => {
+        const cls = ["b", m.me ? "me" : "", S.mode === "VISUAL" && i === S.sel ? "sel" : "", m.rx && m.rx.length ? "has-rx" : ""].join(" ");
+        const who = !m.me && c.group ? `<div class="who ${m.c}">${esc(m.who)}</div>` : "";
+        const ment = m.mention ? `<div class="w-love" style="font-style:italic">@ mentioned you</div>` : "";
+        const q = m.q ? `<div class="q"><b>${esc(m.q.who)}</b><br>${esc(m.q.t)}</div>` : "";
+        let txt = esc(m.t).replace(/\*(\S[^*]*?)\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
+        const st = `<span class="st">${m.time}${m.me ? ` <span class="w-rose">${m.st || "□□"}</span>` : ""}</span>`;
+        const rx = m.rx && m.rx.length ? `<span class="rx">${summarize(m.rx)}</span>` : "";
+        if (m.mention) return `<div class="${cls}" data-m="${i}" style="border-color:var(--love)">${who}${ment}${q}${txt}${st}${rx}</div>`;
+        return `<div class="${cls}" data-m="${i}">${who}${q}${txt}${st}${rx}</div>`;
+      }).join("");
+    } else {
+      $("#t-msgs").innerHTML = `<div style="margin:auto;color:var(--muted);text-align:center">whatsapp-tui<br><span style="font-size:.9em">j k move · enter open · ? help</span></div>`;
+    }
+    $("#t-reply").innerHTML = S.reply ? `<div class="reply-bar"><b>▎↩ Replying to ${esc(S.reply.who || "You")}</b> <span style="color:var(--muted)">· ${esc(S.reply.t.split("\n")[0])}</span></div>` : "";
+    const comp = $("#t-compose");
+    comp.className = "compose" + (S.mode === "INSERT" ? " on" : "");
+    comp.innerHTML = S.mode === "INSERT" ? `❯ ${esc(S.typing)}<span class="caret"></span>` : (c && c.draft ? `❯ ${esc(c.draft)}` : `❯ <span class="ph2">press i to type a message</span>`);
+    // status
+    const m = $("#t-mode"); m.textContent = S.over ? S.over.toUpperCase() : S.mode;
+    m.className = "m" + (S.mode === "VISUAL" || S.over ? " visual" : S.mode === "INSERT" ? " insert" : "");
+    $("#t-where").textContent = " " + (c ? c.name : "chats");
+    // command line
+    let cmd = S.notice;
+    if (!cmd) {
+      if (S.picker) cmd = quick.map((e, i) => `<span class="kk">${i + 1}</span> ${e}`).join("  ") + `  <span class="kk">x</span> remove  <span class="kk">+</span> more`;
+      else if (S.mode === "VISUAL") cmd = `j/k move · <span class="kk">enter</span> reply · <span class="kk">r</span> react · <span class="kk">w</span> who reacted · e edit · f forward · y copy · esc`;
+      else if (S.mode === "INSERT") cmd = `type, <span class="kk">enter</span> sends · <span class="kk">esc</span> normal mode`;
+      else if (S.focus === "list") cmd = `<span class="kk">j k</span> move · <span class="kk">enter</span> open · <span class="kk">J</span> next unread · <span class="kk">I</span> activity · <span class="kk">?</span> help`;
+      else cmd = `<span class="kk">v</span> select · <span class="kk">i</span> write · <span class="kk">h</span> chat list · <span class="kk">e</span> done · <span class="kk">?</span> help`;
+    }
+    $("#t-cmd").innerHTML = cmd;
+    // overlay
+    const ov = $("#t-over");
+    if (S.over === "help") {
+      ov.hidden = false;
+      ov.innerHTML = `<h4>Keys (a few; the real ? lists them all)</h4>` + [
+        ["j k · gg G", "move"], ["enter / l", "open a chat"], ["h", "back to the list"], ["i", "write"], ["v", "select messages"],
+        ["r", "react: 1–6, x, + any emoji"], ["w", "who reacted"], ["J · e · U", "next unread · done · mark unread"],
+        ["I", "activity"], [":later 9am", "send what you wrote then"], [":q", "close the window, keep running"],
+      ].map(([k, d]) => `<div class="row"><span class="w-gold">${k}</span><span>${d}</span></div>`).join("") + `<p style="color:var(--muted);margin-top:10px">esc closes</p>`;
+    } else if (S.over === "activity") {
+      ov.hidden = false;
+      const items = [["Mon 14:06", "@ Ravi mentioned you in Hostel 4th floor:", "@you can you book Paradise?", "w-love", 0, 3],
+        ["Mon 14:05", "❤️ Priya reacted in Hostel 4th floor to:", "count me in", "w-gold", 0, 2],
+        ["Sun 22:12", "↩ Arjun replied in Arjun:", "send me the location of the apartment", "w-foam", 2, 0]];
+      ov.innerHTML = `<h4>Activity · mentions, replies and reactions to you</h4>` + items.map((it, i) =>
+        `<div class="row${i === S.overSel ? " on" : ""}" style="grid-template-columns:6.5em 1fr"><span style="color:var(--muted)">${it[0]}</span><span><span class="${it[3]}">${esc(it[1])}</span> ${esc(it[2])}</span></div>`).join("") +
+        `<p style="color:var(--muted);margin-top:10px">j k move · enter open · esc close</p>`;
+      S._act = items;
+    } else if (S.over === "who") {
+      ov.hidden = false;
+      ov.innerHTML = `<h4>Reactions · ${esc(chats[S.open].msgs[S.sel].t)}</h4>` + (chats[S.open].msgs[S.sel].rx || []).map((e, i) =>
+        `<div class="row"><span>${e}</span><span>${i === 0 && chats[S.open].msgs[S.sel].mine ? "You  <span style='color:var(--muted)'>x or click to remove</span>" : ["Arjun", "Priya", "Ravi", "Amma"][i % 4]}</span></div>`).join("") +
+        (!(chats[S.open].msgs[S.sel].rx || []).length ? `<p style="color:var(--muted)">No reactions yet. r reacts.</p>` : "") + `<p style="color:var(--muted);margin-top:10px">esc close</p>`;
+    } else ov.hidden = true;
+    const body = $("#t-body");
+    body.classList.toggle("listview", S.focus === "list" && S.open == null || S.focus === "list");
+  }
+  function summarize(rx) {
+    const counts = {}; rx.forEach((e) => (counts[e] = (counts[e] || 0) + 1));
+    return Object.entries(counts).map(([e, n]) => (n > 1 ? `${e} ${n}` : e)).join("  ");
+  }
+  function openChat(i) {
+    S.open = i; S.focus = "chat"; S.mode = "NORMAL"; S.picker = false; S.reply = null;
+    chats[i].unread = 0; chats[i].at = false; S.notice = "";
+  }
+  function flash(t) { S.notice = t; render(); clearTimeout(flash.t); flash.t = setTimeout(() => { S.notice = ""; render(); }, 2200); }
+
+  function key(k) {
+    $("#t-hint").textContent = "keys go to the demo · tab leaves";
+    S.notice = "";
+    if (S.over) {
+      if (k === "Escape" || k === "q" || k === S.over[0]) { S.over = null; return render(); }
+      if (S.over === "activity") {
+        if (k === "j" || k === "ArrowDown") S.overSel = Math.min(S.overSel + 1, 2);
+        if (k === "k" || k === "ArrowUp") S.overSel = Math.max(S.overSel - 1, 0);
+        if (k === "Enter") { const it = S._act[S.overSel]; S.over = null; openChat(it[4]); S.mode = "VISUAL"; S.sel = it[5]; }
+      }
+      return render();
+    }
+    if (S.mode === "INSERT") {
+      const c = chats[S.open];
+      if (k === "Escape") { S.mode = "NORMAL"; c.draft = S.typing; }
+      else if (k === "Enter") {
+        if (S.typing.trim()) {
+          c.msgs.push({ me: true, t: S.typing, time: "14:09", st: "□□", q: S.reply ? { who: S.reply.who || "You", t: S.reply.t } : null });
+          const msg = c.msgs[c.msgs.length - 1];
+          setTimeout(() => { msg.st = "■□"; render(); }, 500); setTimeout(() => { msg.st = "■■"; render(); }, 1300);
+          if (c.msgs.length > 6) c.msgs.shift();
+          S.typing = ""; c.draft = ""; S.reply = null;
+        }
+      } else if (k === "Backspace") S.typing = S.typing.slice(0, -1);
+      else if (k.length === 1) S.typing += k;
+      return render();
+    }
+    if (S.picker) {
+      const c = chats[S.open], m = c.msgs[S.sel];
+      if (/^[1-6]$/.test(k)) { m.rx = (m.rx || []).filter((_, i) => !(i === 0 && m.mine)); m.rx.unshift(quick[+k - 1]); m.mine = true; S.picker = false; flash("Reacted " + quick[+k - 1]); return; }
+      if (k === "x") { if (m.mine) { m.rx.shift(); m.mine = false; } S.picker = false; flash("Reaction removed"); return; }
+      if (k === "+") { S.picker = false; flash("the emoji grid: 1,898 emoji, type a name like fire"); return; }
+      if (k === "Escape") S.picker = false;
+      return render();
+    }
+    if (S.mode === "VISUAL") {
+      const c = chats[S.open];
+      if (k === "j" || k === "ArrowDown") S.sel = Math.min(S.sel + 1, c.msgs.length - 1);
+      else if (k === "k" || k === "ArrowUp") S.sel = Math.max(S.sel - 1, 0);
+      else if (k === "Escape" || k === "v") S.mode = "NORMAL";
+      else if (k === "r") S.picker = true;
+      else if (k === "w") S.over = "who";
+      else if (k === "Enter") { S.reply = c.msgs[S.sel]; S.mode = "INSERT"; S.typing = ""; }
+      else if (k === "y") flash("Copied text");
+      else if (k === "f") flash("forward to: type a chat, space picks several, enter sends");
+      else if (k === "e") flash(c.msgs[S.sel].me ? "editing: the text opens in the input box" : "only your own messages can be edited");
+      else if (k === "?") S.over = "help";
+      return render();
+    }
+    // normal
+    if (k === "?") { S.over = "help"; return render(); }
+    if (k === "I") { S.over = "activity"; S.overSel = 0; return render(); }
+    if (S.focus === "list") {
+      if (k === "j" || k === "ArrowDown") S.cursor = Math.min(S.cursor + 1, chats.length - 1);
+      else if (k === "k" || k === "ArrowUp") S.cursor = Math.max(S.cursor - 1, 0);
+      else if (k === "Enter" || k === "l") openChat(S.cursor);
+      else if (k === "J") { const n = chats.findIndex((c, i) => c.unread && i !== S.open); if (n >= 0) { S.cursor = n; openChat(n); } else flash("no unread chats: all caught up"); }
+      else if (k === "G") S.cursor = chats.length - 1;
+      else if (k === "l" && S.open != null) S.focus = "chat";
+    } else {
+      const c = chats[S.open];
+      if (k === "h" || k === "q") { S.focus = "list"; }
+      else if (k === "v") { S.mode = "VISUAL"; S.sel = c.msgs.length - 1; }
+      else if (k === "i" || k === "Enter") { S.mode = "INSERT"; S.typing = c.draft || ""; }
+      else if (k === "J") { const n = chats.findIndex((x, i) => x.unread && i !== S.open); if (n >= 0) { S.cursor = n; openChat(n); } else flash("no unread chats: all caught up"); }
+      else if (k === "e") { const name = c.name; const n = chats.findIndex((x, i) => x.unread && i !== S.open); if (n >= 0) { S.cursor = n; openChat(n); flash("Done with " + name + " (archived) · next unread"); return; } S.focus = "list"; flash("Done with " + name + " · no more unread chats"); return; }
+      else if (k === "U") { c.unread = 1; S.focus = "list"; flash("Marked " + c.name + " unread"); return; }
+    }
+    render();
+  }
+  term.addEventListener("keydown", (e) => {
+    if (e.key === "Tab" || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key.length === 1 || ["Enter", "Escape", "Backspace", "ArrowUp", "ArrowDown"].includes(e.key)) { e.preventDefault(); key(e.key); }
+  });
+  document.querySelectorAll(".keys [data-key]").forEach((b) => b.addEventListener("click", () => { key(b.dataset.key); }));
+  term.addEventListener("click", (e) => {
+    const ch = e.target.closest(".chat");
+    if (ch) { S.cursor = +ch.dataset.i; openChat(S.cursor); render(); }
+  });
+  term.addEventListener("dblclick", (e) => {
+    const b = e.target.closest(".b");
+    if (b && S.open != null) { S.reply = chats[S.open].msgs[+b.dataset.m]; S.mode = "INSERT"; S.typing = ""; render(); }
+  });
+  term.addEventListener("contextmenu", (e) => {
+    const b = e.target.closest(".b");
+    if (b && S.open != null) { e.preventDefault(); S.mode = "VISUAL"; S.sel = +b.dataset.m; S.picker = true; render(); }
+  });
+  // start in a chat with something to look at
+  openChat(0); S.focus = "chat"; S.cursor = 0;
+  render();
+
+  /* ================= time phrases (port of internal/when) ================= */
+  const WD = { sun: 0, sunday: 0, mon: 1, monday: 1, tue: 2, tues: 2, tuesday: 2, wed: 3, wednesday: 3, thu: 4, thur: 4, thurs: 4, thursday: 4, fri: 5, friday: 5, sat: 6, saturday: 6 };
+  const MON = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, sept: 8, oct: 9, nov: 10, dec: 11, january: 0, february: 1, march: 2, april: 3, june: 5, july: 6, august: 7, september: 8, october: 9, november: 10, december: 11 };
+  const NAMED = { noon: 12, midnight: 0, morning: 9, afternoon: 14, evening: 18, tonight: 20, eod: 18, "end of day": 18 };
+  const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, d.getHours(), d.getMinutes());
+  function clock(s) {
+    if (!s) return [9, 0];
+    if (s in NAMED) return [NAMED[s], 0];
+    const m = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a|p)?$/.exec(s);
+    if (!m) return null;
+    let h = +m[1], min = m[2] ? +m[2] : 0; const ap = m[3] || "";
+    if (h > 23 || min > 59 || (ap && h > 12)) return null;
+    if (h === 0 && ap.startsWith("p")) return null;
+    if (ap.startsWith("p") && h < 12) h += 12;
+    if (ap.startsWith("a") && h === 12) h = 0;
+    return [h, min];
+  }
+  function parseWhen(input, now) {
+    let s = input.toLowerCase().trim().split(/\s+/).join(" ");
+    s = s.replace("half an hour", "30m").replace("an hour", "1h").replace("a minute", "1m").replace("a day", "1d").replace("a week", "1w");
+    if (!s) return null;
+    if (/^(?:in\s+)?((?:\d+\s*(?:w|wks?|weeks?|d|days?|h|hrs?|hours?|m|mins?|minutes?)\s*)+)$/.test(s)) {
+      let ms = 0; const re = /(\d+)\s*(w|wks?|weeks?|d|days?|h|hrs?|hours?|m|mins?|minutes?)/g; let p;
+      while ((p = re.exec(s))) { const n = +p[1]; ms += n * ({ w: 6048e5, d: 864e5, h: 36e5, m: 6e4 })[p[2][0]]; }
+      if (!ms) return null; const t = new Date(now.getTime() + ms); t.setSeconds(0, 0); return t;
+    }
+    const today = dayStart(now);
+    // dates
+    let d = null, rest = "";
+    let m = /^(\d{4})-(\d{2})-(\d{2})\b\s*(.*)$/.exec(s);
+    if (m) { d = new Date(+m[1], +m[2] - 1, +m[3]); rest = m[4]; if (d.getMonth() !== +m[2] - 1) return null; }
+    if (!d && (m = /^(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]{3,9})\b\s*(.*)$/.exec(s)) && m[2] in MON) { d = new Date(today.getFullYear(), MON[m[2]], +m[1]); rest = m[3]; if (d.getMonth() !== MON[m[2]]) return null; }
+    if (!d && (m = /^([a-z]{3,9})\s+(\d{1,2})(?:st|nd|rd|th)?\b\s*(.*)$/.exec(s)) && m[1] in MON) { d = new Date(today.getFullYear(), MON[m[1]], +m[2]); rest = m[3]; if (d.getMonth() !== MON[m[1]]) return null; }
+    if (!d && (m = /^(\d{1,2})\/(\d{1,2})\b\s*(.*)$/.exec(s))) { if (+m[2] < 1 || +m[2] > 12) return null; d = new Date(today.getFullYear(), +m[2] - 1, +m[1]); rest = m[3]; if (d.getMonth() !== +m[2] - 1) return null; }
+    if (d) {
+      const c = clock(rest); if (!c) return null;
+      let t = new Date(d.getFullYear(), d.getMonth(), d.getDate(), c[0], c[1]);
+      if (t <= now) { if (d < today || (!rest && d.getTime() === today.getTime())) t = new Date(t.getFullYear() + 1, t.getMonth(), t.getDate(), c[0], c[1]); else return "passed"; }
+      return t;
+    }
+    let words = s.split(" "), day = 0, given = false, weekday = false;
+    const w = words[0], monIdx = (x) => (x + 6) % 7, until = (from, to) => (to - from + 7) % 7;
+    if (w === "today") { given = true; words = words.slice(1); }
+    else if (["tomorrow", "tmrw", "tom", "tmr"].includes(w)) { day = 1; given = true; words = words.slice(1); }
+    else if (w === "weekend" || (w === "this" && words[1] === "weekend")) { day = until(now.getDay(), 6); given = weekday = true; words = words.slice(w === "this" ? 2 : 1); }
+    else if (w === "next" && words[1] === "week") { day = until(now.getDay(), 1) || 7; given = true; words = words.slice(2); }
+    else if (w === "next" && words[1] in WD) { const tgt = WD[words[1]]; day = until(now.getDay(), tgt); if (day === 0 || monIdx(tgt) > monIdx(now.getDay())) day += 7; given = true; words = words.slice(2); }
+    else if (w in WD) { day = until(now.getDay(), WD[w]); given = weekday = true; words = words.slice(1); }
+    if (words[0] === "at") words = words.slice(1);
+    rest = words.join(" ");
+    if (!rest && !given) return null;
+    const c = clock(rest); if (!c) return null;
+    let t = new Date(today.getFullYear(), today.getMonth(), today.getDate() + day, c[0], c[1]);
+    if (t <= now) t = addDays(t, weekday ? 7 : 1);
+    return t;
+  }
+  function describe(t, now) {
+    const days = Math.round((dayStart(t) - dayStart(now)) / 864e5);
+    const hm = t.toTimeString().slice(0, 5);
+    if (days === 0) return "today " + hm;
+    if (days === 1) return "tomorrow " + hm;
+    if (days > 1 && days < 7) return t.toLocaleDateString("en-GB", { weekday: "short" }) + " " + hm;
+    const opts = { day: "numeric", month: "short" }; if (t.getFullYear() !== now.getFullYear()) opts.year = "numeric";
+    return t.toLocaleDateString("en-GB", opts) + " " + hm;
+  }
+  const tp = $("#tp"), tpOut = $("#tp-out");
+  function runTime() {
+    const now = new Date(), r = parseWhen(tp.value, now);
+    if (r === "passed") tpOut.innerHTML = `<span class="bad">that time has passed</span>`;
+    else if (!r) tpOut.innerHTML = `<span class="bad">not a time I understand: try 9am, 21:30, tomorrow 9am, in 2h, fri 5pm, next week, 12 oct 3pm or tonight</span>`;
+    else tpOut.innerHTML = `<span class="ok">Will send to Priya ${describe(r, now)}</span><br><span style="color:var(--muted)">${r.toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>`;
+  }
+  ["9am", "tonight", "in an hour", "tomorrow 9:30", "fri 5pm", "next week", "weekend", "eod", "12 oct 3pm", "12/10", "in 2 weeks", "00:35am"].forEach((x) => {
+    const b = document.createElement("button"); b.className = "chip"; b.textContent = x; b.type = "button";
+    b.addEventListener("click", () => { tp.value = x; runTime(); }); $("#tp-chips").appendChild(b);
+  });
+  tp.addEventListener("input", runTime);
+  $("#tp-now").textContent = "Relative to now on your clock: " + new Date().toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + ". A day without a time means 9:00; a time that's passed today means tomorrow.";
+  runTime();
+
+  /* ================= search demo ================= */
+  const corpus = [
+    ["Hostel 4th floor", "Priya", "the flat address is 12B, Lakeview Residency"],
+    ["Arjun", "Arjun", "send me the location of the apartment"],
+    ["Amma", "Amma", "Did you eat? Café near your place is open till 11"],
+    ["Systems Lab", "Ravi", "flat white or filter coffee before the demo?"],
+    ["Placement Cell", "Coordinator", "Shortlist is out, check your mail"],
+    ["Priya", "Priya", "where is the house warming tomorrow?"],
+    ["Hostel 4th floor", "Arjun", "dinner at 8? Paradise or Bawarchi"],
+  ];
+  const meaning = { address: "place", location: "place", where: "place", flat: "home", apartment: "home", house: "home", dinner: "food", eat: "food", coffee: "drink", cafe: "drink" };
+  const fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  function words(q) { const exact = /[A-Z]/.test(q); return { ws: q.split(/\s+/).filter(Boolean).map((w) => (exact ? fold(w) : fold(w).toLowerCase())), exact }; }
+  function runSearch() {
+    const q = $("#sq").value; const { ws, exact } = words(q); const out = [];
+    if (!ws.length) { $("#sq-out").innerHTML = `<p class="note">Type some words.</p>`; return; }
+    const hit = (t) => { const h = exact ? fold(t) : fold(t).toLowerCase(); return ws.every((w) => h.includes(w)); };
+    const mark = (t) => {
+      const h = exact ? fold(t) : fold(t).toLowerCase(); const rs = [];
+      ws.forEach((w) => { let i = 0; while ((i = h.indexOf(w, i)) >= 0) { rs.push([i, i + w.length]); i += w.length; } });
+      rs.sort((a, b) => a[0] - b[0]); let s = "", p = 0;
+      rs.forEach(([a, b]) => { if (a < p) return; s += esc(t.slice(p, a)) + "<mark>" + esc(t.slice(a, b)) + "</mark>"; p = b; });
+      return s + esc(t.slice(p));
+    };
+    const exactHits = corpus.filter((c) => hit(c[2]));
+    exactHits.forEach((c) => out.push(`<div class="hit"><div class="meta">${esc(c[0])} · ${esc(c[1])}</div>${mark(c[2])}</div>`));
+    const concepts = new Set(ws.map((w) => meaning[w]).filter(Boolean));
+    if (concepts.size) {
+      corpus.filter((c) => !exactHits.includes(c)).filter((c) => {
+        const cs = new Set(fold(c[2]).toLowerCase().split(/[^a-z]+/).map((w) => meaning[w]).filter(Boolean));
+        return [...concepts].every((x) => cs.has(x));
+      }).forEach((c) => out.push(`<div class="hit sim"><div class="meta">≈ ${esc(c[0])} · similar in meaning</div>${esc(c[2])}</div>`));
+    }
+    $("#sq-out").innerHTML = out.join("") || `<p class="note">No messages match all of those words.</p>`;
+  }
+  ["flat address", "flat addr", "cafe", "Café", "dinner", "where house"].forEach((x) => {
+    const b = document.createElement("button"); b.className = "chip"; b.textContent = x; b.type = "button";
+    b.addEventListener("click", () => { $("#sq").value = x; runSearch(); }); $("#sq-chips").appendChild(b);
+  });
+  $("#sq").addEventListener("input", runSearch);
+  runSearch();
+
+  /* ================= speed chart (log scale, measured numbers) ================= */
+  const rows = [
+    ["Redraw after a change", 66, 0.35], ["j in visual mode", 69, 0.84], ["A new message", 70, 0.65],
+    ["Receipts, reactions", 69, 0.78], ["One frame", 2.06, 0.26], ["Scrolling", 2.06, 0.29], ["Opening a chat", 66, 26],
+  ];
+  (function chart() {
+    const W = 760, L = 190, R = 70, rowH = 46, top = 10, H = top + rows.length * rowH + 34;
+    const min = Math.log10(0.1), max = Math.log10(100);
+    const x = (v) => L + ((Math.log10(v) - min) / (max - min)) * (W - L - R);
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Time per action before and after, in milliseconds, log scale">`;
+    [0.1, 1, 10, 100].forEach((t) => {
+      s += `<line x1="${x(t)}" x2="${x(t)}" y1="${top - 4}" y2="${H - 26}" stroke="var(--hl-med)" stroke-dasharray="3 4"/>`;
+      s += `<text x="${x(t)}" y="${H - 8}" font-size="12" text-anchor="middle">${t} ms</text>`;
+    });
+    s += `<line x1="${x(16.7)}" x2="${x(16.7)}" y1="${top - 4}" y2="${H - 26}" stroke="var(--love)" stroke-width="1.2"/>`;
+    s += `<text x="${x(16.7) + 4}" y="${top + 6}" font-size="11" style="fill:var(--love)">one 60 Hz frame</text>`;
+    rows.forEach(([label, b, a], i) => {
+      const y = top + i * rowH + 8;
+      s += `<text x="0" y="${y + 17}" font-size="13" style="fill:var(--text)">${label}</text>`;
+      s += `<rect x="${L}" y="${y}" width="${x(b) - L}" height="12" rx="3" fill="var(--muted)"/>`;
+      s += `<text x="${x(b) + 6}" y="${y + 10}" font-size="11.5">${b} ms</text>`;
+      s += `<rect x="${L}" y="${y + 15}" width="${x(a) - L}" height="12" rx="3" fill="var(--foam)"/>`;
+      s += `<text x="${x(a) + 6}" y="${y + 25}" font-size="11.5" style="fill:var(--foam)">${a} ms · ${Math.round(b / a)}×</text>`;
+    });
+    $("#chart").innerHTML = s + `</svg>`;
+  })();
+
+  /* ================= keyboard reference ================= */
+  const K = [
+    ["list", "j k · gg G", "move · top / bottom"], ["list", "ctrl+d ctrl+u", "half a page"], ["list", "enter / l", "open the chat"],
+    ["list", "/", "find chats and contacts by name or number"], ["list", "S", "search messages in every chat"], ["list", "u", "only unread chats"],
+    ["list", "A", "archived chats"], ["list", "K", "chat info: description, members, picture"], ["list", "V", "profile picture, full screen"],
+    ["list", "d then enter", "delete the chat on all your devices"], ["list", "v", "open beside the current chat (split view)"],
+    ["triage", "J", "open the next unread chat"], ["triage", "e", "done: mark read, archive, open the next unread"], ["triage", "U", "mark unread (or read)"],
+    ["triage", "I", "activity: mentions, replies and reactions to you"], ["triage", "M", "notifications: all → popup → sound → off"],
+    ["chat", "j k · ctrl+d ctrl+u", "scroll"], ["chat", "h / tab", "to the chat list"], ["chat", "i / enter", "write"], ["chat", "v", "select messages"],
+    ["chat", "/ · n N", "search this chat · older / newer match"], ["chat", "@", "jump to messages that mention you"], ["chat", "a", "attach files (yazi)"],
+    ["chat", "s", "stickers and GIFs"], ["chat", "p / ctrl+v", "paste a screenshot or text"], ["chat", "W · :only", "swap split chats · close the split"],
+    ["chat", "ctrl+x", "drop the attachment, cancel a reply or edit"], ["chat", "backspace / q", "back to the list"],
+    ["write", "enter", "send"], ["write", "shift+enter", "new line (also alt+enter, ctrl+j)"], ["write", "@", "mention someone; tab picks"],
+    ["write", "ctrl+a", "select all; type to replace, ctrl+c copy, ctrl+x cut"], ["write", "ctrl+← ctrl+→", "jump a word"], ["write", "ctrl+backspace", "delete a word"],
+    ["write", "esc", "back to normal mode (what you wrote stays as a draft)"],
+    ["visual", "enter", "reply"], ["visual", "p", "reply privately (groups)"], ["visual", "r", "react: 1–6, x removes, + or a name for any emoji"],
+    ["visual", "w", "who reacted"], ["visual", "e", "edit your message (first 15 minutes)"], ["visual", "f", "forward (space picks several chats)"],
+    ["visual", "y", "copy the text or picture"], ["visual", "s", "save media to Downloads"], ["visual", "d", "delete: enter for you, e for everyone"],
+    ["visual", "space", "view full screen, play a voice note or video"], ["visual", "o", "open in its app, or open the message's link"],
+    ["visual", "V", "select several: then y copy, f forward, d delete, s save"], ["visual", "R", "retry a message that didn't send"],
+    ["command", ":later <when>", "send what you wrote at that time"], ["command", ":snooze <when>", "archive the chat until then"],
+    ["command", ":nudge <when>", "remind you if they haven't replied by then"], ["command", ":scheduled", "what's scheduled; x cancels"],
+    ["command", ":activity", "mentions, replies and reactions to you"], ["command", ":private [on|off]", "read without blue ticks"], ["command", ":read", "mark the open chat read"],
+    ["command", ":notify <mode>", "all, popup, sound or off"], ["command", ":search <text>", "search every chat"], ["command", ":attach [path]", "attach files"],
+    ["command", ":download-dir [dir]", "show or change where downloads go"], ["command", ":q · :q!", "close the window (keeps running) · quit for real"],
+    ["command", ":logout", "unlink this device"],
+  ];
+  const ctxs = ["all", "list", "triage", "chat", "write", "visual", "command"];
+  let ctx = "all";
+  const kctx = $("#kctx");
+  ctxs.forEach((c) => { const b = document.createElement("button"); b.type = "button"; b.className = "chip" + (c === "all" ? " on" : ""); b.textContent = c; b.addEventListener("click", () => { ctx = c; kctx.querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", x === b)); runKeys(); }); kctx.appendChild(b); });
+  function runKeys() {
+    const q = $("#kq").value.toLowerCase().trim();
+    const rowsOut = K.filter(([c, k, d]) => (ctx === "all" || c === ctx) && (!q || (k + " " + d + " " + c).toLowerCase().includes(q)))
+      .map(([c, k, d]) => `<tr><td class="k">${k.split(" · ").map((x) => x.split(" ").map((p) => /^(then|or|\/|[<\[].*)$/.test(p) ? `<span class="ctx">${esc(p)}</span>` : `<kbd>${esc(p)}</kbd>`).join(" ")).join(" · ")}</td><td>${esc(d)}</td><td><span class="ctx">${c}</span></td></tr>`);
+    $("#ktable tbody").innerHTML = rowsOut.join("") || `<tr><td colspan="3" class="note">No key does that yet. Try "react", "search" or "later".</td></tr>`;
+  }
+  $("#kq").addEventListener("input", runKeys);
+  runKeys();
+})();
+</script>
+
+</body>
+</html>

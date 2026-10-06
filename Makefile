@@ -4,6 +4,7 @@
 #                   the binary, plus a launcher entry (rofi, app menus) and icon
 #   make uninstall  remove it again
 #   make test       run the tests
+#   make site       preview the website (site/) at http://localhost:8000
 #
 # The launcher opens it in TERMINAL (default kitty): make install TERMINAL=alacritty
 
@@ -17,7 +18,7 @@ APPDIR   := $(PREFIX)/share/applications
 ICONDIR  := $(PREFIX)/share/icons/hicolor/scalable/apps
 BIN      := whatsapp-tui
 
-.PHONY: build install uninstall test clean omarchy-install omarchy-watch
+.PHONY: build install uninstall test clean omarchy-install omarchy-watch site
 
 build:
 	go build -tags $(TAGS) -o $(BIN) .
@@ -57,3 +58,8 @@ omarchy-install:
 
 omarchy-watch:
 	./scripts/omarchy-watch.sh
+
+# the website (published to GitHub Pages by .github/workflows/pages.yml)
+site:
+	@echo "website: http://localhost:8000  (ctrl+c stops)"
+	python3 -m http.server --directory site 8000

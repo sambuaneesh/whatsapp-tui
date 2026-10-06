@@ -4,6 +4,9 @@ A vim-style WhatsApp client for the terminal: modal keys, inline images,
 animated stickers and GIFs, replies, reactions, search and file sending, in
 Rosé Pine colours. Built on [whatsmeow](https://github.com/tulir/whatsmeow).
 
+Tour of every feature, with a playable demo: [the website](https://sambuaneesh.github.io/whatsapp-tui/)
+(source in `site/`; `make site` previews it locally).
+
 ## Install
 
 You need the **Go version declared in `go.mod`** (Go can fetch the required
