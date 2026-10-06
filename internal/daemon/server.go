@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -58,6 +59,9 @@ func Listen() (*Server, error) {
 		lock.Close()
 		return nil, ErrRunning
 	}
+	// our pid, so a newer window can stop us if we ever hang
+	_ = lock.Truncate(0)
+	_, _ = lock.WriteAt([]byte(strconv.Itoa(os.Getpid())), 0)
 	_ = os.Remove(path) // left by a server that crashed
 	ln, err := net.Listen("unix", path)
 	if err != nil {

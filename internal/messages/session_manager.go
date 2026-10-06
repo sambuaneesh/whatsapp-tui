@@ -50,6 +50,7 @@ type SessionManager struct {
 	logOut          io.Writer       // debug log destination (see SetLogWriter)
 	contactsSynced  bool            // contact names re-synced this session
 	syncSeen        *syncSeen       // chats a running full app state sync mentioned
+	resyncMu        sync.Mutex      // one ResyncChatSettings at a time
 	nameTimer       *time.Timer     // pending debounced name refresh
 	listTimer       *time.Timer     // pending debounced chat list push
 	refreshTimer    *time.Timer     // pending debounced open-chat refresh

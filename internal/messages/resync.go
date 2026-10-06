@@ -47,28 +47,42 @@ func (sm *SessionManager) ResyncChatSettings(ctx context.Context) (int, error) {
 	if sm.getClient() == nil {
 		return 0, errors.New("not connected to WhatsApp")
 	}
+	// one at a time: on start, after a conflict and from :resync they can
+	// overlap, and each needs its own note of what the sync mentioned
+	sm.resyncMu.Lock()
+	defer sm.resyncMu.Unlock()
+	seen := &syncSeen{archived: map[string]bool{}, pinned: map[string]bool{}, muted: map[string]bool{}}
 	sm.mu.Lock()
-	sm.syncSeen = &syncSeen{archived: map[string]bool{}, pinned: map[string]bool{}, muted: map[string]bool{}}
+	sm.syncSeen = seen
 	sm.mu.Unlock()
 	defer func() {
 		sm.mu.Lock()
-		sm.syncSeen = nil
+		if sm.syncSeen == seen {
+			sm.syncSeen = nil
+		}
 		sm.mu.Unlock()
 	}()
 
 	lowErr := sm.fetchAppState(ctx, appstate.WAPatchRegularLow)   // archive, pin, read
 	highErr := sm.fetchAppState(ctx, appstate.WAPatchRegularHigh) // mute
 
+	// copy what's needed under the lock; decide outside it
 	sm.mu.RLock()
-	seen := sm.syncSeen
-	var stale []Conversation
+	convs := make([]Conversation, 0, len(sm.convByJID))
 	for _, c := range sm.convByJID {
-		if (lowErr == nil && ((c.IsArchived && !seen.archived[c.JID]) || (c.IsPinned && !seen.pinned[c.JID]))) ||
-			(highErr == nil && c.MutedUntil != 0 && !seen.muted[c.JID]) {
-			stale = append(stale, *c)
+		if c != nil {
+			convs = append(convs, *c)
 		}
 	}
+	archived, pinned, muted := copySet(seen.archived), copySet(seen.pinned), copySet(seen.muted)
 	sm.mu.RUnlock()
+	var stale []Conversation
+	for _, c := range convs {
+		if (lowErr == nil && ((c.IsArchived && !archived[c.JID]) || (c.IsPinned && !pinned[c.JID]))) ||
+			(highErr == nil && c.MutedUntil != 0 && !muted[c.JID]) {
+			stale = append(stale, c)
+		}
+	}
 
 	no := false
 	for _, c := range stale {
@@ -78,14 +92,14 @@ func (sm *SessionManager) ResyncChatSettings(ctx context.Context) (int, error) {
 		}
 		sm.debugf("resync: %s isn't archived/pinned/muted on WhatsApp any more", c.JID)
 		if lowErr == nil {
-			if c.IsArchived && !seen.archived[c.JID] {
+			if c.IsArchived && !archived[c.JID] {
 				sm.setChatFlags(jid, &no, nil)
 			}
-			if c.IsPinned && !seen.pinned[c.JID] {
+			if c.IsPinned && !pinned[c.JID] {
 				sm.setChatFlags(jid, nil, &no)
 			}
 		}
-		if highErr == nil && c.MutedUntil != 0 && !seen.muted[c.JID] {
+		if highErr == nil && c.MutedUntil != 0 && !muted[c.JID] {
 			sm.setChatMute(jid, false, 0)
 		}
 	}
@@ -96,4 +110,12 @@ func (sm *SessionManager) ResyncChatSettings(ctx context.Context) (int, error) {
 		return len(stale), fmt.Errorf("mute sync: %w", highErr)
 	}
 	return len(stale), nil
+}
+
+func copySet(m map[string]bool) map[string]bool {
+	out := make(map[string]bool, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
 }

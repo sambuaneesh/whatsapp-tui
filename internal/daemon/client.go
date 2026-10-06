@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -36,7 +38,10 @@ func Attach(serverArgs []string, logPath string) error {
 			}
 			// the old server is quitting; wait for it, then start the new one
 			if err := waitGone(10 * time.Second); err != nil {
-				return err
+				// it's stuck: stop it, so a hung build can't lock you out
+				if !forceStop() || waitGone(5*time.Second) != nil {
+					return err
+				}
 			}
 			continue
 		case ExitDetached:
@@ -209,4 +214,29 @@ func session(conn net.Conn) (string, error) {
 			return string(payload), nil
 		}
 	}
+}
+
+// forceStop stops a background app that won't quit: SIGTERM, then
+// SIGKILL. Only a process that is whatsapp-tui's server (by its pid in
+// the lock file and its command line) is touched.
+func forceStop() bool {
+	data, err := os.ReadFile(SocketPath() + ".lock")
+	if err != nil {
+		return false
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil || pid <= 1 || pid == os.Getpid() {
+		return false
+	}
+	cmd, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+	if err != nil || !strings.Contains(string(cmd), "whatsapp-tui") || !strings.Contains(string(cmd), "--server") {
+		return false
+	}
+	fmt.Println("The background app is stuck; restarting it…")
+	_ = unix.Kill(pid, unix.SIGTERM)
+	if waitGone(3*time.Second) == nil {
+		return true
+	}
+	_ = unix.Kill(pid, unix.SIGKILL)
+	return true
 }

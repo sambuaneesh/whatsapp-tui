@@ -175,6 +175,14 @@ Results (before → after):
 
 ## Known bugs
 
+- [x] The app froze, and new windows closed blank: two chat-settings
+      resyncs overlapped (start + a 409 on mark-read), one hit a nil
+      pointer while holding the session's read lock and its cleanup
+      waited on that same lock forever. Resyncs now run one at a time
+      with their own state, nothing that can fail runs under the lock,
+      and a window that finds the background app stuck stops it (pid in
+      the lock file) instead of giving up
+
 - [x] A chat stayed archived here after the phone unarchived it: a full
       app state sync doesn't mention chats with no archive/pin/mute, so
       stale ones were never cleared. Full syncs now clear them (on start,
