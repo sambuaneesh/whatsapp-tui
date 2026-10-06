@@ -67,7 +67,12 @@ Results (before → after):
 - [ ] Plain-text chat logs and "download all media" for a chat
 - [ ] Rule-based folders and saved searches (`from:… has:image after:…`)
 - [x] Local API on the background app for scripts and hooks
-- [ ] Split view of two chats; multiple accounts
+- [x] Split view of two chats (`v`, `W`, `:only`)
+- [ ] Multiple WhatsApp accounts in one app
+- [ ] Undo send: a few seconds' grace before a message goes out
+- [ ] Message templates / snippets
+- [ ] Natural-language times through the local model ("saturday morning
+      before the match"), shown for confirmation
 
 ## 3. Local AI (all off by default, per chat)
 
@@ -128,6 +133,12 @@ Results (before → after):
       events; on-demand history also unpinned chats)
 - [x] Muted chats notified: mutes are now synced, shown (🔕, grey count)
       and respected, except mentions of you
+
+## Housekeeping
+
+- [ ] Confirm animated stickers look right in the real tray (`s`)
+- [ ] Re-measure the background app's memory on the live session
+- [ ] Bump the Pages workflow actions off Node 20 (GitHub deprecation)
 
 ## Notes
 
