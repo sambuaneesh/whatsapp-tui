@@ -121,6 +121,22 @@ Results (before → after):
       `S` adds "≈ similar in meaning" hits. Inactive until Ollama is
       installed (`ollama pull embeddinggemma`).
 
+## Palette, like VS Code (2026-10-06)
+
+- [x] `ctrl+p` Quick Open: every chat and contact, fuzzy (fzf-style
+      scoring, matched letters lit), recent chats first, `ctrl+p enter`
+      back to the previous chat, `alt+enter` opens beside
+- [x] `F1` / `ctrl+shift+p` Command Palette: every feature by name, only
+      those that work where you are, recently used first; `>` and `#`
+      (search messages) inside Quick Open
+- [x] VS Code search keys: `ctrl+f` find in chat, `F3`/`shift+F3`,
+      `ctrl+shift+f` all chats (kitty maps for the shift ones)
+- [x] Instant chat open: the highlighted chat preloads, the last 24
+      chats stay loaded; `/` filter's `enter` opens at once
+- [x] Chat list with a real account (2,045 chats, 6,126 contacts): filter
+      keystroke 17 ms → 0.8 ms, list frame 2.1 → 0.5 ms; palette
+      keystroke over all 8k names 1.5 ms, open 1 ms
+
 ## Known bugs
 
 - [x] Polls, live location and event messages were silently dropped

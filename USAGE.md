@@ -31,6 +31,33 @@ Run `whatsapp-tui` and scan the QR code with your phone: **WhatsApp →
 Settings → Linked devices → Link a device**. The login is remembered; your
 chats and recent history load in the background.
 
+## The palette (like VS Code)
+
+The fastest way to get anywhere:
+
+| Key | |
+|---|---|
+| `ctrl+p` | **Go to chat:** type any part of a name, letters in order (`hrsh` finds *Hari Shankar*), or 4+ digits of a number. Chats you opened recently come first; contacts you've never written to and archived chats are found too. `enter` opens it at once, `alt+enter` opens it beside the current chat (split view). |
+| `ctrl+p` `enter` | back to the chat you were in before (like alt+tab) |
+| `F1` or `ctrl+shift+p` | **Commands:** every feature by name: "snooze", "only unread", "notifications off", "send later"… Only what works where you are is listed; the ones you used last come first. Commands that need more (a time, a folder) start the `:` line for you to finish. |
+| `>` in `ctrl+p` | switches to commands (`backspace` goes back to chats) |
+| `#` in `ctrl+p` | search messages in all chats: `#pizza` then `enter` |
+| `ctrl+f` | find in this chat (in the list: go to chat) |
+| `F3` `shift+F3` | next / previous match |
+| `ctrl+shift+f` | search messages in all chats |
+
+In the palette: `↑` `↓` (or `ctrl+n`/`ctrl+p`, `tab`) move, `ctrl+u` clears,
+`ctrl+w` deletes a word, `esc` closes. The mouse works too: click a result,
+scroll with the wheel, click outside to close.
+
+The chat that's highlighted (in the palette or the list) loads in the
+background, and the chats you've looked at recently stay loaded, so opening
+one draws it straight away.
+
+`ctrl+shift+p` and `ctrl+shift+f` need two lines in kitty (see
+[kitty setup](#kitty-setup)): terminals send them the same as `ctrl+p` and
+`ctrl+f`. `F1` works everywhere without setup.
+
 ## Moving around
 
 The chat list opens first. `enter` (or `l`) opens a chat; the list moves to
@@ -122,20 +149,22 @@ on your phone, or someone else did.
 
 | Where | Key | Finds |
 |---|---|---|
-| chat list | `/` | chats and contacts, by name or number |
-| in a chat | `/` | messages in this chat (whole history) |
-| anywhere | `S` or `:search <text>` | messages in every chat |
+| anywhere | `ctrl+p` | chats and contacts, fuzzy, by name or number (see [the palette](#the-palette-like-vs-code)) |
+| chat list | `/` | chats and contacts, filtering the list |
+| in a chat | `/` or `ctrl+f` | messages in this chat (whole history) |
+| anywhere | `S`, `ctrl+shift+f` or `:search <text>` | messages in every chat |
 
 While typing a chat search, `ctrl+n`/`ctrl+p` jump between matches. `enter`
-selects the match (visual mode, ready for `r` `e` `f` …); then `n` goes to the
-older match and `N` to the newer one. `esc` twice clears it. Searches are
+selects the match (visual mode, ready for `r` `e` `f` …); then `n` (or `F3`)
+goes to the older match and `N` (or `shift+F3`) to the newer one. `esc` twice clears it. Searches are
 smartcase: lowercase matches any case, an uppercase letter makes it exact.
 
-In the chat list, `/` also finds contacts you've never written to and
-archived chats (by name or number). `enter` stops typing and keeps the
-results: browse them with `j` `k`, open one with `enter`, or use `K` `V` `d`
-on them. They stay in the sidebar while you're in a chat, so you can go
-through several. `/` edits the search, `esc` (or `backspace`) clears it.
+In the chat list, `/` filters the list, and also finds contacts you've
+never written to and archived chats (by name or number). `ctrl+n`/`ctrl+p`
+move while typing; `enter` opens the highlighted one. The results stay in
+the sidebar while you're in a chat, so you can go through several (`j` `k`,
+or `K` `V` `d` on them). `/` edits the filter, `esc` (or `backspace`) clears
+it.
 
 In the all-chats search, `enter` opens the result in its chat with the message
 selected.
@@ -192,7 +221,15 @@ inside whatsapp-tui:
 ```conf
 map --when-focus-on var:whatsapp_tui shift+enter send_text all \x1b\r
 map --when-focus-on var:whatsapp_tui ctrl+v
+# VS Code's ctrl+shift+p (commands) and ctrl+shift+f (search all chats)
+map --when-focus-on var:whatsapp_tui ctrl+shift+p send_text all \e[25~
+map --when-focus-on var:whatsapp_tui ctrl+shift+f send_text all \e[26~
 ```
+
+The last two send `ctrl+shift+p` and `ctrl+shift+f` as F13 and F14, which
+whatsapp-tui reads as those keys (terminals can't tell them apart from
+`ctrl+p` and `ctrl+f`). Other terminals: map them to the same sequences, or
+use `F1` and `S`.
 
 Reload with `ctrl+shift+f5` and restart whatsapp-tui. To select text with the
 mouse while it runs, hold `shift` while dragging.
@@ -253,8 +290,9 @@ off.
 
 With a chat open, open a second one beside it, on the right:
 
-- **Keyboard:** `h` to the chat list, pick the other chat with `j`/`k`, press
-  `v`. Or type `:split <name>` (e.g. `:split priya`) without leaving the chat.
+- **Keyboard:** `ctrl+p`, type the other chat's name, `alt+enter`. Or `h` to
+  the chat list, pick it with `j`/`k`, press `v`; or type `:split <name>`
+  (e.g. `:split priya`).
 - **Mouse:** middle-click (or `ctrl`+click) the other chat in the sidebar.
 
 It stays current as messages arrive. `W` (or a click on it) swaps the two,

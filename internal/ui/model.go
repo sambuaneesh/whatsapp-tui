@@ -64,7 +64,10 @@ type Model struct {
 	chats      []*messages.Conversation // chats with messages, newest first
 	listVer    int                      // changes with chats (see listMemo)
 	memo       *listMemo
-	rows       *bubbleCache             // rendered chat list entries
+	rows       *bubbleCache  // rendered chat list entries
+	qo         *paletteState // the palette (ctrl+p, F1), when open
+	recent     *recents
+	preload    *preload
 	allChats   []*messages.Conversation // every known chat and contact (forward targets)
 	archive    bool                     // showing archived chats instead of the inbox
 	unreadOnly bool                     // list shows only chats with unread messages
@@ -253,6 +256,8 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		bubbles:     newBubbleCache(),
 		memo:        &listMemo{},
 		rows:        newBubbleCache(),
+		recent:      &recents{},
+		preload:     newPreload(),
 		compose:     compose,
 		cmdline:     cmdline,
 		img:         newImages(opts.Images, opts.Kitty, opts.Media),
@@ -377,6 +382,9 @@ type listMemo struct {
 	key   string
 	out   []*messages.Conversation
 	names lowerNames
+
+	palKey   string // the palette's candidates, likewise
+	palCands []palCand
 }
 
 func (m Model) visibleChats() []*messages.Conversation {
@@ -603,11 +611,15 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 	if m.split != nil && m.split.conv.JID == c.JID {
 		m.split = nil // it moves from beside to here
 	}
+	if m.recent != nil {
+		m.recent.chats = pushRecent(m.recent.chats, c.JID)
+	}
 	if m.current == nil || m.current.JID != c.JID {
 		save = m.stashDraft() // what you were writing in the last chat
+		m.keepOpenChat()
 		m.current = c
 		m.selfChat = m.privacy != nil && m.privacy.IsSelfChat(c.JID)
-		m.msgs = nil
+		m.msgs, _ = m.preload.get(c) // drawn now; the backend's load follows
 		m.compose.SetValue("")
 		m.replyTo = nil
 		m.editing = nil
@@ -629,6 +641,13 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 	m.sel = len(m.msgs) - 1
 	m.resize()
 	m.refreshMessages(true)
+	if m.unreadFor == c.JID && len(m.msgs) > 0 {
+		if i := firstUnread(m.msgs, m.unreadCount); i >= 0 {
+			m.unreadFor, m.unreadID = "", m.msgs[i].Id
+			m.refreshMessages(false)
+			m.scrollToUnread()
+		}
+	}
 	return tea.Batch(m.dispatch("select", c.JID), m.markSeen(), save)
 }
 
@@ -690,6 +709,25 @@ func (m *Model) back() tea.Cmd {
 // Update handles all events, then starts loading any images that became
 // visible.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case preloadTick:
+		return m, m.onPreloadTick(msg)
+	case preloadedMsg:
+		m.onPreloaded(msg)
+		return m, nil
+	}
+	next, cmd := m.withImages(msg)
+	if nm, ok := next.(Model); ok {
+		// load the chat that's highlighted, so enter opens it at once
+		if pc := nm.prefetch(nm.highlighted()); pc != nil {
+			cmd = tea.Batch(cmd, pc)
+		}
+		return nm, cmd
+	}
+	return next, cmd
+}
+
+func (m Model) withImages(msg tea.Msg) (tea.Model, tea.Cmd) {
 	next, cmd := m.update(msg)
 	nm := next.(Model)
 	switch msg.(type) {
@@ -942,6 +980,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil // keep the older messages a search loaded
 		}
 		m.msgs = append(m.olderThan(msg), msg...)
+		m.keepOpenChat()
 		m.sel = len(m.msgs) - 1
 		for i, x := range m.msgs {
 			if x.Id == selID {
@@ -1035,6 +1074,12 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
+	if m.qo != nil {
+		return m.handlePalette(msg)
+	}
+	if next, cmd, ok := m.globalKey(key); ok {
+		return next, cmd
+	}
 	if key == "ctrl+c" && m.mode == modeInsert && m.selectAll {
 		text := m.compose.Value()
 		clip := m.clip
@@ -1269,7 +1314,7 @@ func (m Model) handleMessagesPane(key string) (tea.Model, tea.Cmd) {
 		m.vp.LineDown(half)
 	case "ctrl+u":
 		m.vp.LineUp(half)
-	case "ctrl+f", "pgdown":
+	case "pgdown":
 		m.vp.ViewDown()
 	case "ctrl+b", "pgup":
 		m.vp.ViewUp()
@@ -1607,13 +1652,13 @@ func (m Model) handleFilter(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.clampCursor()
 		return m, nil
 	case "enter":
-		// stop typing, keep the results: browse them with the usual keys
+		// open the highlighted chat; the results stay in the sidebar
 		m.mode = modeNormal
 		m.cmdline.Blur()
 		m.cmdline.Prompt = ":"
 		m.filter = strings.TrimSpace(m.filter)
 		m.clampCursor()
-		return m, nil
+		return m, m.openSelected()
 	case "down", "ctrl+n", "ctrl+j":
 		m.moveCursor(1)
 		return m, nil

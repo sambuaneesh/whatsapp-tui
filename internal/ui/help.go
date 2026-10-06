@@ -15,12 +15,21 @@ var helpSections = []struct {
 	title string
 	keys  [][2]string
 }{
+	{"Palette (like VS Code)", [][2]string{
+		{"ctrl+p", "go to any chat or contact (fuzzy)"},
+		{"ctrl+p enter", "back to the previous chat"},
+		{"F1 · ctrl+shift+p", "every command, by name"},
+		{"> · #", "in ctrl+p: commands · search messages"},
+		{"enter · alt+enter", "open · open beside (split view)"},
+		{"ctrl+f · F3 shift+F3", "find in chat · next / previous"},
+		{"ctrl+shift+f", "search all chats"},
+	}},
 	{"Chat list", [][2]string{
 		{"j k · gg G", "move · top / bottom"},
 		{"ctrl+d ctrl+u", "half page down / up"},
 		{"enter / l", "open chat"},
 		{"backspace / q", "back · close the window (keeps running)"},
-		{"/", "find chats & contacts · enter browses them · esc clears"},
+		{"/", "filter chats & contacts · enter opens · esc clears"},
 		{"S", "search messages in ALL chats"},
 		{"u", "only unread chats"},
 		{"e", "done: mark read + archive (archive: back to inbox)"},
@@ -36,7 +45,7 @@ var helpSections = []struct {
 	{"In a chat", [][2]string{
 		{"j k · gg G", "scroll · top / bottom"},
 		{"ctrl+d ctrl+u", "half page"},
-		{"ctrl+f ctrl+b", "full page"},
+		{"pgdown pgup", "full page (ctrl+b up)"},
 		{"h / l / tab", "chat list / messages"},
 		{"i / enter", "write a message"},
 		{"v", "select messages, starting from what's on screen"},

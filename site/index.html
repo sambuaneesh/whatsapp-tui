@@ -231,6 +231,23 @@ section { padding-block: 56px 24px; border-top: 1px solid var(--hl-med); scroll-
 .hit.sim { border-style: dashed; border-color: var(--iris); }
 .hit.sim .meta { color: var(--iris); }
 
+/* palette demo */
+.pal { background: var(--base); border: 1.5px solid var(--rose); border-radius: 10px; overflow: hidden; font-family: var(--mono); box-shadow: 0 14px 40px rgb(0 0 0 / .28); }
+.pal .field { border: 0; border-bottom: 1px solid var(--hl-med); border-radius: 0; }
+.pal .field .pre { color: var(--rose); font-weight: 700; }
+.pal-list { display: grid; min-height: 10.5em; align-content: start; }
+.pal-row { display: flex; gap: 10px; align-items: baseline; padding: 4px 12px; font-size: 14px; cursor: pointer; border-left: 3px solid transparent; }
+.pal-row.on { background: var(--hl-med); border-left-color: var(--rose); }
+.pal-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pal-row .nm b { color: var(--gold); }
+.pal-row .grp { color: var(--subtle); }
+.pal-row .tag { color: var(--muted); font-size: 12px; }
+.pal-row .rt { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.pal-row .un { background: var(--gold); color: var(--base); border-radius: 4px; padding: 0 5px; font-size: 11.5px; font-weight: 700; }
+.pal-hint { color: var(--muted); font-size: 12px; padding: 6px 12px; border-top: 1px solid var(--hl-low); }
+.pal-done { color: var(--foam); font-size: 13px; min-height: 1.3em; }
+.overlay.palov { inset: 40px 8% auto 8%; border: 1.5px solid var(--rose); border-radius: 8px; padding: 0; box-shadow: 0 10px 30px rgb(0 0 0 / .35); }
+
 /* speed chart */
 .chart { overflow-x: auto; }
 .chart svg { display: block; width: 100%; height: auto; }
@@ -315,6 +332,7 @@ td.mono { white-space: nowrap; }
     <span class="badge">NORMAL</span>
     <span class="brand">whatsapp-tui</span>
     <nav aria-label="Sections">
+      <a href="#palette">ctrl+p</a>
       <a href="#always-on">always on</a>
       <a href="#triage" class="opt">triage</a>
       <a href="#later">later</a>
@@ -334,7 +352,7 @@ td.mono { white-space: nowrap; }
 <div class="hero">
   <div style="display:grid;gap:18px">
     <h1>whatsapp<span class="dim">-</span>tui<span class="cur" aria-hidden="true"></span></h1>
-    <p class="lede">WhatsApp in your terminal, driven by the keyboard like vim. <b>It redraws in a third of a millisecond</b>, keeps running when you close the window, and does what the official apps can't: send later, snooze chats, read without blue ticks, search by meaning, and talk to your own scripts.</p>
+    <p class="lede">WhatsApp in your terminal, driven by the keyboard like vim. <b>It redraws in a third of a millisecond</b>, gets you to any chat with <kbd>ctrl+p</kbd> like VS Code, keeps running when you close the window, and does what the official apps can't: send later, snooze chats, read without blue ticks, search by meaning, and talk to your own scripts.</p>
     <div class="cta-row">
       <div class="copyline"><span><span class="p">$</span> git clone git@github.com:sambuaneesh/whatsapp-tui.git &amp;&amp; cd whatsapp-tui &amp;&amp; make install</span><button class="btn" data-copy="git clone git@github.com:sambuaneesh/whatsapp-tui.git && cd whatsapp-tui && make install">copy</button></div>
     </div>
@@ -347,7 +365,7 @@ td.mono { white-space: nowrap; }
   </div>
 
   <div class="term-shell">
-    <div class="term" id="term" tabindex="0" aria-label="Interactive demo of whatsapp-tui. Focus it and press keys like j, k, enter, v, r, i and question mark.">
+    <div class="term" id="term" tabindex="0" aria-label="Interactive demo of whatsapp-tui. Focus it and press keys like ctrl+p, j, k, enter, v, r, i and question mark.">
       <div class="term-title"><i></i><i></i><i></i><span>kitty — whatsapp-tui</span><span class="hint" id="t-hint">click here, then press keys</span></div>
       <div class="term-body" id="t-body">
         <div class="side">
@@ -361,19 +379,58 @@ td.mono { white-space: nowrap; }
           <div class="compose" id="t-compose"></div>
         </div>
       </div>
-      <div class="status"><span class="m" id="t-mode">NORMAL</span><span id="t-where">chats</span><span class="r"><span class="w-gold">⏰ 1</span><span class="w-gold">🔔 all</span><span class="w-foam">● online</span><span class="w-muted" style="color:var(--muted)">? help</span></span></div>
+      <div class="status"><span class="m" id="t-mode">NORMAL</span><span id="t-where">chats</span><span class="r"><span class="w-gold">⏰ 1</span><span class="w-gold">🔔 all</span><span class="w-foam">● online</span><span class="w-muted" style="color:var(--muted)">ctrl+p chats · F1 commands · ? help</span></span></div>
       <div class="cmdline" id="t-cmd"></div>
       <div class="overlay" id="t-over" hidden></div>
     </div>
     <div class="keys" aria-label="Keys you can press in the demo">
       <span>try:</span>
-      <button data-key="j">j</button><button data-key="k">k</button><button data-key="Enter">enter</button><button data-key="h">h</button><button data-key="v">v</button><button data-key="r">r</button><button data-key="2">2</button><button data-key="w">w</button><button data-key="i">i</button><button data-key="Escape">esc</button><button data-key="I">I</button><button data-key="?">?</button>
+      <button data-key="ctrl+p">ctrl+p</button><button data-key="F1">F1</button><button data-key="j">j</button><button data-key="k">k</button><button data-key="Enter">enter</button><button data-key="h">h</button><button data-key="v">v</button><button data-key="r">r</button><button data-key="2">2</button><button data-key="w">w</button><button data-key="i">i</button><button data-key="Escape">esc</button><button data-key="I">I</button><button data-key="?">?</button>
       <span class="note">or double-click a bubble to reply, right-click to react</span>
     </div>
   </div>
 </div>
 
 <!-- ======================= ALWAYS ON ======================= -->
+<section id="palette">
+  <div class="eyebrow"><span class="badge b-iris">ctrl+p</span>the palette, like VS Code</div>
+  <h2>Any chat, any feature, three keystrokes away.</h2>
+  <p class="intro"><kbd>ctrl+p</kbd> jumps to any chat or contact by a few letters of the name, in order: <span class="mono">hrsh</span> finds <b>Hari Shankar</b>. <kbd>F1</kbd> (or <kbd>ctrl+shift+p</kbd>) runs any feature by name. The chat you land on is already loaded, so it opens the moment you press <kbd>enter</kbd>.</p>
+  <div class="two">
+    <div class="play">
+      <label for="pq">Try it. Type part of a name, <b>&gt;</b> for commands, <b>#</b> to search messages. Arrows move, enter opens.</label>
+      <div class="pal">
+        <div class="field"><span class="pre">›</span><input id="pq" type="text" value="hrsh" autocomplete="off" spellcheck="false" aria-label="Palette demo"></div>
+        <div class="pal-list" id="pq-out" role="listbox"></div>
+        <div class="pal-hint" id="pq-hint"></div>
+      </div>
+      <div class="pal-done" id="pq-done" aria-live="polite"></div>
+      <div class="chips" id="pq-chips"></div>
+    </div>
+    <div class="grid" style="margin-top:0">
+      <div class="feat">
+        <h3><kbd>ctrl+p</kbd> go to chat</h3>
+        <p>Fuzzy, like fzf: letters that start words or run together rank higher; matched letters light up. Recent chats come first, then the rest; archived chats, contacts you've never written to and phone numbers are found too. <kbd>ctrl+p</kbd> <kbd>enter</kbd> flips back to the previous chat, like alt+tab. <kbd>alt+enter</kbd> opens beside.</p>
+      </div>
+      <div class="feat">
+        <h3><kbd>F1</kbd> every command</h3>
+        <p>"snooze", "only unread", "notifications off", "send later", "split"… Only what works where you are is listed, and what you used last comes first. Commands that need a time or a folder start the <code>:</code> line for you.</p>
+      </div>
+      <div class="feat">
+        <h3>VS Code's search keys</h3>
+        <p><kbd>ctrl+f</kbd> finds in the chat, <kbd>F3</kbd> / <kbd>shift+F3</kbd> next and previous, <kbd>ctrl+shift+f</kbd> searches every chat, and <kbd>#</kbd> in the palette does too.</p>
+      </div>
+      <div class="feat">
+        <h3>Instant open</h3>
+        <p>The chat under the highlight loads in the background, and the last 24 you looked at stay loaded. Filtering 8,000 chats and contacts takes under a millisecond and a half per key.</p>
+      </div>
+    </div>
+  </div>
+  <div class="code" style="margin-top:22px"><p class="cap">kitty.conf (optional)</p><button class="btn" data-copy-from="c0">copy</button><pre id="c0"><span class="fn">map</span> --when-focus-on var:whatsapp_tui ctrl+shift+p send_text all \e[25~
+<span class="fn">map</span> --when-focus-on var:whatsapp_tui ctrl+shift+f send_text all \e[26~</pre></div>
+  <p class="note">Terminals send <kbd>ctrl+shift+p</kbd> and <kbd>ctrl+shift+f</kbd> exactly like <kbd>ctrl+p</kbd> and <kbd>ctrl+f</kbd>, so these two lines send them as F13 and F14, only inside whatsapp-tui. <kbd>F1</kbd> and <kbd>S</kbd> work without them.</p>
+</section>
+
 <section id="always-on">
   <div class="eyebrow"><span class="badge b-foam">BACKGROUND</span>one app, any number of windows</div>
   <h2>Close the window. It keeps working.</h2>
@@ -439,7 +496,7 @@ td.mono { white-space: nowrap; }
     </div>
     <div class="feat">
       <h3><kbd>v</kbd> in the list: side by side</h3>
-      <p>Opens a second chat beside the one you're in; it stays live as messages arrive. Or middle-click (or <kbd>ctrl</kbd>+click) a chat, or type <code>:split priya</code>. <kbd>W</kbd> swaps which one you write in; <kbd>X</kbd> or the <b>✕</b> on it closes it.</p>
+      <p>Opens a second chat beside the one you're in; it stays live as messages arrive. Or <kbd>ctrl+p</kbd>, a name, <kbd>alt+enter</kbd>; or middle-click (or <kbd>ctrl</kbd>+click) a chat, or type <code>:split priya</code>. <kbd>W</kbd> swaps which one you write in; <kbd>X</kbd> or the <b>✕</b> on it closes it.</p>
       <pre class="scr">│ <span class="w-rose">Arjun</span>                │ <span class="w-rose">Hostel</span>  beside · W swap  <span class="w-love">✕</span>
 │ ╭────────────────╮  │ ╭──────────────╮
 │ │ coming at 8?   │  │ │ <span class="w-gold">Priya</span>        │
@@ -451,7 +508,7 @@ td.mono { white-space: nowrap; }
     </div>
     <div class="feat">
       <h3>Find, filter, archive</h3>
-      <p>Pinned chats stay on top and muted ones are marked 🔕, synced from your phone, as are archives, renamed groups and chats you read there. Status updates stay out of your chat list. <kbd>/</kbd> finds chats and contacts by name or number (archived ones too), <kbd>u</kbd> shows only unread, <kbd>A</kbd> the archive, <kbd>K</kbd> a chat's info and members, <kbd>V</kbd> a profile picture full screen.</p>
+      <p>Pinned chats stay on top and muted ones are marked 🔕, synced from your phone, as are archives, renamed groups and chats you read there. Status updates stay out of your chat list. <kbd>/</kbd> filters chats and contacts by name or number (archived ones too; <kbd>enter</kbd> opens), <kbd>u</kbd> shows only unread, <kbd>A</kbd> the archive, <kbd>K</kbd> a chat's info and members, <kbd>V</kbd> a profile picture full screen.</p>
     </div>
     <div class="feat">
       <h3>Mentions stand out</h3>
@@ -609,6 +666,7 @@ td.mono { white-space: nowrap; }
     <tr><td>click ✕ on the chat beside</td><td>close the split</td></tr>
     <tr><td>click reactions under a bubble</td><td>who reacted</td></tr>
     <tr><td>click 🔔, ⏰ or 🙈 in the status bar</td><td>change notifications, see what's scheduled, stop private reading</td></tr>
+    <tr><td>click a result in the palette</td><td>open it (click outside to close)</td></tr>
     <tr><td>wheel</td><td>scroll whatever's under the pointer</td></tr>
     <tr><td><kbd>shift</kbd> + drag</td><td>select text the terminal's way</td></tr>
   </table></div>
@@ -857,13 +915,28 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
       if (S.picker) cmd = quick.map((e, i) => `<span class="kk">${i + 1}</span> ${e}`).join("  ") + `  <span class="kk">x</span> remove  <span class="kk">+</span> more`;
       else if (S.mode === "VISUAL") cmd = `j/k move · <span class="kk">enter</span> reply · <span class="kk">r</span> react · <span class="kk">w</span> who reacted · e edit · f forward · y copy · esc`;
       else if (S.mode === "INSERT") cmd = `type, <span class="kk">enter</span> sends · <span class="kk">esc</span> normal mode`;
-      else if (S.focus === "list") cmd = `<span class="kk">j k</span> move · <span class="kk">enter</span> open · <span class="kk">J</span> next unread · <span class="kk">I</span> activity · <span class="kk">?</span> help`;
+      else if (S.focus === "list") cmd = `<span class="kk">ctrl+p</span> go to chat · <span class="kk">j k</span> move · <span class="kk">enter</span> open · <span class="kk">J</span> next unread · <span class="kk">?</span> help`;
       else cmd = `<span class="kk">v</span> select · <span class="kk">i</span> write · <span class="kk">h</span> chat list · <span class="kk">e</span> done · <span class="kk">?</span> help`;
     }
     $("#t-cmd").innerHTML = cmd;
     // overlay
     const ov = $("#t-over");
-    if (S.over === "help") {
+    ov.classList.toggle("palov", S.over === "palette");
+    if (S.over === "palette") {
+      ov.hidden = false;
+      // recent first: the open chat, then the one before it
+      const list = chats.map((c, i) => [c.name, c.time || "", c.unread ? 1 : 0, c.group ? "group" : "", i === S.open ? 1 : i === S.cursor ? 2 : 0]);
+      S._pal = palette(S.pq, list, PCMDS, 6);
+      if (S.pq === "" && S.open != null) {
+        const order = S._pal.items.slice().sort((a, b) => (b.idx === S.open) - (a.idx === S.open));
+        S._pal.items = order;
+      }
+      S.pSel = Math.min(S.pSel, Math.max(S._pal.items.length - 1, 0));
+      ov.innerHTML = `<div class="pal" style="border:0;box-shadow:none"><div class="field"><span class="pre">›</span><span style="flex:1">${esc(S.pq)}<span class="cur" style="display:inline-block;width:.6em;background:var(--rose)">&nbsp;</span>${S.pq ? "" : `<span style="color:var(--muted);font-style:italic"> type a name · &gt; commands · # messages</span>`}</span></div>` +
+        `<div class="pal-list" style="min-height:0">` + (S._pal.items.map((it, i) => `<div class="pal-row${i === S.pSel ? " on" : ""}"><span class="nm">${it.html}</span><span class="rt">${it.right}</span></div>`).join("") ||
+        `<div class="pal-row"><span class="nm" style="color:var(--muted)">${S._pal.note}</span></div>`) + `</div>` +
+        `<div class="pal-hint">${S._pal.mode === ">" ? "enter run · esc close" : "↑↓ move · enter open · esc close"}</div></div>`;
+    } else if (S.over === "help") {
       ov.hidden = false;
       ov.innerHTML = `<h4>Keys (a few; the real ? lists them all)</h4>` + [
         ["j k · gg G", "move"], ["enter / l", "open a chat"], ["h", "back to the list"], ["i", "write"], ["v", "select messages"],
@@ -901,6 +974,26 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
   function key(k) {
     $("#t-hint").textContent = "keys go to the demo · tab leaves";
     S.notice = "";
+    if (k === "ctrl+p" || k === "F1") {
+      if (S.over === "palette" && k === "ctrl+p") { const n = S._pal.items.length; if (n) S.pSel = (S.pSel + 1) % n; return render(); }
+      S.over = "palette"; S.pq = k === "F1" ? ">" : ""; S.pSel = 0;
+      if (k === "ctrl+p" && S.open != null) { S.pSel = 1; }
+      return render();
+    }
+    if (S.over === "palette") {
+      const items = S._pal ? S._pal.items : [];
+      if (k === "Escape") S.over = null;
+      else if (k === "ArrowDown") { if (items.length) S.pSel = (S.pSel + 1) % items.length; }
+      else if (k === "ArrowUp") { if (items.length) S.pSel = (S.pSel - 1 + items.length) % items.length; }
+      else if (k === "Backspace") { S.pq = S.pq.slice(0, -1); S.pSel = 0; }
+      else if (k === "Enter") {
+        const it = items[S.pSel]; S.over = null;
+        if (S._pal.mode === "#") flash("all-chats search for “" + S.pq.slice(1).trim() + "”");
+        else if (it && S._pal.mode === ">") flash("ran “" + it.label + "” (the real app does it)");
+        else if (it) { S.cursor = it.idx; openChat(it.idx); }
+      } else if (k.length === 1) { S.pq += k; S.pSel = 0; }
+      return render();
+    }
     if (S.over) {
       if (k === "Escape" || k === "q" || k === S.over[0]) { S.over = null; return render(); }
       if (S.over === "activity") {
@@ -969,6 +1062,8 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     render();
   }
   term.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && !e.altKey && (e.key === "p" || e.key === "P")) { e.preventDefault(); key(e.shiftKey ? "F1" : "ctrl+p"); return; }
+    if (e.key === "F1") { e.preventDefault(); key("F1"); return; }
     if (e.key === "Tab" || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key.length === 1 || ["Enter", "Escape", "Backspace", "ArrowUp", "ArrowDown"].includes(e.key)) { e.preventDefault(); key(e.key); }
   });
@@ -1112,10 +1207,119 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
   $("#sq").addEventListener("input", runSearch);
   runSearch();
 
+
+  /* ================= fuzzy matching (the app's, ported) ================= */
+  function isWordStart(n, i) {
+    if (i === 0) return true;
+    const p = n[i - 1], c = n[i], al = (x) => /[\p{L}\p{N}]/u.test(x);
+    if (!al(p)) return al(c);
+    return p === p.toLowerCase() && p !== p.toUpperCase() && c === c.toUpperCase() && c !== c.toLowerCase();
+  }
+  function scoreWin(q, low, name, a, b) {
+    const pos = []; let sc = 0, qi = 0, prev = -2, gap = false;
+    for (let i = a; i <= b && qi < q.length; i++) {
+      if (low[i] !== q[qi]) { if (prev >= 0) { sc -= gap ? 1 : 3; gap = true; } continue; }
+      sc += 16; if (i === 0) sc += 12; else if (isWordStart(name, i)) sc += 10;
+      if (prev === i - 1) sc += 8; pos.push(i); prev = i; gap = false; qi++;
+    }
+    return [sc - Math.min(a, 10) - Math.min(Math.floor(low.length / 8), 4), pos];
+  }
+  function fuzzy(qs, str) {
+    const q = [...qs.toLowerCase()], name = [...str], low = name.map((c) => c.toLowerCase());
+    if (!q.length) return [0, []];
+    let qi = 0, end = -1;
+    for (let i = 0; i < low.length; i++) if (low[i] === q[qi] && ++qi === q.length) { end = i; break; }
+    if (end < 0) return null;
+    let start = end; qi = q.length - 1;
+    for (let i = end; i >= 0; i--) if (low[i] === q[qi] && --qi < 0) { start = i; break; }
+    let best = scoreWin(q, low, name, start, end);
+    for (let s0 = 0; s0 + q.length <= low.length; s0++) {
+      if (s0 > 0 && !isWordStart(name, s0)) continue;
+      if (q.every((c, j) => low[s0 + j] === c)) { const w = scoreWin(q, low, name, s0, s0 + q.length - 1); if (w[0] > best[0]) best = w; break; }
+    }
+    return best;
+  }
+  function lit(str, pos) {
+    const set = new Set(pos);
+    return [...str].map((c, i) => (set.has(i) ? `<b>${esc(c)}</b>` : esc(c))).join("");
+  }
+  const PCHATS = [
+    ["Hari Shankar", "14:02", 2, "", 1], ["Hostel 4th floor", "13:58", 5, "group", 2], ["Amma", "Yesterday", 0, "", 3],
+    ["Arjun", "Yesterday", 0, "", 4], ["Systems Lab", "Mon", 0, "group", 0], ["Placement Cell", "Sun", 1, "group", 0],
+    ["Priya", "Sat", 0, "", 0], ["Harsha (cousin)", "", 0, "contact", 0], ["Thushar", "2 Oct", 0, "", 0],
+    ["Ravi Kumar", "1 Oct", 0, "", 0], ["Book Club", "28 Sep", 0, "group · archived", 0], ["Sam", "", 0, "contact", 0],
+    ["Usha Sambasivan", "21 Sep", 0, "", 0], ["Dr. Mehta (clinic)", "12 Sep", 0, "", 0], ["Flat owners association", "3 Sep", 0, "group", 0],
+  ];
+  const PCMDS = [
+    ["Chat", "Snooze Until…", ":snooze"], ["Chat List", "Only Unread Chats (Toggle)", "u"], ["Notifications", "Off", ":notify off"],
+    ["Notifications", "Silent Popup", ":notify popup"], ["Message", "Send Later…", ":later"], ["Split View", "Open a Chat Beside…", "alt+enter"],
+    ["Search", "Messages in All Chats", "ctrl+shift+f"], ["Search", "Find in Chat", "ctrl+f"], ["Go", "Next Unread Chat", "J"],
+    ["Go", "Activity (Mentions, Replies, Reactions to You)", "I"], ["Chat", "Done (Mark Read and Archive)", "e"], ["Private Reading", "On (No Blue Ticks)", ":private on"],
+    ["Message", "Attach Files…", "a"], ["Message", "Stickers & GIFs", "s"], ["Chat", "Remind Me If No Reply By…", ":nudge"],
+    ["Go", "Scheduled (Send Later, Snoozes, Reminders)", ":scheduled"], ["Help", "Keyboard Shortcuts", "?"], ["App", "Close the Window (Keeps Running)", ":q"],
+  ];
+  // the palette's results for a query: [{html, right, label}]
+  function palette(query, chatList, cmdList, max) {
+    if (query[0] === "#") {
+      const q = query.slice(1).trim();
+      return { mode: "#", items: [], note: q ? `enter: search all chats for “${esc(q)}”` : "type something to search for" };
+    }
+    if (query[0] === ">") {
+      const q = query.slice(1).trim(), out = [];
+      cmdList.forEach(([g, t, k]) => { const full = g + ": " + t, r = fuzzy(q, full); if (r) out.push({ sc: r[0], label: full,
+        html: `<span class="grp">${esc(g)}: </span>` + lit(t, r[1].filter((i) => i >= g.length + 2).map((i) => i - g.length - 2)), right: esc(k) }); });
+      out.sort((a, b) => b.sc - a.sc);
+      return { mode: ">", items: out.slice(0, max), note: out.length ? "" : "no command matches" };
+    }
+    const q = query.trim(), out = [];
+    chatList.forEach(([n, time, un, tag, recent], idx) => {
+      if (!q && tag.startsWith("contact")) return;
+      const r = fuzzy(q, n); if (!r) return;
+      let sc = r[0] + (recent ? Math.max(12 - recent, 2) : 0) + (tag.startsWith("contact") ? 0 : 6);
+      if (!q) sc = recent ? 100 - recent : -idx;
+      out.push({ sc, idx, label: n, html: lit(n, r[1]) + (tag ? ` <span class="tag">${esc(tag)}</span>` : ""),
+        right: (un ? `<span class="un">${un}</span> ` : "") + esc(time) });
+    });
+    out.sort((a, b) => b.sc - a.sc);
+    return { mode: "", items: out.slice(0, max), note: out.length ? "" : "no chat or contact matches" };
+  }
+
+  /* ================= palette demo ================= */
+  let pSel = 0, pRes = null;
+  function runPalette() {
+    const q = $("#pq").value;
+    pRes = palette(q, PCHATS, PCMDS, 7);
+    pSel = Math.min(pSel, Math.max(pRes.items.length - 1, 0));
+    $("#pq-out").innerHTML = pRes.items.map((it, i) => `<div class="pal-row${i === pSel ? " on" : ""}" data-i="${i}" role="option"><span class="nm">${it.html}</span><span class="rt">${it.right}</span></div>`).join("")
+      || `<div class="pal-row"><span class="nm" style="color:var(--muted)">${pRes.note}</span></div>`;
+    $("#pq-hint").textContent = pRes.mode === ">" ? "↑↓ move · enter run · backspace: back to chats · esc close"
+      : pRes.mode === "#" ? "enter search · esc close" : "↑↓ move · enter open · alt+enter beside · > commands · # messages";
+  }
+  function choosePalette(beside) {
+    if (!pRes) return;
+    if (pRes.mode === "#") { const q = $("#pq").value.slice(1).trim(); $("#pq-done").textContent = q ? `→ all-chats search for “${q}”` : ""; return; }
+    const it = pRes.items[pSel]; if (!it) return;
+    $("#pq-done").textContent = pRes.mode === ">" ? `→ ran “${it.label}”` : beside ? `→ ${it.label} opened beside the current chat` : `→ opened ${it.label}, already loaded`;
+  }
+  $("#pq").addEventListener("input", () => { pSel = 0; $("#pq-done").textContent = ""; runPalette(); });
+  $("#pq").addEventListener("keydown", (e) => {
+    const n = pRes ? pRes.items.length : 0;
+    if (e.key === "ArrowDown" || (e.ctrlKey && e.key === "n")) { e.preventDefault(); if (n) pSel = (pSel + 1) % n; runPalette(); }
+    else if (e.key === "ArrowUp" || (e.ctrlKey && e.key === "k")) { e.preventDefault(); if (n) pSel = (pSel - 1 + n) % n; runPalette(); }
+    else if (e.key === "Enter") { e.preventDefault(); choosePalette(e.altKey || e.ctrlKey); }
+    else if (e.key === "Escape") { $("#pq").value = ""; pSel = 0; runPalette(); }
+  });
+  $("#pq-out").addEventListener("click", (e) => { const r = e.target.closest(".pal-row[data-i]"); if (r) { pSel = +r.dataset.i; runPalette(); choosePalette(false); } });
+  ["hrsh", "ho4", "sam", "pri", "drm", "> snooze", "> notif off", "> split", "#pizza"].forEach((x) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = x;
+    b.addEventListener("click", () => { $("#pq").value = x; pSel = 0; $("#pq-done").textContent = ""; runPalette(); $("#pq").focus(); }); $("#pq-chips").appendChild(b);
+  });
+  runPalette();
   /* ================= speed chart (log scale, measured numbers) ================= */
   const rows = [
     ["Redraw after a change", 66, 0.35], ["j in visual mode", 69, 0.84], ["A new message", 70, 0.65],
     ["Receipts, reactions", 69, 0.78], ["One frame", 2.06, 0.26], ["Scrolling", 2.06, 0.29], ["Opening a chat", 66, 26],
+    ["Filter key, 8k chats", 17, 0.77], ["Chat list frame", 2.1, 0.48],
   ];
   function chart() {
     const box = $("#chart");
@@ -1150,14 +1354,18 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
 
   /* ================= keyboard reference ================= */
   const K = [
+    ["palette", "ctrl+p", "go to any chat or contact (fuzzy, recent first)"], ["palette", "ctrl+p enter", "back to the previous chat"],
+    ["palette", "F1 · ctrl+shift+p", "every command, by name"], ["palette", "> · #", "in ctrl+p: commands · search messages"],
+    ["palette", "enter · alt+enter", "open · open beside (split view)"], ["palette", "ctrl+f", "find in this chat"],
+    ["palette", "F3 · shift+F3", "next · previous match"], ["palette", "ctrl+shift+f", "search messages in every chat"],
     ["list", "j k · gg G", "move · top / bottom"], ["list", "ctrl+d ctrl+u", "half a page"], ["list", "enter / l", "open the chat"],
-    ["list", "/", "find chats and contacts by name or number"], ["list", "S", "search messages in every chat"], ["list", "u", "only unread chats"],
+    ["list", "/", "filter chats and contacts by name or number; enter opens"], ["list", "S", "search messages in every chat"], ["list", "u", "only unread chats"],
     ["list", "A", "archived chats"], ["list", "K", "chat info: description, members, picture"], ["list", "V", "profile picture, full screen"],
     ["list", "d then enter", "delete the chat on all your devices"], ["list", "v", "open beside the current chat (split view)"],
     ["triage", "J", "open the next unread chat"], ["triage", "e", "done: mark read, archive, open the next unread"], ["triage", "U", "mark unread (or read)"],
     ["triage", "I", "activity: mentions, replies and reactions to you"], ["triage", "M", "notifications: all → popup → sound → off"],
     ["chat", "j k · ctrl+d ctrl+u", "scroll"], ["chat", "h / tab", "to the chat list"], ["chat", "i / enter", "write"], ["chat", "v", "select messages"],
-    ["chat", "/ · n N", "search this chat · older / newer match"], ["chat", "@", "jump to messages that mention you"], ["chat", "a", "attach files (yazi)"],
+    ["chat", "/ · n N", "search this chat · older / newer match"], ["chat", "pgdown pgup", "a full page"], ["chat", "@", "jump to messages that mention you"], ["chat", "a", "attach files (yazi)"],
     ["chat", "s", "stickers and GIFs"], ["chat", "p / ctrl+v", "paste a screenshot or text"], ["chat", "W · X", "swap split chats · close the split"], ["command", ":split <name> · :close", "open a chat beside the one you're in · close it"],
     ["chat", "ctrl+x", "drop the attachment, cancel a reply or edit"], ["chat", "backspace / q", "back to the list"],
     ["write", "enter", "send"], ["write", "shift+enter", "new line (also alt+enter, ctrl+j)"], ["write", "@", "mention someone; tab picks"],
@@ -1175,7 +1383,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["command", ":download-dir [dir]", "show or change where downloads go"], ["command", ":q · :q!", "close the window (keeps running) · quit for real"],
     ["command", ":logout", "unlink this device"],
   ];
-  const ctxs = ["all", "list", "triage", "chat", "write", "visual", "command"];
+  const ctxs = ["all", "palette", "list", "triage", "chat", "write", "visual", "command"];
   let ctx = "all";
   const kctx = $("#kctx");
   ctxs.forEach((c) => { const b = document.createElement("button"); b.type = "button"; b.className = "chip" + (c === "all" ? " on" : ""); b.textContent = c; b.addEventListener("click", () => { ctx = c; kctx.querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", x === b)); runKeys(); }); kctx.appendChild(b); });

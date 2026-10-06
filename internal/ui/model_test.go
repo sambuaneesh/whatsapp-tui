@@ -347,21 +347,8 @@ func TestFilterFindsContactsAndOpens(t *testing.T) {
 	if !strings.Contains(v, "start a new chat") || !strings.Contains(v, "ctrl+n/p move") {
 		t.Fatalf("contact result not marked:\n%s", v)
 	}
-	// ctrl+n moves while typing; enter keeps the results to browse
+	// ctrl+n moves while typing; enter opens that one at once
 	m, _ = press(t, m, tea.KeyCtrlN)
-	m, _ = press(t, m, tea.KeyEnter)
-	if m.mode != modeNormal || m.filter != "hari" || m.screen != screenList || m.selectedChat().Name != "~ Hari Kumar" {
-		t.Fatalf("after enter: mode %d filter %q screen %d sel %v", m.mode, m.filter, m.screen, m.selectedChat())
-	}
-	if v := stripANSI(m.View()); !strings.Contains(v, "esc clear") {
-		t.Fatalf("no browse hint:\n%s", v)
-	}
-	// normal keys work on the results: j/k, then enter opens
-	m, _ = keys(t, m, "j", "k", "k")
-	if m.selectedChat().Name != "Hari Shankar" {
-		t.Fatalf("j/k: sel %v", m.selectedChat())
-	}
-	m, _ = keys(t, m, "j")
 	m, cmds := keys(t, m, "enter")
 	for _, c := range cmds {
 		if c != nil {
@@ -371,7 +358,7 @@ func TestFilterFindsContactsAndOpens(t *testing.T) {
 	if c := <-ch; c.Name != "select" || c.Params[0] != "918438018376@s.whatsapp.net" {
 		t.Fatalf("opened %+v", c)
 	}
-	if m.screen != screenChat || m.current.Name != "~ Hari Kumar" || m.filter != "hari" {
+	if m.screen != screenChat || m.current.Name != "~ Hari Kumar" || m.filter != "hari" || m.mode != modeNormal {
 		t.Fatalf("after open: screen %d current %v filter %q", m.screen, m.current, m.filter)
 	}
 	// the results stay in the sidebar: back, next result, open

@@ -291,7 +291,7 @@ func (m Model) statusRight() string {
 	if m.status.Connected {
 		conn = styleOnline.Background(colorBarBg).Render("● online")
 	}
-	return m.privateBadge() + m.scheduledBadge() + m.notifyBadge() + styleStatusBar.Render(" ") + conn + styleStatusBar.Render("  ? help ")
+	return m.privateBadge() + m.scheduledBadge() + m.notifyBadge() + styleStatusBar.Render(" ") + conn + styleStatusBar.Render("  ctrl+p chats · F1 commands · ? help ")
 }
 
 // visualHint lists the visual-mode actions.
@@ -409,6 +409,9 @@ func (m Model) View() string {
 	}
 	if m.screen != screenChat || m.overlayOpen() || m.qr != "" {
 		main = box(main, m.width, h)
+	}
+	if m.qo != nil {
+		main = m.overlayPalette(main)
 	}
 	cmdline := lipgloss.NewStyle().Width(m.width).MaxWidth(m.width).Render(m.renderCommandLine())
 	return paintBackground(main+"\n"+m.renderStatusLine()+"\n"+cmdline, m.bgSeq)

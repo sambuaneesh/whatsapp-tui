@@ -47,6 +47,8 @@ func (m Model) overlayOpen() bool {
 
 func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	switch {
+	case m.qo != nil:
+		return m.mousePalette(msg)
 	case m.emo != nil:
 		return m.mouseEmoji(msg)
 	case m.reactors != nil:

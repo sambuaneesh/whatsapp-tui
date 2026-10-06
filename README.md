@@ -64,7 +64,9 @@ characters outside kitty). Native Windows is untested.
 
 ## Use
 
-The full guide is in [USAGE.md](USAGE.md); press `?` in the app for every key. The basics: `j`/`k` move, `enter` opens a
+The full guide is in [USAGE.md](USAGE.md); press `?` in the app for every key. Like VS Code, `ctrl+p` goes to any
+chat or contact (fuzzy: `hrsh` finds Hari Shankar) and `F1` /
+`ctrl+shift+p` runs any feature by name. The basics: `j`/`k` move, `enter` opens a
 chat, `i` writes, `esc` goes back to normal mode, `v` selects messages
 (`enter` reply, `r` react, `e` edit, `f` forward, `y` copy, `s` save, `d` delete), `/` searches,
 `S` searches all chats, `:q` closes the window (it keeps running in the
@@ -76,6 +78,8 @@ to `kitty.conf` (only affects whatsapp-tui):
 ```conf
 map --when-focus-on var:whatsapp_tui shift+enter send_text all \x1b\r
 map --when-focus-on var:whatsapp_tui ctrl+v
+map --when-focus-on var:whatsapp_tui ctrl+shift+p send_text all \e[25~
+map --when-focus-on var:whatsapp_tui ctrl+shift+f send_text all \e[26~
 ```
 
 Scripts and tools can use it through a local API and hooks: see

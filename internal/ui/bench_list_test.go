@@ -58,3 +58,28 @@ func keysB2(m Model, k string) (Model, tea.Cmd) {
 	next, cmd := m.Update(msg)
 	return next.(Model), cmd
 }
+
+// A keystroke in Quick Open over every chat and contact, then the frame.
+func BenchmarkPaletteKeystroke(b *testing.B) {
+	m := bigList(b)
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlP})
+	m = next.(Model)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		k := "r"
+		if i%2 == 1 {
+			k = "backspace"
+		}
+		m, _ = keysB2(m, k)
+		_ = m.View()
+	}
+}
+
+func BenchmarkPaletteOpen(b *testing.B) {
+	m := bigList(b)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlP})
+		_ = next.(Model).View()
+	}
+}
