@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/Srindot/whatsapp-tui/internal/messages"
 )
@@ -155,8 +156,10 @@ func (m Model) splitPane(height int) []string {
 	if s.width != w {
 		m.renderSplit() // resized (s is shared, so this sticks)
 	}
-	title := " " + styleTitle.Render(chatName(s.conv)) + styleDim.Render("  beside · W swap · :only close")
-	lines := strings.Split(m.renderHeader(title, w, false), "\n")
+	// the header, with a ✕ at its right end that closes the split
+	title := " " + styleTitle.Render(chatName(s.conv)) + styleDim.Render("  beside · W swap · X close")
+	head := padLine(ansi.Truncate(title, w-splitCloseW, "…"), w-splitCloseW) + styleErr.Render(" ✕  ")
+	lines := []string{head, lipgloss.NewStyle().Foreground(colorBorder).Render(strings.Repeat("─", w))}
 	body := height - len(lines)
 	msgs := s.lines
 	if len(s.msgs) == 0 {
@@ -172,6 +175,34 @@ func (m Model) splitPane(height int) []string {
 		lines = append(lines, strings.Repeat(" ", w))
 	}
 	return lines
+}
+
+// splitCloseW is the width of the ✕ at the end of the split's header.
+const splitCloseW = 4
+
+// splitCloseAt reports whether screen cell (x, y) is on the split's ✕.
+func (m Model) splitCloseAt(x, y int) bool {
+	if m.split == nil || y != 0 {
+		return false
+	}
+	end := m.sidebarW + 1 + m.rightWidth() + 1 + m.splitWidth()
+	return x >= end-splitCloseW && x < end
+}
+
+// splitByName opens the chat whose name matches q beside the open one.
+func (m *Model) splitByName(q string) tea.Cmd {
+	q = strings.ToLower(strings.TrimSpace(q))
+	if q == "" {
+		m.notice, m.noticeErr = ":split <name>, e.g. :split priya (or v on a chat in the list)", true
+		return nil
+	}
+	for _, c := range m.chats {
+		if !c.IsArchived && filterMatches(c, q) && (m.current == nil || c.JID != m.current.JID) {
+			return m.openSplit(c)
+		}
+	}
+	m.notice, m.noticeErr = "no chat matches "+q, true
+	return nil
 }
 
 // splitDivider is the line between the panes.

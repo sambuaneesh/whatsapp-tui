@@ -251,10 +251,15 @@ off.
 
 ## Two chats side by side
 
-In a chat, go to the list (`h`), pick another chat and press `v`: it opens on
-the right, beside the one you're in, and stays current as messages arrive.
-`W` (or a click on it) swaps them, so you write in the other one; `:only`
-closes the split.
+With a chat open, open a second one beside it, on the right:
+
+- **Keyboard:** `h` to the chat list, pick the other chat with `j`/`k`, press
+  `v`. Or type `:split <name>` (e.g. `:split priya`) without leaving the chat.
+- **Mouse:** middle-click (or `ctrl`+click) the other chat in the sidebar.
+
+It stays current as messages arrive. `W` (or a click on it) swaps the two,
+so you write in the other one. To close it: **`X`**, the **✕** at the right
+end of its header, or `:close` / `:only`.
 
 ## Activity
 

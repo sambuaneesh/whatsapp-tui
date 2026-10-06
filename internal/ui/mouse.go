@@ -73,9 +73,15 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	}
 	overList := m.screen == screenList || msg.X < m.sidebarW
 	if m.split != nil && m.screen == screenChat && msg.X > m.sidebarW+m.rightWidth() {
-		// the chat beside: a click makes it the one you write in
-		if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress && msg.Y >= headerRows && msg.Y < m.mainHeight() {
-			return m.swapSplit()
+		// the chat beside: its ✕ closes it, a click elsewhere makes it the
+		// one you write in
+		if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress {
+			switch {
+			case m.splitCloseAt(msg.X, msg.Y):
+				m.closeSplit()
+			case msg.Y >= headerRows && msg.Y < m.mainHeight():
+				return m.swapSplit()
+			}
 		}
 		return m, nil
 	}
@@ -100,6 +106,16 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m.rightClickMessage(msg.X, msg.Y)
 		}
 		return m, nil
+	case tea.MouseButtonMiddle:
+		// middle-click a chat in the sidebar: open it beside the one you're in
+		if msg.Action == tea.MouseActionPress && overList && m.screen == screenChat && m.current != nil {
+			if row := msg.Y - headerRows; row >= 0 {
+				if c, _ := m.itemAt(m.listOffset + row/fullItemHeight); c != nil {
+					return m, m.openSplit(c)
+				}
+			}
+		}
+		return m, nil
 	case tea.MouseButtonLeft:
 		if msg.Action != tea.MouseActionPress {
 			return m, nil
@@ -113,12 +129,19 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		}
 		// entries start below the list header, fullItemHeight rows each
 		row := msg.Y - headerRows
+		besideClick := msg.Ctrl
 		if row < 0 {
 			return m, nil
 		}
 		i := m.listOffset + row/fullItemHeight
 		if i >= m.listLen() {
 			return m, nil
+		}
+		if besideClick && m.screen == screenChat && m.current != nil {
+			// ctrl+click: open it beside the chat you're in
+			if c, _ := m.itemAt(i); c != nil {
+				return m, m.openSplit(c)
+			}
 		}
 		if m.mode == modeVisual || m.mode == modeInsert {
 			m.mode = modeNormal

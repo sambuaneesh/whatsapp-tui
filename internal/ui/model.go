@@ -1135,6 +1135,8 @@ func (m Model) handleListPane(key string) (tea.Model, tea.Cmd) {
 		return m, m.openPicture(m.selectedChat())
 	case "v": // beside the open chat
 		return m, m.openSplit(m.selectedChat())
+	case "X":
+		m.closeSplit()
 	case "e", "U", "J":
 		return m.triageKey(key, false)
 	case "I":
@@ -1226,6 +1228,8 @@ func (m Model) handleMessagesPane(key string) (tea.Model, tea.Cmd) {
 		return m, m.openInfo(m.current)
 	case "W":
 		return m.swapSplit()
+	case "X":
+		m.closeSplit()
 	case "e", "U", "J":
 		return m.triageKey(key, true)
 	case "I":
@@ -1458,9 +1462,11 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 		return m, m.openScheduled()
 	case "activity":
 		return m, m.openActivity()
-	case "only", "unsplit":
+	case "only", "unsplit", "close":
 		m.closeSplit()
 		return m, nil
+	case "split", "vsplit", "beside":
+		return m, m.splitByName(strings.Join(fields[1:], " "))
 	case "notify", "notifications":
 		if len(fields) == 1 {
 			return m.cycleNotifyMode()

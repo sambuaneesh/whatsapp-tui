@@ -439,8 +439,8 @@ td.mono { white-space: nowrap; }
     </div>
     <div class="feat">
       <h3><kbd>v</kbd> in the list: side by side</h3>
-      <p>Opens a second chat beside the one you're in; it stays live as messages arrive. <kbd>W</kbd> swaps which one you write in, <kbd>:only</kbd> closes it.</p>
-      <pre class="scr">│ <span class="w-rose">Arjun</span>                │ <span class="w-rose">Hostel</span>  beside · W swap
+      <p>Opens a second chat beside the one you're in; it stays live as messages arrive. Or middle-click (or <kbd>ctrl</kbd>+click) a chat, or type <code>:split priya</code>. <kbd>W</kbd> swaps which one you write in; <kbd>X</kbd> or the <b>✕</b> on it closes it.</p>
+      <pre class="scr">│ <span class="w-rose">Arjun</span>                │ <span class="w-rose">Hostel</span>  beside · W swap  <span class="w-love">✕</span>
 │ ╭────────────────╮  │ ╭──────────────╮
 │ │ coming at 8?   │  │ │ <span class="w-gold">Priya</span>        │
 │ ╰────────────────╯  │ │ yes!         │</pre>
@@ -605,6 +605,8 @@ td.mono { white-space: nowrap; }
     <tr><td>click a quoted message</td><td>jump to the original</td></tr>
     <tr><td>double-click a message</td><td>reply to it</td></tr>
     <tr><td>right-click a message</td><td>the reaction bar; click an emoji</td></tr>
+    <tr><td>middle-click (or ctrl+click) a chat</td><td>open it beside the one you're in</td></tr>
+    <tr><td>click ✕ on the chat beside</td><td>close the split</td></tr>
     <tr><td>click reactions under a bubble</td><td>who reacted</td></tr>
     <tr><td>click 🔔, ⏰ or 🙈 in the status bar</td><td>change notifications, see what's scheduled, stop private reading</td></tr>
     <tr><td>wheel</td><td>scroll whatever's under the pointer</td></tr>
@@ -1156,7 +1158,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["triage", "I", "activity: mentions, replies and reactions to you"], ["triage", "M", "notifications: all → popup → sound → off"],
     ["chat", "j k · ctrl+d ctrl+u", "scroll"], ["chat", "h / tab", "to the chat list"], ["chat", "i / enter", "write"], ["chat", "v", "select messages"],
     ["chat", "/ · n N", "search this chat · older / newer match"], ["chat", "@", "jump to messages that mention you"], ["chat", "a", "attach files (yazi)"],
-    ["chat", "s", "stickers and GIFs"], ["chat", "p / ctrl+v", "paste a screenshot or text"], ["chat", "W · :only", "swap split chats · close the split"],
+    ["chat", "s", "stickers and GIFs"], ["chat", "p / ctrl+v", "paste a screenshot or text"], ["chat", "W · X", "swap split chats · close the split"], ["command", ":split <name> · :close", "open a chat beside the one you're in · close it"],
     ["chat", "ctrl+x", "drop the attachment, cancel a reply or edit"], ["chat", "backspace / q", "back to the list"],
     ["write", "enter", "send"], ["write", "shift+enter", "new line (also alt+enter, ctrl+j)"], ["write", "@", "mention someone; tab picks"],
     ["write", "ctrl+a", "select all; type to replace, ctrl+c copy, ctrl+x cut"], ["write", "ctrl+← ctrl+→", "jump a word"], ["write", "ctrl+backspace", "delete a word"],

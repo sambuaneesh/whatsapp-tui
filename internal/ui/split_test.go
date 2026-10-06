@@ -74,3 +74,53 @@ func TestSplitView(t *testing.T) {
 		t.Fatal(":only didn't close the split")
 	}
 }
+
+func TestSplitWithMouseAndCommands(t *testing.T) {
+	a, b, c := "a@s.whatsapp.net", "b@s.whatsapp.net", "c@s.whatsapp.net"
+	reader := fakeReader{a: nil, b: nil, c: nil}
+	chats := []*messages.Conversation{{JID: a, Name: "Arjun", LastMsgTime: 9}, {JID: b, Name: "Bina", LastMsgTime: 8}, {JID: c, Name: "Chitra", LastMsgTime: 7}}
+	m := New(make(chan messages.Command, 50), chats, Options{SidebarWidth: 30, Images: termimg.ModeOff, Chats: reader})
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 160, Height: 30})
+	m = next.(Model)
+	m, _ = keys(t, m, "enter") // Arjun
+	rowOf := func(i int) int { return headerRows + i*fullItemHeight + 1 }
+
+	// ctrl+click Bina in the sidebar: beside, Arjun stays where you write
+	next, _ = m.Update(tea.MouseMsg{X: 5, Y: rowOf(1), Button: tea.MouseButtonLeft, Action: tea.MouseActionPress, Ctrl: true})
+	m = next.(Model)
+	if m.split == nil || m.split.conv.Name != "Bina" || m.current.Name != "Arjun" {
+		t.Fatalf("ctrl+click: split %v current %s", m.split, m.current.Name)
+	}
+	// the ✕ in its header closes it
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "✕") {
+		t.Fatal("no ✕ in the split header")
+	}
+	m, _ = click(t, m, m.width-3, 0)
+	if m.split != nil {
+		t.Fatal("✕ didn't close the split")
+	}
+	// middle-click Chitra: beside
+	next, _ = m.Update(tea.MouseMsg{X: 5, Y: rowOf(2), Button: tea.MouseButtonMiddle, Action: tea.MouseActionPress})
+	m = next.(Model)
+	if m.split == nil || m.split.conv.Name != "Chitra" {
+		t.Fatalf("middle-click: %v", m.split)
+	}
+	// X closes it
+	m, _ = keys(t, m, "X")
+	if m.split != nil {
+		t.Fatal("X didn't close the split")
+	}
+	// :split <name>
+	m = typeCmd(t, m, "split bin")
+	if m.split == nil || m.split.conv.Name != "Bina" {
+		t.Fatalf(":split bin: %v", m.split)
+	}
+	m = typeCmd(t, m, "close")
+	if m.split != nil {
+		t.Fatal(":close didn't close it")
+	}
+	m = typeCmd(t, m, "split zzz")
+	if m.split != nil || !m.noticeErr {
+		t.Fatal(":split with no match")
+	}
+}
