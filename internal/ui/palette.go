@@ -37,6 +37,7 @@ type paletteState struct {
 	pickTitle string
 	only      func(c *messages.Conversation) bool
 	onPick    func(m Model, c *messages.Conversation) (tea.Model, tea.Cmd)
+	actions   []palItem // a list of things to do (the local model's suggestions…)
 
 	cands []palCand // chats and contacts, gathered when opened
 	items []palItem
@@ -55,14 +56,15 @@ type palCand struct {
 }
 
 type palItem struct {
-	pitem *personal.Item // "@": one of your tasks, notes or saved messages
-	plist string
-	chat  *messages.Conversation
-	cand  *palCand
-	cmd   *command
-	score int
-	pos   []int // matched runes, highlighted
-	title string
+	action *palAction
+	pitem  *personal.Item // "@": one of your tasks, notes or saved messages
+	plist  string
+	chat   *messages.Conversation
+	cand   *palCand
+	cmd    *command
+	score  int
+	pos    []int // matched runes, highlighted
+	title  string
 }
 
 // recents remembers the chats you opened and the commands you ran, most
@@ -133,7 +135,7 @@ func (m Model) recentRank() map[string]int {
 // paletteMode is what the query asks for: chats, ">" commands, "#"
 // messages.
 func (p *paletteState) mode() byte {
-	if p.onPick != nil {
+	if p.onPick != nil || p.actions != nil {
 		return 0
 	}
 	if len(p.query) > 0 && (p.query[0] == '>' || p.query[0] == '#' || p.query[0] == '@') {
@@ -165,6 +167,13 @@ func (m *Model) refilter() {
 	case '@':
 		p.items = m.matchPersonal(p.text())
 	default:
+		if p.actions != nil {
+			p.items = matchActions(p.actions, p.text())
+			for p.cursor < len(p.items)-1 && p.items[p.cursor].action.info && p.items[p.cursor].action.run == nil && hasRunnable(p.items) {
+				p.cursor++
+			}
+			return
+		}
 		p.items = m.matchChats(p)
 		if len(p.items) > 0 && p.text() == "" && m.current != nil && m.screen == screenChat &&
 			p.items[0].chat != nil && p.items[0].chat.JID == m.current.JID && len(p.items) > 1 {
@@ -386,6 +395,34 @@ func (m Model) choosePalette(beside bool) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	it := p.items[p.cursor]
+	if a := it.action; a != nil {
+		if a.run == nil {
+			return m, nil
+		}
+		if a.keep {
+			nm, note := a.run(m)
+			nm.notice, nm.noticeErr = note, false
+			// done with it: it leaves the list
+			kept := p.actions[:0:0]
+			for _, x := range p.actions {
+				if x.action != a {
+					kept = append(kept, x)
+				}
+			}
+			p.actions = kept
+			if !hasRunnable(kept) {
+				nm.closePalette()
+				return nm, nil
+			}
+			nm.qo = p
+			nm.refilter()
+			return nm, nil
+		}
+		m.closePalette()
+		nm, note := a.run(m)
+		nm.notice, nm.noticeErr = note, false
+		return nm, nil
+	}
 	m.closePalette()
 	if p.onPick != nil && it.chat != nil {
 		return p.onPick(m, it.chat)
@@ -530,6 +567,9 @@ func (m Model) paletteLines() []string {
 	if p.onPick != nil {
 		hint = "↑↓ move · enter picks · esc cancels"
 	}
+	if p.actions != nil {
+		hint = "↑↓ move · enter does it · esc closes"
+	}
 	switch p.mode() {
 	case '>':
 		hint = "↑↓ move · enter run · backspace: back to chats · esc close"
@@ -552,6 +592,16 @@ func (m Model) paletteRow(it palItem, width int, st lipgloss.Style, chosen bool,
 		marker = st.Foreground(pal.Rose).Render("▌ ")
 	}
 	nameSt := st.Foreground(pal.Text)
+	if a := it.action; a != nil {
+		lst := nameSt
+		if a.info {
+			lst = st.Foreground(pal.Subtle)
+		}
+		if a.run != nil && !a.keep {
+			lst = st.Foreground(pal.Foam).Bold(true)
+		}
+		return fitRow(marker+lst.Render(a.label), st.Foreground(pal.Muted).Render(a.right+" "), width, st)
+	}
 	if it.pitem != nil {
 		x := it.pitem
 		icon := "☐ "
@@ -787,4 +837,42 @@ func (m Model) matchPersonal(q string) []palItem {
 		items = append(items, palItem{pitem: &x, plist: names[x.ListID]})
 	}
 	return items
+}
+
+// palAction is a row that does something when chosen (keep: the list
+// stays open, without it), or just says something (info, no run).
+type palAction struct {
+	label, right string
+	info, keep   bool
+	run          func(m Model) (Model, string) // returns a notice
+}
+
+// openActions opens the palette on a list of things to do.
+func (m *Model) openActions(title string, items []palItem) {
+	m.qo = &paletteState{pickTitle: title, actions: items}
+	m.refilter()
+}
+
+func hasRunnable(items []palItem) bool {
+	for _, it := range items {
+		if it.action != nil && it.action.run != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func matchActions(items []palItem, q string) []palItem {
+	if q == "" {
+		return items
+	}
+	qr := []rune(q)
+	var out []palItem
+	for _, it := range items {
+		name, low := lowerRunes(it.action.label)
+		if _, ok := fuzzyScore(qr, low, name); ok {
+			out = append(out, it)
+		}
+	}
+	return out
 }

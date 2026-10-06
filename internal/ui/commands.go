@@ -88,6 +88,7 @@ func chatIs(f func(c *messages.Conversation) bool) func(Model) bool {
 }
 
 func hasPersonal(m Model) bool { return m.personal != nil }
+func aiInChat(m Model) bool    { return m.ai != nil && inChat(m) }
 func inList(m Model) bool      { return m.inPersonal() && m.pv.page == nil }
 func onItem(m Model) bool {
 	_, ok := m.selectedItem()
@@ -314,6 +315,11 @@ func commandList() []command {
 		{id: "p.copyone", title: "Task: Copy", keys: "y", when: onItem, run: personalKey("y")},
 		{id: "sel.task", title: "Selected: Make a Task (to 📥 Inbox)", keys: "T", when: func(m Model) bool { return oneSelected(m) && hasPersonal(m) }, run: visualKey("T")},
 		{id: "sel.savemsg", title: "Selected: Save to 🔖 Saved", keys: "b", when: func(m Model) bool { return oneSelected(m) && hasPersonal(m) }, run: visualKey("b")},
+
+		// The local model (Ollama)
+		{id: "ai.catchup", title: "AI: Catch Me Up on This Chat", keys: ":catchup", when: aiInChat, run: ex("catchup")},
+		{id: "ai.todos", title: "AI: Find To-dos in This Chat", keys: ":todos", when: aiInChat, run: ex("todos")},
+		{id: "ai.plan", title: "AI: Plan My Day (Times for Today's Tasks)", keys: ":plan", when: func(m Model) bool { return m.ai != nil && m.personal != nil }, run: ex("plan")},
 
 		// Pins and mutes
 		{id: "pinned", title: "Go: Pinned Message", keys: "click 📌", when: func(m Model) bool { return inChat(m) && len(m.pins) > 0 },

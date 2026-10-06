@@ -18,6 +18,7 @@ import (
 	"github.com/charmbracelet/x/term"
 	"github.com/muesli/termenv"
 
+	"github.com/Srindot/whatsapp-tui/internal/ai"
 	"github.com/Srindot/whatsapp-tui/internal/api"
 	"github.com/Srindot/whatsapp-tui/internal/config"
 	"github.com/Srindot/whatsapp-tui/internal/daemon"
@@ -197,6 +198,10 @@ func run() error {
 		mirror.Start(2 * time.Second)
 		defer mirror.Stop()
 		opts.Mirror = mirror
+	}
+	if g := config.Config.General; g.Ai && g.AiModel != "" {
+		// the local chat model: tasks from messages, odd dates, plans, catch-ups
+		opts.AI = &ai.Client{URL: g.OllamaUrl, Model: g.AiModel}
 	}
 	opts.Mouse = config.Config.Ui.Mouse
 	opts.PrivateReading = config.Config.General.PrivateReading

@@ -1600,6 +1600,9 @@ func (m Model) personalCommand(fields []string) (tea.Model, tea.Cmd, bool) {
 		}
 		m.afterChange(m.personal.DeleteList(l.ID), "Deleted the list "+l.Name+" · :undo brings it back")
 		return m, nil, true
+	case "plan":
+		next, cmd := m.planDay()
+		return next, cmd, true
 	case "mirror", "obsidian":
 		next, cmd := m.setMirror(arg)
 		return next, cmd, true

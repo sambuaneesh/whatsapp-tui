@@ -36,7 +36,7 @@ type Parsed struct {
 var (
 	tagRe = regexp.MustCompile(`(?:^|\s)#([\p{L}\p{N}_\-/]+)`)
 	// a time of day in the phrase: 5pm, 17:30, at 9, noon, tonight, in 2h…
-	clockRe  = regexp.MustCompile(`\d\s*(am|pm|a|p)\b|\d:\d\d|\b(noon|midnight|morning|afternoon|evening|tonight|eod|end of day)\b|^(in\s+)?\d+\s*(m|min|mins|minutes?|h|hrs?|hours?)\b`)
+	clockRe  = regexp.MustCompile(`\d\s*(am|pm|a|p)\b|\d:\d\d|\b(noon|midnight|morning|afternoon|evening|tonight|night|lunch|eod|end of day)\b|\bat\s+\d{1,2}$|^(in\s+)?\d+\s*(m|min|mins|minutes?|h|hrs?|hours?)\b`)
 	bulletRe = regexp.MustCompile(`^\s*(?:[-*•]\s+)?(?:\[( |x|X)\]\s*|[☐☑✅]\s*)?`)
 	digitsRe = regexp.MustCompile(`^\d+$`)
 )

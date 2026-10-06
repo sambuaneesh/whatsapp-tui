@@ -77,6 +77,7 @@ type Model struct {
 	waChats    []*messages.Conversation // the chats from WhatsApp, as last received
 	pendingSrc *msgSource               // the message :task makes a task from
 	mirror     Mirrorer
+	ai         Assistant                // the local model (nil: off)
 	allChats   []*messages.Conversation // every known chat and contact (forward targets)
 	archive    bool                     // showing archived chats instead of the inbox
 	unreadOnly bool                     // list shows only chats with unread messages
@@ -198,6 +199,7 @@ type Options struct {
 	Chats     ChatReader      // loads a chat for split view; may be nil
 	Personal  *personal.Store // your lists, notes and saved messages; may be nil
 	Mirror    Mirrorer        // keeps a Markdown folder in step with them; may be nil
+	AI        Assistant       // the local chat model (Ollama); may be nil
 
 	// PrivateReading: opening a chat doesn\'t send read receipts; you mark
 	// chats read yourself (U, :read).
@@ -283,6 +285,7 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		chatReader:  opts.Chats,
 		personal:    opts.Personal,
 		mirror:      opts.Mirror,
+		ai:          opts.AI,
 		privateRead: opts.PrivateReading,
 		rangeFrom:   noRange,
 		notifier:    opts.Notifier,
@@ -1021,6 +1024,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case pinsMsg:
 		return m.applyPins(msg)
+	case aiTaskMsg, aiDateMsg, aiSuggestMsg, aiPlanMsg, aiSummaryMsg:
+		next, cmd, _ := m.applyAI(msg)
+		return next, cmd
 	case screenMsg:
 		if m.current == nil {
 			return m, nil
@@ -1666,6 +1672,10 @@ func (m Model) runCommand(line string) (tea.Model, tea.Cmd) {
 		return m.scheduleCommand(messages.ScheduleNudge, fields[1:])
 	case "scheduled", "sched":
 		return m, m.openScheduled()
+	case "catchup", "summary", "summarize":
+		return m.catchUp()
+	case "todos":
+		return m.findTasksInChat()
 	case "pin", "unpin":
 		c := m.theChat()
 		if c == nil {

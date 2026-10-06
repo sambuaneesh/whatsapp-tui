@@ -32,11 +32,23 @@ var (
 // spelled-out amounts: "in an hour", "in half an hour", "a week"
 var spelled = strings.NewReplacer(
 	"half an hour", "30m", "an hour", "1h", "a minute", "1m", "a day", "1d", "a week", "1w",
+	"a fortnight", "2w", "fortnight", "2w", "overmorrow", "day after tomorrow",
+)
+
+// Words in front of a time that don't change it: "by fri", "before 5pm".
+var leadWords = map[string]bool{"by": true, "before": true, "on": true, "at": true, "till": true, "until": true,
+	"due": true, "around": true, "about": true, "latest": true}
+
+var (
+	ordinalRe = regexp.MustCompile(`^(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)\b\s*(.*)$`)
+	lastDayRe = regexp.MustCompile(`^last\s+([a-z]+)\s+of\s+(?:the|this)\s+month\b\s*(.*)$`)
+	endOfRe   = regexp.MustCompile(`^end\s+of\s+(?:the\s+)?(this\s+week|next\s+week|week|this\s+month|month)\b\s*(.*)$`)
+	atHourRe  = regexp.MustCompile(`\bat\s+([1-7])$`)
 )
 
 var named = map[string]int{ // hour
 	"noon": 12, "midnight": 0, "morning": 9, "afternoon": 14, "evening": 18, "tonight": 20,
-	"eod": 18, "end of day": 18,
+	"eod": 18, "end of day": 18, "night": 21, "lunch": 13,
 }
 
 var weekdays = map[string]time.Weekday{
@@ -62,8 +74,20 @@ var months = map[string]time.Month{
 func Parse(s string, now time.Time) (time.Time, error) {
 	s = strings.ToLower(strings.Join(strings.Fields(s), " "))
 	s = spelled.Replace(s)
+	// "at 4" means the afternoon, not 4 in the morning
+	s = atHourRe.ReplaceAllString(s, "at ${1}pm")
+	for {
+		w, rest, ok := strings.Cut(s, " ")
+		if !ok || !leadWords[w] {
+			break
+		}
+		s = rest
+	}
 	if s == "" {
 		return time.Time{}, ErrUnknown
+	}
+	if t, ok, err := parseRelativeDay(s, now); ok {
+		return t, err
 	}
 	// a duration: "in 2h", "90m", "1h30m", "in 3 days", "in 2 weeks"
 	if durRe.MatchString(s) {
@@ -258,4 +282,69 @@ func Describe(t, now time.Time) string {
 		return t.Format("2 Jan 2006") + " " + clock
 	}
 	return t.Format("2 Jan") + " " + clock
+}
+
+// parseRelativeDay reads days named relative to now: "day after tomorrow",
+// "the 12th", "last friday of the month", "end of next week", each with
+// an optional time after it.
+func parseRelativeDay(s string, now time.Time) (time.Time, bool, error) {
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	at := func(day time.Time, rest string, hour int) (time.Time, bool, error) {
+		h, m := hour, 0
+		if strings.TrimSpace(rest) != "" {
+			var err error
+			if h, m, err = parseClock(strings.TrimPrefix(strings.TrimSpace(rest), "at ")); err != nil {
+				return time.Time{}, true, err
+			}
+		}
+		t := day.Add(time.Duration(h)*time.Hour + time.Duration(m)*time.Minute)
+		if !t.After(now) {
+			return time.Time{}, true, errors.New("that time has passed")
+		}
+		return t, true, nil
+	}
+	if rest, ok := strings.CutPrefix(s, "day after tomorrow"); ok {
+		return at(today.AddDate(0, 0, 2), rest, defaultHour)
+	}
+	if m := ordinalRe.FindStringSubmatch(s); m != nil {
+		d, _ := strconv.Atoi(m[1])
+		if first, _, _ := strings.Cut(m[2], " "); d < 1 || d > 31 || months[first] != 0 || first == "of" {
+			return time.Time{}, false, nil // "12th oct" is a date the usual way
+		}
+		// this month's, or next month's when it's gone
+		day := time.Date(now.Year(), now.Month(), d, 0, 0, 0, 0, now.Location())
+		if day.Day() != d || day.Before(today) {
+			day = time.Date(now.Year(), now.Month()+1, d, 0, 0, 0, 0, now.Location())
+		}
+		return at(day, m[2], defaultHour)
+	}
+	if m := lastDayRe.FindStringSubmatch(s); m != nil {
+		first := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, now.Location())
+		if m[1] == "day" {
+			return at(first.AddDate(0, 0, -1), m[2], defaultHour)
+		}
+		wd, ok := weekdays[m[1]]
+		if !ok {
+			return time.Time{}, false, nil
+		}
+		d := first.AddDate(0, 0, -1)
+		for d.Weekday() != wd {
+			d = d.AddDate(0, 0, -1)
+		}
+		return at(d, m[2], defaultHour)
+	}
+	if m := endOfRe.FindStringSubmatch(s); m != nil {
+		var day time.Time
+		switch m[1] {
+		case "this month", "month":
+			day = time.Date(now.Year(), now.Month()+1, 0, 0, 0, 0, 0, now.Location())
+		default: // a week ends on Friday, at the end of the working day
+			day = today.AddDate(0, 0, daysUntil(now.Weekday(), time.Friday))
+			if strings.HasPrefix(m[1], "next") {
+				day = day.AddDate(0, 0, 7)
+			}
+		}
+		return at(day, m[2], named["eod"])
+	}
+	return time.Time{}, false, nil
 }

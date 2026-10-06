@@ -47,6 +47,9 @@ func TestParseTask(t *testing.T) {
 		{"meet priya on sat", "meet priya", day(10, 0, 0), false, false, ""},
 		{"water plants in 2h", "water plants", day(5, 16, 0), true, false, ""},
 		{"read the book", "read the book", time.Time{}, false, false, ""},
+		{"meet priya day after tomorrow at 4", "meet priya", day(7, 16, 0), true, false, ""},
+		{"pay rent by the 12th", "pay rent", day(12, 0, 0), false, false, ""},
+		{"submit report end of next week", "submit report", day(16, 0, 0), false, false, ""},
 	}
 	for _, c := range cases {
 		p := ParseTask(c.in, monday, nil)
