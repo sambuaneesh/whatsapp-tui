@@ -1,13 +1,13 @@
 // Package ai asks a small local chat model (Ollama, qwen3:4b by default)
 // for help with things that are hard to do by rule: wording a message as
-// a task, finding the to-dos in a chat, guessing an odd date, planning a
-// day, and catching you up on a chat. It runs on your machine; nothing
+// a task, finding the to-dos in a chat, planning a day, and catching you
+// up on a chat. It runs on your machine; nothing
 // leaves it.
 //
-// The model never does calendar arithmetic it would get wrong: it copies
-// time phrases out ("before friday evening") and the app's own parser
-// (internal/when) turns them into dates. Where it has to guess a date, the
-// guess is shown for you to accept or change.
+// The model never does calendar arithmetic (a 4B model gets it wrong
+// most of the time, as tried): it copies time phrases out ("before friday
+// evening") and the app's own parser (internal/when) turns them into
+// dates.
 package ai
 
 import (
@@ -137,9 +137,9 @@ type Suggestion struct {
 	From string `json:"from"` // who asked
 }
 
-const chatTasksSystem = `You read the latest messages of a chat (one per line, "name: text"; "You" is me) and list the things I still have to do: requests or promises made to me or by me that aren't done yet.
-For each: "task" (a short command, at most 8 words), "when" (the words that say by when, copied exactly as written, or ""), "from" (who asked, or "You").
-Leave out anything already done or answered, small talk and questions that need no action. At most 8 items; an empty list if there's nothing.`
+const chatTasksSystem = `You read the latest messages of a chat (one per line, "name: text"; "You" is me) and list what I still have to do: things people asked me (or everyone) to do, and things I promised.
+For each, "task" is a complete short to-do that makes sense on its own, starting with a verb and saying what and for whom (at most 8 words), for example "Pay Kiran the rent" or "Send Mom the trip photos". "when" is the words that say by when, copied exactly as written, or "". "from" is who asked, or "You" for my own promises.
+Leave out anything already done or answered, thanks and small talk. At most 8 items; an empty list if there's nothing.`
 
 // TasksInChat finds the to-dos in a chat's latest messages (oldest first).
 func (c *Client) TasksInChat(ctx context.Context, chat string, lines []string) ([]Suggestion, error) {
@@ -156,45 +156,6 @@ func (c *Client) TasksInChat(ctx context.Context, chat string, lines []string) (
 		}
 	}
 	return kept, err
-}
-
-// ---------- a date the parser can't read ----------
-
-// calendar lists the next days by number, which the model can look up
-// (it's poor at counting days itself).
-func calendar(now time.Time, days int) string {
-	var b strings.Builder
-	for i := 0; i < days; i++ {
-		fmt.Fprintf(&b, "%d: %s\n", i, now.AddDate(0, 0, i).Format("Monday 2 January 2006"))
-	}
-	return b.String()
-}
-
-// GuessDate guesses what odd time words mean ("after the exams", "the
-// last friday of the month"). It's a guess: show it before using it.
-func (c *Client) GuessDate(ctx context.Context, words string, now time.Time) (t time.Time, hasTime, ok bool, err error) {
-	system := "Calendar (day number: date). Day 0 is today; the time now is " + now.Format("15:04") + ".\n" +
-		calendar(now, 60) +
-		`Find the day number the user's words mean, and the time of day as HH:MM ("" if they give none; morning 09:00, evening 18:00, night 21:00). ` +
-		`"found" is false if the words don't name a date or time at all.`
-	var out struct {
-		Found bool   `json:"found"`
-		Day   int    `json:"day"`
-		Time  string `json:"time"`
-	}
-	schema := object(map[string]any{"found": map[string]any{"type": "boolean"}, "day": map[string]any{"type": "integer"}, "time": str},
-		"found", "day", "time")
-	if err := c.ask(ctx, system, words, schema, &out); err != nil {
-		return time.Time{}, false, false, err
-	}
-	if out.Day < 0 || out.Day > 365 || (!out.Found && out.Day == 0 && out.Time == "") {
-		return time.Time{}, false, false, nil
-	}
-	day := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, out.Day)
-	if tm, err := time.Parse("15:04", out.Time); err == nil {
-		return day.Add(time.Duration(tm.Hour())*time.Hour + time.Duration(tm.Minute())*time.Minute), true, true, nil
-	}
-	return day, false, true, nil
 }
 
 // ---------- planning a day ----------
@@ -232,8 +193,9 @@ func (c *Client) PlanDay(ctx context.Context, tasks []PlanTask, now time.Time) (
 
 // ---------- catching up on a chat ----------
 
-const summarySystem = `You catch me up on a chat. I give its latest messages, oldest first, one per line ("name: text"; "You" is me).
-Answer with "points": 3 to 6 short bullet points (each under 20 words) on what was said, decided or asked, most important first, naming people. Then "asks": anything someone is waiting on me for (short; empty if nothing).`
+const summarySystem = `You catch me up on a chat. I give its latest messages, oldest first, one per line ("name: text"; "You" is me; "@You" means someone is talking to me).
+"points": 2 to 5 short points (each under 15 words) on what was said or decided, most important first, naming people.
+"asks": what someone is waiting for me to do or answer, as short to-dos starting with a verb (for example "Reply to Sam about the deadline"); [] if nothing.`
 
 // Summary is a chat caught up.
 type Summary struct {

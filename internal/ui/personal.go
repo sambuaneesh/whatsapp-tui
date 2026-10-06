@@ -1193,11 +1193,7 @@ func (m Model) setDue(words string) (tea.Model, tea.Cmd) {
 	}
 	t, hasTime, ok := personal.FindDate(words, time.Now())
 	if !ok {
-		if cmd := m.aiDate(words, it.ID); cmd != nil {
-			m.notice, m.noticeErr = "Asking the local model what “"+words+"” means…", false
-			return m, cmd
-		}
-		m.notice, m.noticeErr = "not a date I understand: try 9am, tomorrow 6pm, fri, 12 oct, in 2h, next week", true
+		m.notice, m.noticeErr = "not a date I understand: try 9am, tomorrow 6pm, fri, 12 oct, by the 12th, a week from friday, in 2h", true
 		return m, nil
 	}
 	it.Due, it.DueTime = t.Unix(), hasTime

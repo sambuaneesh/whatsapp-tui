@@ -348,7 +348,8 @@ Times:
 | Clock | `9am`, `9:30pm`, `21:30`, `00:35am`, `noon`, `tonight`, `eod` |
 | Day | `today 5pm`, `tomorrow`, `fri 5pm`, `next friday`, `next week`, `weekend` |
 | Date | `12 oct`, `oct 12 3pm`, `12/10` (day/month), `2026-10-12 9:00` |
-| From now | `in 2h`, `90m`, `in an hour`, `in half an hour`, `in 3 days`, `in 2 weeks` |
+| From now | `in 2h`, `90m`, `in an hour`, `in half an hour`, `in 3 days`, `in 2 weeks`, `in a fortnight` |
+| Relative | `day after tomorrow at 4`, `by the 12th`, `a week from friday`, `two days before the 12th`, `first monday of november`, `last friday of the month`, `end of next week`, `the weekend after next` |
 
 A day without a time means 9:00; a time that's passed today means tomorrow.
 A message due while you're offline is sent as soon as you're connected again.
@@ -383,7 +384,9 @@ Open a list, `i`, type, `enter`:
 In 📋 Today, something without a date is for today. Times read like
 everywhere else in the app (see [the table](#later-send-snooze-nudge)),
 plus `day after tomorrow`, `by the 5th`, `in a fortnight`, `end of next
-week`, `last friday of the month`, `by eod`. A bare number isn't a time
+week`, `last friday of the month`, `first monday of november`, `a week
+from friday`, `two days before the 12th`, `the weekend after next`,
+`by eod`. A bare number isn't a time
 ("buy 2 eggs" stays as it is), but `at 5` is (17:00).
 
 `:task <text>` adds from anywhere (to the Inbox, or the list it names).
@@ -497,12 +500,12 @@ machine.
 | The to-dos in a chat | `:todos` (or `F1` → "find to-dos"): the requests and promises in the last 60 messages; `enter` adds each to the Inbox |
 | Catch me up | `:catchup`: a few points on what was said, and what people are waiting on you for (`enter` makes it a task) |
 | Plan my day | `:plan`: times for today's tasks around the ones that have one; "use this plan" sets them (`u` undoes) |
-| Odd dates | `t after the exams`, `:later after diwali`: when the rules can't read it, the model guesses and fills the command in for you to accept (`enter`) or change |
 
-It never does the calendar sums small models get wrong: it copies the
-time words out of a message ("before friday evening") and the app's own
-parser turns them into a date. Guesses are always shown before they're
-used. Turn it off with `ai = false`; another model with `ai_model`.
+It never does calendar sums (a 4B model gets them wrong most of the
+time; we tried): it copies the time words out of a message ("before
+friday evening") and the app's own parser turns them into a date. What it
+suggests always waits for your `enter`. Turn it off with `ai = false`;
+another model with `ai_model`.
 
 ## Running in the background
 

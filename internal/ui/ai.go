@@ -14,15 +14,14 @@ import (
 )
 
 // The local model's help (Options.AI; nil when off): a message worded as
-// a task (T), odd dates guessed (t, :later, :snooze, :nudge), the to-dos
-// found in a chat, today planned, and a chat caught up. Answers arrive
+// a task (T), the to-dos found in a chat, today planned, and a chat
+// caught up. Answers arrive
 // as messages; nothing waits on them.
 
 // Assistant is the local model; *ai.Client implements it.
 type Assistant interface {
 	TaskFromMessage(ctx context.Context, sender, text string) (task, when string, err error)
 	TasksInChat(ctx context.Context, chat string, lines []string) ([]ai.Suggestion, error)
-	GuessDate(ctx context.Context, words string, now time.Time) (time.Time, bool, bool, error)
 	PlanDay(ctx context.Context, tasks []ai.PlanTask, now time.Time) ([]ai.Slot, string, error)
 	Summarize(ctx context.Context, chat string, lines []string) (ai.Summary, error)
 }
@@ -85,72 +84,6 @@ func (m Model) applyAITask(r aiTaskMsg) (tea.Model, tea.Cmd) {
 	m.cmdline.CursorEnd()
 	m.notice, m.noticeErr = "✨ worded by the local model · edit it, enter adds", false
 	return m, nil
-}
-
-// ---------- odd dates ----------
-
-type aiDateMsg struct {
-	words  string
-	cmd    string // the command to fill in: "due", "later", "snooze", "nudge"
-	t      time.Time
-	hasT   bool
-	ok     bool
-	err    error
-	itemID int64
-}
-
-// aiDate asks the model what words the parser can't read mean, for :due;
-// the guess is filled in for you to accept (enter) or change.
-func (m Model) aiDate(words string, itemID int64) tea.Cmd {
-	return m.aiDateFor("due", words, itemID)
-}
-
-func (m Model) aiDateFor(cmd, words string, itemID int64) tea.Cmd {
-	a := m.ai
-	if a == nil {
-		return nil
-	}
-	return func() tea.Msg {
-		ctx, cancel := aiCtx()
-		defer cancel()
-		t, hasT, ok, err := a.GuessDate(ctx, words, time.Now())
-		return aiDateMsg{words: words, cmd: cmd, t: t, hasT: hasT, ok: ok, err: err, itemID: itemID}
-	}
-}
-
-func (m Model) applyAIDate(r aiDateMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case r.err != nil:
-		m.notice, m.noticeErr = "local model: "+r.err.Error(), true
-		return m, nil
-	case !r.ok:
-		m.notice, m.noticeErr = "neither the parser nor the local model could read “"+r.words+"” as a date", true
-		return m, nil
-	}
-	if r.itemID != 0 && m.inPersonal() {
-		for i, row := range m.pv.rows {
-			if row.isItem() && row.item.ID == r.itemID {
-				m.pv.sel = i
-			}
-		}
-	}
-	when := strings.ToLower(r.t.Format("2 Jan"))
-	if r.t.Year() != time.Now().Year() {
-		when = r.t.Format("2006-01-02")
-	}
-	if r.hasT {
-		when += " " + r.t.Format("15:04")
-	}
-	m.mode = modeCommand
-	m.cmdline.Prompt = ":"
-	m.cmdline.SetValue(r.cmd + " " + when)
-	m.cmdline.CursorEnd()
-	label := r.t.Format("Mon 2 Jan")
-	if r.hasT {
-		label += " " + r.t.Format("15:04")
-	}
-	m.notice, m.noticeErr = "✨ the local model reads “"+r.words+"” as "+label+" · enter accepts, or change it", false
-	return m, m.cmdline.Focus()
 }
 
 // ---------- chat lines for the model ----------
@@ -437,9 +370,6 @@ func (m Model) applyAI(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	switch r := msg.(type) {
 	case aiTaskMsg:
 		next, cmd := m.applyAITask(r)
-		return next, cmd, true
-	case aiDateMsg:
-		next, cmd := m.applyAIDate(r)
 		return next, cmd, true
 	case aiSuggestMsg:
 		next, cmd := m.applySuggestions(r)

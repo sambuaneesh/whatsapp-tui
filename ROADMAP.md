@@ -162,8 +162,10 @@ Results (before → after):
 - [x] Obsidian mirror, both ways (Tasks plugin marks, `^t` block ids)
 - [x] `whatsapp-tui todo/note/capture`, API methods, Super+Shift+T capture
 - [x] Local model (qwen3:4b): tasks from messages, to-dos in a chat,
-      catch up, plan my day, odd dates (guessed, then confirmed); the
-      parser reads more time phrases ("by the 12th", "end of next week")
+      catch up, plan my day; the parser reads many more time phrases
+      ("by the 12th", "a week from friday", "first monday of november").
+      AI date guessing was tried and dropped: qwen3:4b without thinking
+      gets calendar lookups wrong most of the time
 
 ## Next
 

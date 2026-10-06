@@ -2,7 +2,6 @@ package ui
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -65,11 +64,6 @@ func (m Model) scheduleCommand(kind string, args []string) (tea.Model, tea.Cmd) 
 	now := clickNow()
 	due, err := when.Parse(strings.Join(args, " "), now)
 	if err != nil {
-		if errors.Is(err, when.ErrUnknown) && m.ai != nil {
-			name := map[string]string{messages.ScheduleSend: "later", messages.ScheduleSnooze: "snooze", messages.ScheduleNudge: "nudge"}[kind]
-			m.notice, m.noticeErr = "Asking the local model what “"+strings.Join(args, " ")+"” means…", false
-			return m, m.aiDateFor(name, strings.Join(args, " "), 0)
-		}
 		m.notice, m.noticeErr = err.Error(), true
 		return m, nil
 	}

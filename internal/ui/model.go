@@ -1024,7 +1024,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case pinsMsg:
 		return m.applyPins(msg)
-	case aiTaskMsg, aiDateMsg, aiSuggestMsg, aiPlanMsg, aiSummaryMsg:
+	case aiTaskMsg, aiSuggestMsg, aiPlanMsg, aiSummaryMsg:
 		next, cmd, _ := m.applyAI(msg)
 		return next, cmd
 	case screenMsg:

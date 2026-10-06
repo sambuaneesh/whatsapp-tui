@@ -9,14 +9,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Srindot/whatsapp-tui/internal/ai"
-	"github.com/Srindot/whatsapp-tui/internal/messages"
 	"github.com/Srindot/whatsapp-tui/internal/personal"
 )
 
 type fakeAI struct {
 	task, when string
 	sugg       []ai.Suggestion
-	guess      time.Time
 	slots      func(tasks []ai.PlanTask) []ai.Slot
 	sum        ai.Summary
 	lines      []string
@@ -28,9 +26,6 @@ func (f *fakeAI) TaskFromMessage(_ context.Context, sender, text string) (string
 func (f *fakeAI) TasksInChat(_ context.Context, _ string, lines []string) ([]ai.Suggestion, error) {
 	f.lines = lines
 	return f.sugg, nil
-}
-func (f *fakeAI) GuessDate(context.Context, string, time.Time) (time.Time, bool, bool, error) {
-	return f.guess, true, !f.guess.IsZero(), nil
 }
 func (f *fakeAI) PlanDay(_ context.Context, tasks []ai.PlanTask, _ time.Time) ([]ai.Slot, string, error) {
 	return f.slots(tasks), "important first", nil
@@ -183,36 +178,6 @@ func TestAICatchUpAndAsks(t *testing.T) {
 	if items, _ := e.s.Items(inbox.ID); len(items) != 1 || items[0].Text != "Tell Priya if you're coming" {
 		t.Fatalf("ask as task: %+v", items)
 	}
-}
-
-func TestAIGuessesOddDates(t *testing.T) {
-	guess := time.Now().AddDate(0, 0, 10)
-	guess = time.Date(guess.Year(), guess.Month(), guess.Day(), 18, 0, 0, 0, time.Local)
-	f := &fakeAI{guess: guess}
-	e := aiEnv(t, f)
-	e.open(t, "Inbox")
-	e.typeIn(t, "pack for the trip")
-	e.selectRow(t, "pack for the trip")
-	m, cmds := keys(t, e.m, ":", "d", "u", "e", " ", "a", "f", "t", "e", "r", " ", "d", "i", "w", "a", "l", "i", "enter")
-	e.m = m
-	e.runCmds(t, cmds...)
-	if e.m.mode != modeCommand || !strings.HasPrefix(e.m.cmdline.Value(), "due ") || !strings.Contains(e.m.notice, "“after diwali”") {
-		t.Fatalf("guess: %q %q", e.m.cmdline.Value(), e.m.notice)
-	}
-	e.key(t, "enter") // accept
-	if it, ok := e.m.selectedItem(); !ok || time.Unix(it.Due, 0).Day() != guess.Day() || !it.DueTime {
-		t.Fatalf("accepted: %+v", it)
-	}
-	// :later too
-	e.open(t, "Arjun")
-	e.m.compose.SetValue("happy diwali!")
-	m, cmds = keys(t, e.m, ":", "l", "a", "t", "e", "r", " ", "o", "n", " ", "d", "i", "w", "a", "l", "i", "enter")
-	e.m = m
-	e.runCmds(t, cmds...)
-	if !strings.HasPrefix(e.m.cmdline.Value(), "later ") {
-		t.Fatalf(":later guess: %q (%s)", e.m.cmdline.Value(), e.m.notice)
-	}
-	_ = messages.Message{}
 }
 
 func TestNoAIMeansNoAICommands(t *testing.T) {

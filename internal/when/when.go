@@ -44,6 +44,9 @@ var (
 	lastDayRe = regexp.MustCompile(`^last\s+([a-z]+)\s+of\s+(?:the|this)\s+month\b\s*(.*)$`)
 	endOfRe   = regexp.MustCompile(`^end\s+of\s+(?:the\s+)?(this\s+week|next\s+week|week|this\s+month|month)\b\s*(.*)$`)
 	atHourRe  = regexp.MustCompile(`\bat\s+([1-7])$`)
+	offsetRe  = regexp.MustCompile(`^(a|an|one|two|three|four|five|six|seven|ten|\d+)\s*(d|days?|w|weeks?)\s+(after|from|before)\s+(.+)$`)
+	nthDayRe  = regexp.MustCompile(`^(first|second|third|fourth|last|1st|2nd|3rd|4th)\s+([a-z]+)\s+(?:of|in)\s+([a-z]+)\b\s*(.*)$`)
+	afterNext = regexp.MustCompile(`^(?:the\s+)?([a-z]+)\s+after\s+next\b\s*(.*)$`)
 )
 
 var named = map[string]int{ // hour
@@ -302,6 +305,70 @@ func parseRelativeDay(s string, now time.Time) (time.Time, bool, error) {
 			return time.Time{}, true, errors.New("that time has passed")
 		}
 		return t, true, nil
+	}
+	// "a week from friday", "two days before the 12th"
+	if m := offsetRe.FindStringSubmatch(s); m != nil {
+		n := map[string]int{"a": 1, "an": 1, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "ten": 10}[m[1]]
+		if n == 0 {
+			n, _ = strconv.Atoi(m[1])
+		}
+		if strings.HasPrefix(m[2], "w") {
+			n *= 7
+		}
+		if m[3] == "before" {
+			n = -n
+		}
+		base, err := Parse(m[4], now)
+		if err != nil {
+			return time.Time{}, true, err
+		}
+		t := base.AddDate(0, 0, n)
+		if !t.After(now) {
+			return time.Time{}, true, errors.New("that time has passed")
+		}
+		return t, true, nil
+	}
+	// "first monday of november", "last friday in december" (a month by
+	// name; "of this month" is lastDayRe's)
+	if m := nthDayRe.FindStringSubmatch(s); m != nil {
+		wd, isDay := weekdays[m[2]]
+		mo, isMonth := months[m[3]]
+		if isDay && isMonth {
+			y := now.Year()
+			if mo < now.Month() {
+				y++
+			}
+			nth := map[string]int{"first": 1, "1st": 1, "second": 2, "2nd": 2, "third": 3, "3rd": 3, "fourth": 4, "4th": 4, "last": -1}[m[1]]
+			var d time.Time
+			if nth > 0 {
+				d = time.Date(y, mo, 1, 0, 0, 0, 0, now.Location())
+				for d.Weekday() != wd {
+					d = d.AddDate(0, 0, 1)
+				}
+				d = d.AddDate(0, 0, 7*(nth-1))
+			} else {
+				d = time.Date(y, mo+1, 0, 0, 0, 0, 0, now.Location())
+				for d.Weekday() != wd {
+					d = d.AddDate(0, 0, -1)
+				}
+			}
+			return at(d, m[4], defaultHour)
+		}
+	}
+	// "the weekend after next", "saturday after next"
+	if m := afterNext.FindStringSubmatch(s); m != nil {
+		target, ok := weekdays[m[1]]
+		if m[1] == "weekend" {
+			target, ok = time.Saturday, true
+		}
+		if !ok {
+			return time.Time{}, false, nil
+		}
+		days := daysUntil(now.Weekday(), target)
+		if days == 0 {
+			days = 7
+		}
+		return at(today.AddDate(0, 0, days+7), m[2], defaultHour)
 	}
 	if rest, ok := strings.CutPrefix(s, "day after tomorrow"); ok {
 		return at(today.AddDate(0, 0, 2), rest, defaultHour)
