@@ -102,6 +102,17 @@ func fitLines(s string, h int) []string {
 	return lines
 }
 
+// box fits text to exactly w by h cells, line by line. It's what
+// lipgloss's Width/Height/MaxHeight do, minus re-wrapping and measuring
+// every line several times (a third of a list frame).
+func box(s string, w, h int) string {
+	lines := fitLines(s, h)
+	for i, l := range lines {
+		lines[i] = padLine(l, w)
+	}
+	return strings.Join(lines, "\n")
+}
+
 // padLine pads (or cuts) a line to exactly w cells.
 func padLine(line string, w int) string {
 	n := ansi.StringWidth(line)
@@ -397,7 +408,7 @@ func (m Model) View() string {
 		main = b.String()
 	}
 	if m.screen != screenChat || m.overlayOpen() || m.qr != "" {
-		main = lipgloss.NewStyle().Width(m.width).Height(h).MaxHeight(h).Render(main)
+		main = box(main, m.width, h)
 	}
 	cmdline := lipgloss.NewStyle().Width(m.width).MaxWidth(m.width).Render(m.renderCommandLine())
 	return paintBackground(main+"\n"+m.renderStatusLine()+"\n"+cmdline, m.bgSeq)

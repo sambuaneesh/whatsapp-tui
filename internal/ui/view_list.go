@@ -149,6 +149,25 @@ func (m Model) renderEntry(c *messages.Conversation, width int, sel, open bool, 
 	return fitRow(left1, right1, width, fill) + "\n" + fitRow(left2, right2, width, fill)
 }
 
+// cachedEntry is renderEntry, reused while nothing it shows has changed.
+func (m Model) cachedEntry(c *messages.Conversation, width int, sel, open bool, now time.Time) string {
+	if m.rows == nil {
+		return m.renderEntry(c, width, sel, open, now)
+	}
+	k := m.rows.keyer().str(c.JID).str(chatName(c)).str(c.Preview).str(listTime(c.LastMsgTime, now)).
+		int(int(c.Unread)).bool(c.IsPinned).bool(c.Muted(now.Unix())).bool(c.Mentioned).bool(c.IsArchived).
+		bool(m.archive).bool(c.LastMsgTime == 0).str(m.listDraft(c.JID)).bool(sel).bool(open).int(width)
+	if e := m.img.get(imgKey{imgAvatar, c.JID, avatarBigCols, avatarBigRows}); e != nil {
+		k = k.int(int(e.state)).str(e.text)
+	}
+	if e, ok := m.rows.get(k.sum()); ok {
+		return e.lines[0]
+	}
+	out := m.renderEntry(c, width, sel, open, now)
+	m.rows.put(k.sum(), cachedBubble{lines: []string{out}})
+	return out
+}
+
 // renderList draws the chat list: full screen at start, as the sidebar
 // next to an open chat. Both use the same two-line entries.
 func (m Model) renderList(width, height int, focused bool) string {
@@ -156,7 +175,7 @@ func (m Model) renderList(width, height int, focused bool) string {
 	b.WriteString(m.renderHeader(m.listTitle(width), width, focused))
 	if m.listLen() == 0 {
 		b.WriteString("\n\n" + styleDim.Render(emptyListText(m)))
-		return lipgloss.NewStyle().Width(width).Height(height).MaxHeight(height).Render(b.String())
+		return box(b.String(), width, height)
 	}
 	now := time.Now()
 	rows := m.listRows()
@@ -173,9 +192,12 @@ func (m Model) renderList(width, height int, focused bool) string {
 			continue
 		}
 		open := m.screen == screenChat && m.current != nil && c.JID == m.current.JID
-		b.WriteString("\n" + m.renderEntry(c, width, sel, open, now) + "\n" + divider)
+		b.WriteString("\n" + m.cachedEntry(c, width, sel, open, now) + "\n" + divider)
 	}
-	return lipgloss.NewStyle().Width(width).Height(height).MaxHeight(height).Render(b.String())
+	if m.rows != nil {
+		m.rows.done()
+	}
+	return box(b.String(), width, height)
 }
 
 // renderFullList renders the start screen.

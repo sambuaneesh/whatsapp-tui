@@ -62,6 +62,9 @@ type Model struct {
 	helpScroll    int
 
 	chats      []*messages.Conversation // chats with messages, newest first
+	listVer    int                      // changes with chats (see listMemo)
+	memo       *listMemo
+	rows       *bubbleCache             // rendered chat list entries
 	allChats   []*messages.Conversation // every known chat and contact (forward targets)
 	archive    bool                     // showing archived chats instead of the inbox
 	unreadOnly bool                     // list shows only chats with unread messages
@@ -248,6 +251,8 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		sidebarW:    sidebarWidth,
 		bgSeq:       backgroundSeq(opts.PaintBackground),
 		bubbles:     newBubbleCache(),
+		memo:        &listMemo{},
+		rows:        newBubbleCache(),
 		compose:     compose,
 		cmdline:     cmdline,
 		img:         newImages(opts.Images, opts.Kitty, opts.Media),
@@ -339,6 +344,7 @@ func (m *Model) setChats(cs []*messages.Conversation) {
 	}
 	sortChats(list)
 	m.chats = list
+	m.listVer++
 	// keep the cursor where it was; start on the newest chat, not the
 	// archive row (enter right after launch opens your latest chat)
 	m.cursor = 0
@@ -363,14 +369,42 @@ func (m *Model) setChats(cs []*messages.Conversation) {
 }
 
 // visibleChats is the current list (inbox or archive), filtered.
+// listMemo remembers the visible list between calls: drawing asks for it
+// once per row, and filtering thousands of chats and contacts each time
+// made typing in the filter slow (17 ms a frame). It's shared by the
+// Model's copies; listVer changes whenever the chat list does.
+type listMemo struct {
+	key   string
+	out   []*messages.Conversation
+	names lowerNames
+}
+
 func (m Model) visibleChats() []*messages.Conversation {
+	if m.unreadOnly || m.memo == nil { // unread counts change in place: not cached
+		return m.computeVisible()
+	}
+	key := fmt.Sprintf("%d|%t|%s", m.listVer, m.archive, m.filter)
+	if m.memo.key == key {
+		return m.memo.out
+	}
+	out := m.computeVisible()
+	m.memo.key, m.memo.out = key, out
+	return out
+}
+
+func (m Model) computeVisible() []*messages.Conversation {
 	q := strings.ToLower(strings.TrimSpace(m.filter))
+	var names *lowerNames
+	if m.memo != nil {
+		names = &m.memo.names
+	}
+	cq := newChatQuery(q, names)
 	out := make([]*messages.Conversation, 0, len(m.chats))
 	for _, c := range m.chats {
 		if c.IsArchived != m.archive || (m.unreadOnly && c.Unread == 0) {
 			continue
 		}
-		if q != "" && !filterMatches(c, q) {
+		if q != "" && !cq.matches(c) {
 			continue
 		}
 		out = append(out, c)
@@ -384,7 +418,7 @@ func (m Model) visibleChats() []*messages.Conversation {
 		}
 		n := 0
 		for _, c := range m.allChats {
-			if seen[c.JID] || n >= maxContactResults || !filterMatches(c, q) {
+			if seen[c.JID] || n >= maxContactResults || !cq.matches(c) {
 				continue
 			}
 			if c.LastMsgTime > 0 && !c.IsArchived {
@@ -402,17 +436,61 @@ const maxContactResults = 30
 
 // filterMatches: the name contains q, or q's digits are in the number.
 func filterMatches(c *messages.Conversation, q string) bool {
-	if strings.Contains(strings.ToLower(chatName(c)), q) {
-		return true
-	}
+	return newChatQuery(q, nil).matches(c)
+}
+
+// chatQuery is a lowercased filter, ready to test many chats against.
+type chatQuery struct {
+	q, digits string
+	names     *lowerNames
+}
+
+func newChatQuery(q string, names *lowerNames) chatQuery {
 	digits := strings.Map(func(r rune) rune {
 		if r >= '0' && r <= '9' {
 			return r
 		}
 		return -1
 	}, q)
-	return len(digits) >= 4 && len(digits) == len(strings.ReplaceAll(strings.ReplaceAll(q, " ", ""), "+", "")) &&
-		strings.Contains(strings.Split(c.JID, "@")[0], digits)
+	// a phone number: only digits (spaces and + allowed), at least 4
+	if len(digits) < 4 || len(digits) != len(strings.ReplaceAll(strings.ReplaceAll(q, " ", ""), "+", "")) {
+		digits = ""
+	}
+	return chatQuery{q: q, digits: digits, names: names}
+}
+
+func (cq chatQuery) matches(c *messages.Conversation) bool {
+	if strings.Contains(cq.names.of(c), cq.q) {
+		return true
+	}
+	if cq.digits == "" {
+		return false
+	}
+	user, _, _ := strings.Cut(c.JID, "@")
+	return strings.Contains(user, cq.digits)
+}
+
+// lowerNames remembers each chat's lowercased name, so filtering thousands
+// of chats per keystroke doesn't lowercase them all again. A nil one just
+// lowercases.
+type lowerNames struct {
+	m map[*messages.Conversation][2]string
+} // name, lower
+
+func (l *lowerNames) of(c *messages.Conversation) string {
+	name := chatName(c)
+	if l == nil {
+		return strings.ToLower(name)
+	}
+	if e, ok := l.m[c]; ok && e[0] == name {
+		return e[1]
+	}
+	if l.m == nil {
+		l.m = make(map[*messages.Conversation][2]string)
+	}
+	low := strings.ToLower(name)
+	l.m[c] = [2]string{name, low}
+	return low
 }
 
 // chatCounts returns how many chats are in the inbox and the archive, and
