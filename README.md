@@ -9,7 +9,13 @@ Tour of every feature, with a playable demo: [the website](https://sambuaneesh.g
 
 ## Install
 
-You need the **Go version declared in `go.mod`** (Go can fetch the required
+**Arch Linux** (AUR):
+
+```bash
+yay -S whatsapp-tui-git      # or paru, or any AUR helper
+```
+
+**From source:** you need the **Go version declared in `go.mod`** (Go can fetch the required
 toolchain) and a **C compiler** (for SQLite).
 
 ```bash

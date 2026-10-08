@@ -398,7 +398,7 @@ td.mono { white-space: nowrap; }
     <h1>whatsapp<span class="dim">-</span>tui<span class="cur" aria-hidden="true"></span></h1>
     <p class="lede">WhatsApp in your terminal, driven by the keyboard like vim. <b>It redraws in a third of a millisecond</b>, gets you to any chat with <kbd>ctrl+p</kbd> like VS Code, keeps running when you close the window, and does what the official apps can't: send later, snooze chats, read without blue ticks, search by meaning, and talk to your own scripts. Next to your chats sits <b>a space of your own</b>: today's tasks, lists, notes and saved messages, mirrored to Obsidian, with a small AI on your own machine.</p>
     <div class="cta-row">
-      <div class="copyline"><span><span class="p">$</span> git clone git@github.com:sambuaneesh/whatsapp-tui.git &amp;&amp; cd whatsapp-tui &amp;&amp; make install</span><button class="btn" data-copy="git clone git@github.com:sambuaneesh/whatsapp-tui.git && cd whatsapp-tui && make install">copy</button></div>
+      <div class="copyline"><span><span class="p">$</span> yay -S whatsapp-tui-git</span><button class="btn" data-copy="yay -S whatsapp-tui-git">copy</button></div>
     </div>
     <div class="stats">
       <div><b>0.35 ms</b>to redraw a 400-message chat</div>
@@ -1020,7 +1020,11 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
   <div class="eyebrow"><span class="badge b-rose">:q</span>get it running</div>
   <h2>Two minutes to your chats.</h2>
   <div class="two">
-    <div class="code"><p class="cap">install (Go and a C compiler; kitty recommended)</p><button class="btn" data-copy-from="c5">copy</button><pre id="c5"><span class="fn">git</span> clone git@github.com:sambuaneesh/whatsapp-tui.git
+    <div class="code"><p class="cap">install (Arch: from the AUR; elsewhere: Go and a C compiler)</p><button class="btn" data-copy-from="c5">copy</button><pre id="c5"><span class="c"># Arch Linux</span>
+<span class="fn">yay</span> -S whatsapp-tui-git
+
+<span class="c"># anywhere else</span>
+<span class="fn">git</span> clone git@github.com:sambuaneesh/whatsapp-tui.git
 <span class="kw">cd</span> whatsapp-tui
 <span class="fn">make</span> install         <span class="c"># to ~/.local/bin, plus a launcher entry</span>
 <span class="fn">whatsapp-tui</span>         <span class="c"># scan the QR: WhatsApp → Settings → Linked devices</span>
