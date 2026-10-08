@@ -24,6 +24,11 @@ func (eh *eventHandler) Handle(evt interface{}) {
 	switch v := evt.(type) {
 	case *events.Message:
 		eh.handleMessage(v)
+	case *events.UndecryptableMessage:
+		if v.Info.Chat.Server != types.BroadcastServer {
+			eh.sm.canonicalSource(context.Background(), &v.Info.MessageSource)
+			eh.handleViewOnceNotice(v)
+		}
 	case *events.Connected:
 		eh.sm.mu.Lock()
 		eh.sm.reconnecting = false
@@ -412,6 +417,14 @@ func (eh *eventHandler) handleMessage(evt *events.Message) {
 	}
 	if id, text, ok := editOf(evt.Message); ok {
 		eh.sm.handleEdit(evt.Info.Chat.String(), id, text)
+		return
+	}
+	if evt.IsViewOnce {
+		// shown, without its media (it opens only on the phone)
+		text := viewOnceText(evt.Message)
+		stripped := *evt
+		stripped.Message = &waE2E.Message{}
+		eh.processIncomingMessage(&stripped, text, text)
 		return
 	}
 	text, preview := extractMessageContent(evt.Message)

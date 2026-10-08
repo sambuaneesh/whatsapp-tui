@@ -29,7 +29,8 @@ func (m Model) setPrivateReading(on bool) (tea.Model, tea.Cmd) {
 // privateBadge shows in the status bar while private reading is on.
 func (m Model) privateBadge() string {
 	if !m.privateRead {
-		return ""
+		// always there, so a click turns it on
+		return lipgloss.NewStyle().Background(colorBarBg).Foreground(pal.Muted).Render(" 👁 read ")
 	}
 	return lipgloss.NewStyle().Background(colorBarBg).Foreground(pal.Iris).Render(" 🙈 private ")
 }

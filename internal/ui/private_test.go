@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/Srindot/whatsapp-tui/internal/messages"
@@ -60,5 +61,26 @@ func TestPrivateReading(t *testing.T) {
 	runCmds(cmd)
 	if m.privateRead || m.chats[0].Unread != 0 {
 		t.Fatalf("private %v, unread %d", m.privateRead, m.chats[0].Unread)
+	}
+}
+
+func TestPrivateBadgeAlwaysThereAndToggles(t *testing.T) {
+	m, _ := testModel(t)
+	if !strings.Contains(ansi.Strip(m.renderStatusLine()), "👁 read") {
+		t.Fatal("badge should show while private reading is off")
+	}
+	x := m.width - lipgloss.Width(m.statusRight()) + 1
+	click := func() {
+		next, _ := m.Update(tea.MouseMsg{X: x, Y: m.mainHeight(), Button: tea.MouseButtonLeft, Action: tea.MouseActionPress})
+		m = next.(Model)
+	}
+	click()
+	if !m.privateRead || !strings.Contains(ansi.Strip(m.renderStatusLine()), "🙈 private") {
+		t.Fatal("click should turn it on")
+	}
+	x = m.width - lipgloss.Width(m.statusRight()) + 1
+	click()
+	if m.privateRead {
+		t.Fatal("click again should turn it off")
 	}
 }

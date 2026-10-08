@@ -185,6 +185,10 @@ Results (before → after):
 
 ## Known bugs
 
+- [x] View-once messages never showed (WhatsApp sends linked devices an
+      "unavailable" notice instead): now shown as "👁 View once photo",
+      opens only on the phone
+
 - [x] The app froze, and new windows closed blank: two chat-settings
       resyncs overlapped (start + a 409 on mark-read), one hit a nil
       pointer while holding the session's read lock and its cleanup

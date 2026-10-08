@@ -249,8 +249,13 @@ mouse while it runs, hold `shift` while dragging.
 `:private` (or `private_reading = true` in the config) lets you open chats
 without sending read receipts: no blue ticks for the sender, and the chat
 stays unread for you. Mark a chat read when you choose: `U` in the list or
-in the chat, or `:read`. The status bar shows 🙈 while it's on; click it (or
-`:private off`) to turn it off, which marks the open chat read.
+in the chat, or `:read`. The status bar always has its switch: **👁 read**
+while it's off, **🙈 private** while it's on; click it to flip it
+(`:private on`/`off` too). Turning it off marks the open chat read.
+
+**View-once** photos, videos and voice messages show as "👁 View once
+photo" (or video, voice message, message): WhatsApp only lets your phone
+open them, so they can't be opened here, but you see that they came.
 
 ## Deleted messages
 

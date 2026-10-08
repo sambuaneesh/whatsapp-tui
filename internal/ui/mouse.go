@@ -73,7 +73,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m, m.openScheduled()
 	}
 	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress && m.privateBadgeAt(msg.X, msg.Y) {
-		return m.setPrivateReading(false)
+		return m.setPrivateReading(!m.privateRead)
 	}
 	overList := m.screen == screenList || msg.X < m.sidebarW
 	if m.split != nil && m.screen == screenChat && msg.X > m.sidebarW+m.rightWidth() {

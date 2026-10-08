@@ -142,6 +142,7 @@ var helpSections = []struct {
 		{"", "right-click a message to react"},
 		{"", "click reactions to see who reacted"},
 		{"", "click 🔔 in the status bar: notifications"},
+		{"", "click 👁/🙈 there: private reading on/off"},
 		{"", "middle- or ctrl+click a chat: open beside"},
 		{"", "click ✕ on the right pane: close the split"},
 		{"", "click the 📌 bar: jump to the pinned message"},

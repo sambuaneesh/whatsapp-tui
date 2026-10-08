@@ -60,6 +60,7 @@ var tagLabels = []struct{ tag, label string }{
 	{"[EVENT]", "📅"},
 	{"[CONTACTS]", "👥"},
 	{"[REACTION]", "Reacted"},
+	{"[VIEW ONCE]", "👁 View once"},
 }
 
 // splitTag returns the leading media tag of text (if any) and the rest.
@@ -447,6 +448,9 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 		}
 	}
 
+	if strings.HasPrefix(msg.Text, messages.ViewOnceTag) {
+		lines = append(lines, styleMuted.Italic(true).Render("opens only on your phone"))
+	}
 	stamp := stampStyle.Render(t.Format("15:04"))
 	if msg.Pinned {
 		stamp = "📌 " + stamp

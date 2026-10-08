@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/proto/waHistorySync"
 	"go.mau.fi/whatsmeow/proto/waWeb"
 	"go.mau.fi/whatsmeow/types"
@@ -244,6 +245,11 @@ func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
 			}
 
 			text, preview := extractMessageContent(evt.Message)
+			if evt.IsViewOnce {
+				text = viewOnceText(evt.Message) // without its media
+				preview = text
+				evt.Message = &waE2E.Message{}
+			}
 			if text == "" {
 				continue
 			}
