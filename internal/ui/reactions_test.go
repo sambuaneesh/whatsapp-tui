@@ -47,11 +47,21 @@ func TestQuickBarKeysAndClicks(t *testing.T) {
 	}
 }
 
-func TestRightClickOpensQuickBar(t *testing.T) {
+func TestRightClickSelectsThenReacts(t *testing.T) {
 	m := visualModel(t, &fakeActions{}, fakeClip{})
 	x, y := findLast(t, m, "yes!")
-	next, _ := m.Update(tea.MouseMsg{X: x + 1, Y: y, Button: tea.MouseButtonRight, Action: tea.MouseActionPress})
-	m = next.(Model)
+	rightClick := func() {
+		next, _ := m.Update(tea.MouseMsg{X: x + 1, Y: y, Button: tea.MouseButtonRight, Action: tea.MouseActionPress})
+		m = next.(Model)
+	}
+	// first: selected, ready for actions
+	rightClick()
+	if sel, _ := m.selected(); m.mode != modeVisual || m.picker || sel.Id != "m2" {
+		t.Fatalf("first right-click: mode %v picker %v sel %s", m.mode, m.picker, sel.Id)
+	}
+	x, y = findLast(t, m, "yes!")
+	// again on it: the reactions
+	rightClick()
 	if sel, _ := m.selected(); m.mode != modeVisual || !m.picker || sel.Id != "m2" {
 		t.Fatalf("mode %v picker %v sel %s", m.mode, m.picker, sel.Id)
 	}

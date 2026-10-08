@@ -169,9 +169,17 @@ func (m Model) rightClickMessage(x, y int) (tea.Model, tea.Cmd) {
 	if m.mode == modeInsert {
 		m.compose.Blur()
 	}
+	// the first right-click selects it (ready for r, f, y, d, i…); a
+	// second one on the same message opens the reactions
+	again := m.mode == modeVisual && m.sel == sp.idx && m.rangeFrom == noRange
 	m.mode, m.sel = modeVisual, sp.idx
+	m.focus = paneMessages
 	m.refreshMessages(false)
-	return m, m.openPicker()
+	if again && !m.picker {
+		return m, m.openPicker()
+	}
+	m.picker = false
+	return m, nil
 }
 
 // ---------- emoji grid ----------
