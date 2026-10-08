@@ -104,3 +104,12 @@ func TestOldGroupReadsAreDowngraded(t *testing.T) {
 		t.Fatal("one-to-one reads are right and stay")
 	}
 }
+
+func TestOldGroupMessageHasNoRecord(t *testing.T) {
+	sm := receiptSM(t)
+	addTestMsg(t, sm.db, Message{Id: "old", ChatId: "g@g.us", FromMe: true, Text: "x", Timestamp: 1, Status: StatusDelivered})
+	info, _ := sm.MessageReceipts(context.Background(), Message{Id: "old", ChatId: "g@g.us", FromMe: true, Status: StatusDelivered})
+	if !info.NoRecord || len(info.Waiting) != 0 {
+		t.Fatalf("old message: %+v", info)
+	}
+}

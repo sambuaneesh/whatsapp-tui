@@ -109,6 +109,10 @@ func (m Model) messageInfoLines(width int) []string {
 		return append(lines, styleMuted.Render("Asking who has seen it…"))
 	}
 	info := v.info
+	if info.NoRecord {
+		return append(lines, styleMuted.Render("Who read this wasn't recorded: it was sent before the app kept receipts per person."),
+			styleMuted.Render("Messages you send from now on show who read them, and when."))
+	}
 	name := func(r messages.Receipt) string {
 		if r.Name != "" {
 			return r.Name

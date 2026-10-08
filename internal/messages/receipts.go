@@ -285,6 +285,7 @@ type MessageInfo struct {
 	Delivered []Receipt // delivered, not read yet
 	Waiting   []Receipt // not even delivered yet (groups)
 	Group     bool
+	NoRecord  bool // a group message from before receipts were kept
 }
 
 // MessageReceipts tells who has seen (or got) a message you sent. In a
@@ -299,6 +300,10 @@ func (sm *SessionManager) MessageReceipts(ctx context.Context, m Message) (Messa
 		return info, err
 	}
 	info.Group = strings.HasSuffix(m.ChatId, GROUPSUFFIX)
+	if info.Group && len(rs) == 0 && m.Status >= StatusDelivered {
+		info.NoRecord = true // who read it wasn't recorded: don't guess
+		return info, nil
+	}
 	users := map[string]bool{}
 	for u := range rs {
 		users[u] = true
