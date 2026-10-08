@@ -129,6 +129,7 @@ you're at the bottom). Move with `j` `k`, `gg` (oldest) and `G` (newest), then:
 | `p` | reply privately to a group member |
 | `r` | react: `1`–`6` quick emoji, `x` removes yours, `+` (or start typing a name like `fire`) opens every emoji |
 | `w` | who reacted; `x` removes your reaction |
+| `i` | message info (your messages): who read it and when, who has it, who's still waiting |
 | `e` | edit your message: it opens in the input box; `enter` saves, `esc` cancels (text messages, first 15 minutes) |
 | `f` | forward: type to filter chats, `space` picks several, `enter` sends |
 | `y` | copy the text and/or image |
@@ -216,6 +217,12 @@ Your messages show two blocks instead of ticks:
 | `■■` grey | delivered |
 | `■■` blue | read (purple: voice note or video played) |
 | `✕` | not sent — `v`, select it, `R` to retry |
+
+In a **group**, the blocks speak for everyone, as on the phone: grey once
+every member has it, blue once every member has read it (one person
+reading it doesn't make it blue). To see who has: `v` on your message,
+then **`i`** (Message info): who read it and when, who it was delivered
+to, and who hasn't got it yet. Works in one-to-one chats too.
 
 If you turned read receipts off in WhatsApp, WhatsApp doesn't send you
 anyone's either, so one-to-one chats stop at delivered.

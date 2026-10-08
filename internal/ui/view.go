@@ -300,7 +300,7 @@ func (m Model) statusRight() string {
 }
 
 // visualHint lists the visual-mode actions.
-const visualHint = "j/k gg/G move · V several · enter reply · p private · r react · w who reacted · e edit · f forward · space view · y copy · s save · d delete · P pin · T task · b save · o open · F1 all · esc"
+const visualHint = "j/k gg/G move · V several · enter reply · p private · r react · w who reacted · e edit · f forward · space view · y copy · s save · d delete · P pin · i info · T task · b save · o open · F1 all · esc"
 
 func (m Model) renderCommandLine() string {
 	switch {
@@ -367,6 +367,8 @@ func (m Model) View() string {
 	switch {
 	case m.settings != nil:
 		main = m.renderSettings(m.width, h)
+	case m.minfo != nil:
+		main = m.renderMessageInfo(m.width, h)
 	case m.showHelp:
 		main = m.renderHelp(m.width, h)
 	case m.emo != nil:

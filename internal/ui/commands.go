@@ -313,6 +313,8 @@ func commandList() []command {
 		{id: "p.outdent", title: "Task: Out of Its Checklist", keys: "<", when: onTask, run: personalKey("<")},
 		{id: "p.delete", title: "Task: Delete", keys: "d", when: onItem, run: personalKey("d")},
 		{id: "p.copyone", title: "Task: Copy", keys: "y", when: onItem, run: personalKey("y")},
+		{id: "sel.info", title: "Selected: Message Info (Who Read It)", keys: "i",
+			when: selWhen(func(_ Model, s messages.Message) bool { return s.FromMe }), run: visualKey("i")},
 		{id: "sel.task", title: "Selected: Make a Task (to 📥 Inbox)", keys: "T", when: func(m Model) bool { return oneSelected(m) && hasPersonal(m) }, run: visualKey("T")},
 		{id: "sel.savemsg", title: "Selected: Save to 🔖 Saved", keys: "b", when: func(m Model) bool { return oneSelected(m) && hasPersonal(m) }, run: visualKey("b")},
 

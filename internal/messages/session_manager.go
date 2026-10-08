@@ -54,6 +54,7 @@ type SessionManager struct {
 	nameTimer       *time.Timer     // pending debounced name refresh
 	listTimer       *time.Timer     // pending debounced chat list push
 	refreshTimer    *time.Timer     // pending debounced open-chat refresh
+	groupMembers    groupMembers    // who's in each group, for per-person receipts
 }
 
 // initialize the SessionManager

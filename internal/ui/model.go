@@ -80,6 +80,7 @@ type Model struct {
 	ai         Assistant                // the local model (nil: off)
 	noindex    map[string]bool          // chats search doesn\'t index
 	settings   *settingsView            // the settings screen, when open
+	minfo      *msgInfoView             // Message info (i in visual mode), when open
 	aiStash    Assistant                // the model, while AI help is turned off
 	allChats   []*messages.Conversation // every known chat and contact (forward targets)
 	archive    bool                     // showing archived chats instead of the inbox
@@ -1031,6 +1032,8 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case pinsMsg:
 		return m.applyPins(msg)
+	case msgInfoMsg:
+		return m.applyMessageInfo(msg)
 	case aiTaskMsg, aiSuggestMsg, aiPlanMsg, aiSummaryMsg:
 		next, cmd, _ := m.applyAI(msg)
 		return next, cmd
@@ -1151,6 +1154,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	if m.settings != nil {
 		return m.handleSettings(msg)
+	}
+	if m.minfo != nil {
+		return m.handleMessageInfo(msg)
 	}
 	if next, cmd, ok := m.globalKey(key); ok {
 		return next, cmd

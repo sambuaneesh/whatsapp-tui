@@ -811,9 +811,18 @@ Priya: @You you're coming right?</div>
         <span style="color:var(--muted)">□□</span><span>sending</span>
         <span><span style="color:var(--subtle)">■</span><span style="color:var(--muted)">□</span></span><span>sent: it reached WhatsApp</span>
         <span style="color:var(--subtle)">■■</span><span>delivered to their phone</span>
-        <span class="w-foam">■■</span><span>read, in blue like WhatsApp's ticks (purple when a voice note or video was played)</span>
+        <span class="w-foam">■■</span><span>read, in blue like WhatsApp's ticks (purple when a voice note or video was played); in a group, only once everyone has read it</span>
         <span class="w-love">✕</span><span>not sent: <kbd>v</kbd>, select it, <kbd>R</kbd> retries</span>
       </div>
+      <p><kbd>i</kbd> on your message shows who read it and when, who has it, and who's still waiting:</p>
+      <pre class="scr"><b>Message info</b>  <span style="color:var(--muted)">·  sent 14:02</span>
+<span class="w-foam">✓✓ Read by  2</span>
+  Priya                 14:03
+  Ravi                  14:10
+<span style="color:var(--subtle)">✓✓ Delivered to  1</span>
+  Arjun                 14:02
+<span style="color:var(--muted)">✓ Not delivered yet  1</span>
+  Amma</pre>
     </div>
   </div>
 </section>
@@ -1911,7 +1920,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["write", "ctrl+a", "select all; type to replace, ctrl+c copy, ctrl+x cut"], ["write", "ctrl+← ctrl+→", "jump a word"], ["write", "ctrl+backspace", "delete a word"],
     ["write", "esc", "back to normal mode (what you wrote stays as a draft)"],
     ["visual", "enter", "reply"], ["visual", "p", "reply privately (groups)"], ["visual", "r", "react: 1–6, x removes, + or a name for any emoji"],
-    ["visual", "w", "who reacted"], ["visual", "e", "edit your message (first 15 minutes)"], ["visual", "f", "forward (space picks several chats)"],
+    ["visual", "w", "who reacted"], ["visual", "i", "message info: who read it, when; who's still waiting"], ["visual", "e", "edit your message (first 15 minutes)"], ["visual", "f", "forward (space picks several chats)"],
     ["visual", "y", "copy the text or picture"], ["visual", "s", "save media to Downloads"], ["visual", "d", "delete: enter for you, e for everyone"],
     ["visual", "space", "view full screen, play a voice note or video"], ["visual", "o", "open in its app, or open the message's link"],
     ["visual", "V", "select several: then y copy, f forward, d delete, s save"], ["visual", "R", "retry a message that didn't send"], ["visual", "P", "pin for everyone, 7 days (again: unpin)"],

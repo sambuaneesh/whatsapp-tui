@@ -281,6 +281,15 @@ func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
 			quoteOf(&msg, evt.Message)
 			if evt.Info.IsFromMe {
 				msg.Status = statusFromHistory(webMsg.GetStatus())
+				// who in a group got and read it, for Message info
+				if urs := webMsg.GetUserReceipt(); len(urs) > 0 {
+					var hr []historyReceipt
+					for _, u := range urs {
+						hr = append(hr, historyReceipt{user: u.GetUserJID(), delivered: u.GetReceiptTimestamp(),
+							read: u.GetReadTimestamp(), played: u.GetPlayedTimestamp()})
+					}
+					sm.storeHistoryReceipts(jidStr, evt.Info.ID, hr)
+				}
 			}
 
 			batch = append(batch, msg)

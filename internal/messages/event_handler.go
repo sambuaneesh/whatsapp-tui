@@ -62,6 +62,10 @@ func (eh *eventHandler) Handle(evt interface{}) {
 		}
 		eh.sm.setChatMute(v.JID, v.Action.GetMuted(), v.Action.GetMuteEndTimestamp())
 	case *events.GroupInfo:
+		if len(v.Join) > 0 || len(v.Leave) > 0 {
+			eh.sm.forgetMembers(eh.sm.pnForLID(context.Background(), v.JID).String())
+			eh.sm.forgetMembers(v.JID.String())
+		}
 		if v.Name != nil {
 			eh.sm.renameChat(v.JID, v.Name.Name)
 		}

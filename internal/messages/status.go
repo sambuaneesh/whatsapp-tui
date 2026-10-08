@@ -66,6 +66,15 @@ func (sm *SessionManager) handleReceipt(evt *events.Receipt) {
 		return // our other devices reading their chats
 	}
 	sm.debugf("receipt %q from %s for %d message(s) in %s", evt.Type, evt.Sender, len(evt.MessageIDs), evt.Chat)
+	sm.canonicalSource(context.Background(), &evt.MessageSource) // LID chats
+	if evt.Chat.Server == types.GroupServer {
+		// one member's receipt isn't the group's: see receipts.go
+		sm.handleGroupReceipt(evt, st)
+		return
+	}
+	for _, id := range evt.MessageIDs {
+		sm.db.AddReceipt(id, sm.receiptUser(context.Background(), evt.Chat), st, evt.Timestamp.UnixMilli())
+	}
 	changed := false
 	for _, id := range evt.MessageIDs {
 		ok, err := sm.db.AdvanceStatus(id, st)
@@ -75,7 +84,6 @@ func (sm *SessionManager) handleReceipt(evt *events.Receipt) {
 		changed = changed || ok
 	}
 	if changed {
-		sm.canonicalSource(context.Background(), &evt.MessageSource) // LID chats
 		sm.scheduleChatRefresh(evt.Chat.String())
 	}
 }

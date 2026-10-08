@@ -227,6 +227,8 @@ func (m Model) handleVisual(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.openReactors(sel, "")
 	case "P": // pin / unpin
 		return m.pinSelected(0)
+	case "i": // message info: who saw it
+		return m.openMessageInfo(sel)
 	case "T": // a task from it
 		return m.taskFromMessage(sel)
 	case "b": // keep it in 🔖 Saved

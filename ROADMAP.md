@@ -185,6 +185,12 @@ Results (before → after):
 
 ## Known bugs
 
+- [x] Group messages turned blue when one member read them: receipts are
+      now kept per person, and the ticks are what's true of everyone
+      (grey when all have it, blue when all read it). Old group "read"s
+      without receipts went back to grey. `i` in visual mode shows who
+      read it (Message info); history sync's per-person receipts are kept
+
 - [x] View-once messages never showed (WhatsApp sends linked devices an
       "unavailable" notice instead): now shown as "👁 View once photo",
       opens only on the phone

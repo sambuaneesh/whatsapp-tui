@@ -102,6 +102,7 @@ var helpSections = []struct {
 		{"p", "reply privately (groups)"},
 		{"r", "react: 1–6, x remove, + or a name: any emoji"},
 		{"w", "who reacted (x removes yours)"},
+		{"i", "message info: who read it, when"},
 		{"P", "pin for everyone, 7 days (again: unpin)"},
 		{"e", "edit your message (first 15 min)"},
 		{"f", "forward (space picks several)"},
