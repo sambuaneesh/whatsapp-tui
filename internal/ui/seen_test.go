@@ -89,10 +89,17 @@ func TestUnfocusedWindowDoesntMarkRead(t *testing.T) {
 	if got := sent(ch, cmds...); len(got) != 1 {
 		t.Fatalf("sent %v with the window in the background", got)
 	}
+	// focus alone (hover, with focus-follows-mouse) isn't reading
 	next, cmd := m.Update(tea.FocusMsg{})
 	m = next.(Model)
-	if got := sent(ch, cmd); len(got) != 1 || got[0] != "read "+seenJID {
+	if got := sent(ch, cmd); len(got) != 0 {
 		t.Fatalf("focus: sent %v", got)
+	}
+	// a click in the window is
+	next, cmd = m.Update(tea.MouseMsg{X: 60, Y: 5, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress})
+	m = next.(Model)
+	if got := sent(ch, cmd); len(got) != 1 || got[0] != "read "+seenJID {
+		t.Fatalf("click: sent %v", got)
 	}
 	_ = m
 }

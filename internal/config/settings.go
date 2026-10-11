@@ -77,6 +77,7 @@ type Ui struct {
 	HighlightOpacity float64
 	MessageSpacing   string // compact, normal or roomy: blank lines between messages
 	BubbleStyle      string // rounded, square, thick, double or none
+	PlainGroups      bool   // don't colour group bubbles by sender
 }
 
 type Colors struct {

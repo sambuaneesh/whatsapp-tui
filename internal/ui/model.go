@@ -62,32 +62,34 @@ type Model struct {
 	showHelp      bool
 	helpScroll    int
 
-	chats      []*messages.Conversation // chats with messages, newest first
-	listVer    int                      // changes with chats (see listMemo)
-	memo       *listMemo
-	rows       *bubbleCache  // rendered chat list entries
-	qo         *paletteState // the palette (ctrl+p, F1), when open
-	recent     *recents
-	preload    *preload
-	pins       []messages.Message       // the open chat's pinned messages, newest first
-	pinIdx     int                      // which one the pinned bar shows
-	personal   *personal.Store          // your lists, notes and saved messages (nil: off)
-	pv         *personalView            // the open list
-	pconvs     []*messages.Conversation // the lists, as chats
-	waChats    []*messages.Conversation // the chats from WhatsApp, as last received
-	pendingSrc *msgSource               // the message :task makes a task from
-	mirror     Mirrorer
-	ai         Assistant                // the local model (nil: off)
-	noindex    map[string]bool          // chats search doesn\'t index
-	settings   *settingsView            // the settings screen, when open
-	minfo      *msgInfoView             // Message info (i in visual mode), when open
-	aiStash    Assistant                // the model, while AI help is turned off
-	allChats   []*messages.Conversation // every known chat and contact (forward targets)
-	archive    bool                     // showing archived chats instead of the inbox
-	unreadOnly bool                     // list shows only chats with unread messages
-	filter     string
-	cursor     int // index into the list items (see itemAt)
-	listOffset int
+	chats           []*messages.Conversation // chats with messages, newest first
+	listVer         int                      // changes with chats (see listMemo)
+	memo            *listMemo
+	rows            *bubbleCache  // rendered chat list entries
+	qo              *paletteState // the palette (ctrl+p, F1), when open
+	recent          *recents
+	preload         *preload
+	pins            []messages.Message       // the open chat's pinned messages, newest first
+	pinIdx          int                      // which one the pinned bar shows
+	personal        *personal.Store          // your lists, notes and saved messages (nil: off)
+	pv              *personalView            // the open list
+	pconvs          []*messages.Conversation // the lists, as chats
+	waChats         []*messages.Conversation // the chats from WhatsApp, as last received
+	pendingSrc      *msgSource               // the message :task makes a task from
+	mirror          Mirrorer
+	ai              Assistant                // the local model (nil: off)
+	noindex         map[string]bool          // chats search doesn\'t index
+	settings        *settingsView            // the settings screen, when open
+	minfo           *msgInfoView             // Message info (i in visual mode), when open
+	engaged         bool                     // you clicked or typed in the window since it got focus (hover isn't reading)
+	openedPrivately bool                     // the open chat was opened in private reading: it stays unread
+	aiStash         Assistant                // the model, while AI help is turned off
+	allChats        []*messages.Conversation // every known chat and contact (forward targets)
+	archive         bool                     // showing archived chats instead of the inbox
+	unreadOnly      bool                     // list shows only chats with unread messages
+	filter          string
+	cursor          int // index into the list items (see itemAt)
+	listOffset      int
 
 	current  *messages.Conversation // chat open on the right, nil if none
 	msgs     []messages.Message
@@ -195,6 +197,7 @@ type Options struct {
 	PaintBackground bool   // fill the screen with the theme's base colour
 	MessageSpacing  string // compact, normal, roomy
 	BubbleStyle     string // rounded, square, thick, double, none
+	PlainGroups     bool   // don't colour group bubbles by sender
 
 	Mouse bool // mouse tracking is on (turned back on after other programs)
 
@@ -255,6 +258,7 @@ const composePlaceholder = "press i to type a message"
 // initial seeds the chat list with cached conversations.
 func New(commands chan<- messages.Command, initial []*messages.Conversation, opts Options) Model {
 	ApplyTheme(opts.Theme)
+	SetGroupTint(!opts.PlainGroups)
 	SetLook(opts.MessageSpacing, opts.BubbleStyle)
 	sidebarWidth := opts.SidebarWidth
 	compose := newCompose()
@@ -652,6 +656,11 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 		return m.openPersonal(c)
 	}
 	m.pv = nil
+	// opened privately, it stays unread even if private reading goes off
+	// (until you open it again)
+	if m.current == nil || m.current.JID != c.JID || m.screen != screenChat {
+		m.openedPrivately = m.privateRead
+	}
 	m.screen = screenChat
 	m.focus = paneMessages
 	var save tea.Cmd
@@ -703,7 +712,8 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 // screen and the terminal has focus. Called on open, when the chat list
 // changes (a new message arrived) and when the window gets focus back.
 func (m *Model) markSeen() tea.Cmd {
-	if m.screen != screenChat || m.current == nil || !m.focused || m.privateRead || isPersonal(m.current.JID) {
+	if m.screen != screenChat || m.current == nil || !m.focused || !m.engaged || m.privateRead || m.openedPrivately ||
+		isPersonal(m.current.JID) {
 		return nil
 	}
 	return m.markRead(m.current.JID)
@@ -757,6 +767,33 @@ func (m *Model) back() tea.Cmd {
 // Update handles all events, then starts loading any images that became
 // visible.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var seen tea.Cmd
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		seen = m.engage()
+	case tea.MouseMsg:
+		if msg.Action == tea.MouseActionPress && msg.Button != tea.MouseButtonWheelUp && msg.Button != tea.MouseButtonWheelDown {
+			seen = m.engage()
+		}
+	}
+	if seen != nil {
+		next, cmd := m.update1(msg)
+		return next, tea.Batch(seen, cmd)
+	}
+	return m.update1(msg)
+}
+
+// engage notes that you're using the window (a click or a key): the open
+// chat is being read now.
+func (m *Model) engage() tea.Cmd {
+	if m.engaged {
+		return nil
+	}
+	m.engaged = true
+	return m.markSeen()
+}
+
+func (m Model) update1(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case preloadTick:
 		return m, m.onPreloadTick(msg)
@@ -1021,13 +1058,15 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.markSeen(), m.splitChanged())
 
 	case tea.FocusMsg:
+		// focus alone (a window manager focusing on hover) isn't reading:
+		// a click or a key in the window is (see Update)
 		m.notifyLogf("window focused")
-		m.focused = true
-		return m, tea.Batch(m.markSeen(), m.blink(true))
+		m.focused, m.engaged = true, false
+		return m, m.blink(true)
 
 	case tea.BlurMsg:
 		m.notifyLogf("window unfocused or closed")
-		m.focused = false
+		m.focused, m.engaged = false, false
 		return m, tea.Batch(m.blink(false), m.stashDraft())
 
 	case pinsMsg:

@@ -13,15 +13,12 @@ import (
 // setPrivateReading turns private reading on or off and saves it.
 func (m Model) setPrivateReading(on bool) (tea.Model, tea.Cmd) {
 	m.privateRead = on
-	m.notice, m.noticeErr = "Private reading off: opening a chat marks it read", false
+	m.notice, m.noticeErr = "Private reading off: chats you open from now on are marked read (one opened privately stays unread until you open it again)", false
 	if on {
 		m.notice = "Private reading on: no read receipts until you mark a chat read (U or :read)"
 	}
 	if err := config.SetPrivateReading(on); err != nil {
 		m.notice, m.noticeErr = "private reading: "+err.Error(), true
-	}
-	if !on {
-		return m, m.markSeen() // the open chat is being read now
 	}
 	return m, nil
 }

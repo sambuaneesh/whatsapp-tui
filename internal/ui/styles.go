@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"hash/fnv"
 	"strings"
 
@@ -41,14 +42,39 @@ var (
 )
 
 func init() {
-	// Group sender colours, chosen for contrast on the Overlay bubble.
+	// Group sender colours: a name and (softened) its bubble's border. They
+	// keep clear of the colours that mean something else: iris (your
+	// messages), rose (selected) and love (mentions you, not sent). Peach
+	// and periwinkle are blends, to have five that stay apart.
 	for _, p := range []*Palette{&RosePine, &RosePineMoon} {
-		p.senders = []lipgloss.Color{p.Love, p.Gold, p.Rose, p.Iris, p.Leaf}
+		p.senders = []lipgloss.Color{p.Gold, p.Foam, p.Leaf, mix(p.Gold, p.Love, 0.5), mix(p.Foam, p.Iris, 0.5)}
 	}
-	// Dawn's gold is too light on its cream background; pine stays for contrast.
-	RosePineDawn.senders = []lipgloss.Color{RosePineDawn.Love, RosePineDawn.Iris, RosePineDawn.Rose,
-		RosePineDawn.Leaf, RosePineDawn.Pine}
+	// Dawn's gold is too light on its cream background
+	d := &RosePineDawn
+	d.senders = []lipgloss.Color{d.Pine, d.Foam, d.Leaf, mix(d.Gold, d.Love, 0.55), mix(d.Pine, d.Iris, 0.5)}
 	ApplyTheme("rose-pine")
+}
+
+// mix blends two #rrggbb colours: t of the way from a to b.
+func mix(a, b lipgloss.Color, t float64) lipgloss.Color {
+	pa, pb := hexRGB(string(a)), hexRGB(string(b))
+	var out [3]int
+	for i := range out {
+		out[i] = int(float64(pa[i])*(1-t) + float64(pb[i])*t + 0.5)
+	}
+	return lipgloss.Color(fmt.Sprintf("#%02x%02x%02x", out[0], out[1], out[2]))
+}
+
+func hexRGB(s string) [3]int {
+	var r, g, b int
+	fmt.Sscanf(strings.TrimPrefix(s, "#"), "%02x%02x%02x", &r, &g, &b)
+	return [3]int{r, g, b}
+}
+
+// senderTint is a group member's bubble border: their colour, softened
+// toward the background so the chat stays calm.
+func senderTint(id string) lipgloss.Color {
+	return mix(senderColor(id), pal.Base, 0.4)
 }
 
 // ThemeByName returns the palette for a config value; unknown names fall back

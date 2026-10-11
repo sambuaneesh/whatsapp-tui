@@ -53,14 +53,26 @@ func TestPrivateReading(t *testing.T) {
 	if !found {
 		t.Fatal(":read didn't mark it read")
 	}
-	// clicking the badge turns it off, and the open chat counts as read
+	// clicking the badge turns it off; the chat opened privately stays
+	// unread...
 	m.chats[0].Unread = 2
 	line := ansi.Strip(m.renderStatusLine())
 	x := ansi.StringWidth(line[:strings.Index(line, "🙈")])
 	m, cmd := click(t, m, x+1, m.mainHeight())
 	runCmds(cmd)
-	if m.privateRead || m.chats[0].Unread != 0 {
+	if m.privateRead || m.chats[0].Unread != 2 {
 		t.Fatalf("private %v, unread %d", m.privateRead, m.chats[0].Unread)
+	}
+	for _, c := range sentCommands(ch) {
+		if strings.HasPrefix(c, "read ") {
+			t.Fatal("turning private reading off marked the open chat read")
+		}
+	}
+	// ...until you open it again, normally
+	m, cmds = keys(t, m, "backspace", "enter")
+	runCmds(cmds...)
+	if m.chats[0].Unread != 0 {
+		t.Fatalf("reopened: unread %d", m.chats[0].Unread)
 	}
 }
 

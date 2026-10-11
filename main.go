@@ -155,6 +155,7 @@ func run() error {
 		PaintBackground: config.Config.Ui.PaintBackground,
 		MessageSpacing:  config.Config.Ui.MessageSpacing,
 		BubbleStyle:     config.Config.Ui.BubbleStyle,
+		PlainGroups:     config.Config.Ui.PlainGroups,
 		Images:          termimg.Detect(config.Config.Ui.Images),
 		Media:           mediaSource{sm, config.Config.Ui.Avatars},
 		Sender:          sm,

@@ -185,6 +185,12 @@ Results (before → after):
 
 ## Known bugs
 
+- [x] Chats were marked read on focus alone (Hyprland focuses on hover):
+      now only after a click or a key in the window. Turning private
+      reading off no longer marks the chat opened privately as read
+- [x] Group bubbles all looked alike: each sender's border is now a soft
+      tint of their name's colour (Settings to turn off)
+
 - [x] Group messages turned blue when one member read them: receipts are
       now kept per person, and the ticks are what's true of everyone
       (grey when all have it, blue when all read it). Old group "read"s

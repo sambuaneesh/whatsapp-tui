@@ -67,8 +67,11 @@ messages opens with the "N unread messages" line in the middle of the screen
 otherwise (or when the phone reports more unread than have loaded) at the
 newest message. Older history loading in doesn't move what you're reading.
 
-A chat counts as read once it's open while the terminal window has focus
-(messages that arrive while you watch too). That clears it on your phone as
+A chat counts as read once it's open and you're using the window: you've
+clicked in it or pressed a key since it got focus. Focus alone doesn't
+count, so a window manager that focuses windows as the mouse passes over
+them (Hyprland's default) doesn't mark anything read; messages that arrive
+while you're using it are read too. That clears it on your phone as
 well, and reading it on the phone clears it here.
 
 | Key | |
@@ -219,6 +222,10 @@ Your messages show two blocks instead of ticks:
 | `■■` blue | read (purple: voice note or video played) |
 | `✕` | not sent — `v`, select it, `R` to retry |
 
+In a **group**, each person's bubbles have a border in their own soft
+colour (the colour of their name), so you can tell who's talking at a
+glance; Settings → "Colour group messages by sender" turns it off.
+
 In a **group**, the blocks speak for everyone, as on the phone: grey once
 every member has it, blue once every member has read it (one person
 reading it doesn't make it blue). To see who has: `v` on your message,
@@ -259,7 +266,8 @@ without sending read receipts: no blue ticks for the sender, and the chat
 stays unread for you. Mark a chat read when you choose: `U` in the list or
 in the chat, or `:read`. The status bar always has its switch: **👁 read**
 while it's off, **🙈 private** while it's on; click it to flip it
-(`:private on`/`off` too). Turning it off marks the open chat read.
+(`:private on`/`off` too). A chat you opened privately stays unread after
+you turn it off, until you open it again.
 
 **View-once** photos, videos and voice messages show as "👁 View once
 photo" (or video, voice message, message): WhatsApp only lets your phone
@@ -582,7 +590,7 @@ the few marked ↻ apply when the app starts again (`:q!`, then open it).
 
 | Group | Settings |
 |---|---|
-| Appearance | theme (Rosé Pine, Moon, Dawn) · space between messages (compact, normal, roomy) · bubble borders (rounded ╭, square ┌, thick ┏, double ╔, none) · chat list width · paint the background · mouse · pictures ↻ · profile pictures ↻ · see-through highlights ↻ |
+| Appearance | theme (Rosé Pine, Moon, Dawn) · colour group messages by sender · space between messages (compact, normal, roomy) · bubble borders (rounded ╭, square ┌, thick ┏, double ╔, none) · chat list width · paint the background · mouse · pictures ↻ · profile pictures ↻ · see-through highlights ↻ |
 | Notifications & privacy | notifications (all, popup, sound, off) · private reading |
 | The app | keep running when closed ↻ · downloads folder · media kept on disk · scripts may send ↻ |
 | Search & AI | search by meaning ↻ · pause indexing while gaming ↻ · chats left out of search · AI help · AI model ↻ |

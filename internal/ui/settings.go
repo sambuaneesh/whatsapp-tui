@@ -112,6 +112,18 @@ func settingsList() []setting {
 				m.restyle()
 				return m, nil, nil
 			}},
+		{group: "Appearance", label: "Colour group messages by sender", help: "each person's bubbles in their own soft colour",
+			values: onOffChoices,
+			get:    func(m Model) string { return onOff(look.tint) },
+			set: func(m Model, v string) (Model, tea.Cmd, error) {
+				if err := saveUI("plain_groups", fmt.Sprint(v == "off")); err != nil {
+					return m, nil, err
+				}
+				config.Config.Ui.PlainGroups = v == "off"
+				SetGroupTint(v == "on")
+				m.restyle()
+				return m, nil, nil
+			}},
 		{group: "Appearance", label: "Chat list width", help: "columns next to an open chat",
 			values: []string{"28", "32", "34", "38", "42", "46", "50", "56"},
 			get:    func(m Model) string { return strconv.Itoa(m.sidebarW) },

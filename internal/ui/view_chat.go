@@ -375,6 +375,9 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 	if failed || mentionsYou {
 		border = pal.Love
 	}
+	if !msg.FromMe && !mentionsYou && look.tint && m.current != nil && isGroup(m.current.JID) && msg.ContactId != "" {
+		border = senderTint(msg.ContactId) // who's who at a glance (Settings)
+	}
 	if msg.Deleted != 0 {
 		border = pal.HighlightMed // faded: no longer there for the others
 	}
