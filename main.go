@@ -155,7 +155,7 @@ func run() error {
 		PaintBackground: config.Config.Ui.PaintBackground,
 		MessageSpacing:  config.Config.Ui.MessageSpacing,
 		BubbleStyle:     config.Config.Ui.BubbleStyle,
-		PlainGroups:     config.Config.Ui.PlainGroups,
+		GroupColors:     groupColors(),
 		Images:          termimg.Detect(config.Config.Ui.Images),
 		Media:           mediaSource{sm, config.Config.Ui.Avatars},
 		Sender:          sm,
@@ -311,3 +311,12 @@ func run() error {
 func serverLogPath() string { return filepath.Join(config.GetCacheDir(), "server.log") }
 
 func debugLogPath() string { return filepath.Join(config.GetCacheDir(), "debug.log") }
+
+// groupColors is the group bubble colours setting (the old plain_groups
+// switch still turns them off).
+func groupColors() string {
+	if config.Config.Ui.PlainGroups {
+		return "off"
+	}
+	return config.Config.Ui.GroupColors
+}

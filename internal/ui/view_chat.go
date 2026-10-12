@@ -276,13 +276,13 @@ func (m Model) quoteBlock(msg messages.Message, maxInner int) []string {
 		return nil
 	}
 	who := m.quotedSenderName(msg)
-	bar := lipgloss.NewStyle().Foreground(senderColor(msg.QuotedSender))
+	bar := lipgloss.NewStyle().Foreground(m.groupColor(msg.QuotedSender))
 	text := strings.ReplaceAll(prettyTags(msg.QuotedText), "\n", " ")
 	if text == "" {
 		text = "message"
 	}
 	return []string{
-		bar.Render("▎") + senderStyle(msg.QuotedSender).Render(ansi.Truncate(who, maxInner-1, "…")),
+		bar.Render("▎") + lipgloss.NewStyle().Bold(true).Foreground(m.groupColor(msg.QuotedSender)).Render(ansi.Truncate(who, maxInner-1, "…")),
 		bar.Render("▎") + styleDim.Render(ansi.Truncate(text, maxInner-1, "…")),
 	}
 }
@@ -375,8 +375,17 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 	if failed || mentionsYou {
 		border = pal.Love
 	}
-	if !msg.FromMe && !mentionsYou && look.tint && m.current != nil && isGroup(m.current.JID) && msg.ContactId != "" {
-		border = senderTint(msg.ContactId) // who's who at a glance (Settings)
+	var fill string // a faint wash of the sender's colour inside (groups)
+	if !msg.FromMe && look.tint != tintOff && m.current != nil && isGroup(m.current.JID) && msg.ContactId != "" {
+		c := m.groupColor(msg.ContactId) // who's who at a glance (Settings)
+		if !mentionsYou {
+			border = bubbleBorderTint(c)
+		}
+		if look.tint == tintFill && !selected && msg.Deleted == 0 {
+			if seq := lipgloss.ColorProfile().Color(string(bubbleFillTint(c))).Sequence(true); seq != "" {
+				fill = "\x1b[" + seq + "m"
+			}
+		}
 	}
 	if msg.Deleted != 0 {
 		border = pal.HighlightMed // faded: no longer there for the others
@@ -397,7 +406,7 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 		if name == "" {
 			name = msg.ContactName
 		}
-		lines = append(lines, senderStyle(msg.ContactId).Render(ansi.Truncate(name, maxInner, "…")))
+		lines = append(lines, lipgloss.NewStyle().Bold(true).Foreground(m.groupColor(msg.ContactId)).Render(ansi.Truncate(name, maxInner, "…")))
 	}
 	if mentionsYou {
 		lines = append(lines, styleMention.Render("@ mentioned you"))
@@ -514,7 +523,11 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 		blk = make([]string, 0, len(lines)+2)
 		blk = append(blk, bc.Render(ch[0]+edge+ch[1]))
 		for _, l := range lines {
-			blk = append(blk, side+" "+padRight(l, inner)+" "+side)
+			body := " " + padRight(l, inner) + " "
+			if fill != "" {
+				body = paintBackground(body, fill)
+			}
+			blk = append(blk, side+body+side)
 		}
 		blk = append(blk, bc.Render(ch[2]+edge+ch[3]))
 		blkW = inner + 4

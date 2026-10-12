@@ -222,9 +222,11 @@ Your messages show two blocks instead of ticks:
 | `■■` blue | read (purple: voice note or video played) |
 | `✕` | not sent — `v`, select it, `R` to retry |
 
-In a **group**, each person's bubbles have a border in their own soft
-colour (the colour of their name), so you can tell who's talking at a
-glance; Settings → "Colour group messages by sender" turns it off.
+In a **group**, each person has their own colour (their name, their
+bubble's border and a soft wash inside it), so you can tell who's
+talking at a glance. Up to eight people in a chat never share a colour,
+and none of them looks like yours, a selection or a mention. Settings →
+"Group messages by sender": filled (the default), borders only, or off.
 
 In a **group**, the blocks speak for everyone, as on the phone: grey once
 every member has it, blue once every member has read it (one person
@@ -590,7 +592,7 @@ the few marked ↻ apply when the app starts again (`:q!`, then open it).
 
 | Group | Settings |
 |---|---|
-| Appearance | theme (Rosé Pine, Moon, Dawn) · colour group messages by sender · space between messages (compact, normal, roomy) · bubble borders (rounded ╭, square ┌, thick ┏, double ╔, none) · chat list width · paint the background · mouse · pictures ↻ · profile pictures ↻ · see-through highlights ↻ |
+| Appearance | theme (Rosé Pine, Moon, Dawn) · group messages by sender (filled, borders, off) · space between messages (compact, normal, roomy) · bubble borders (rounded ╭, square ┌, thick ┏, double ╔, none) · chat list width · paint the background · mouse · pictures ↻ · profile pictures ↻ · see-through highlights ↻ |
 | Notifications & privacy | notifications (all, popup, sound, off) · private reading |
 | The app | keep running when closed ↻ · downloads folder · media kept on disk · scripts may send ↻ |
 | Search & AI | search by meaning ↻ · pause indexing while gaming ↻ · chats left out of search · AI help · AI model ↻ |
@@ -620,6 +622,7 @@ theme            = rose-pine   ; rose-pine, rose-pine-moon, rose-pine-dawn
 paint_background = false       ; true paints the theme background
 message_spacing  = normal      ; compact, normal, roomy
 bubble_style     = rounded     ; rounded, square, thick, double, none
+group_colors     = filled      ; filled, borders, off: group members in their own colours
 images           = auto        ; auto, kitty, blocks, off
 avatars          = true
 mouse            = true

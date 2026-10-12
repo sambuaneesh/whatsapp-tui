@@ -188,8 +188,11 @@ Results (before → after):
 - [x] Chats were marked read on focus alone (Hyprland focuses on hover):
       now only after a click or a key in the window. Turning private
       reading off no longer marks the chat opened privately as read
-- [x] Group bubbles all looked alike: each sender's border is now a soft
-      tint of their name's colour (Settings to turn off)
+- [x] Group bubbles all looked alike: each person has their own colour
+      (name, border, a soft wash inside); eight hues, handed out per chat
+      so up to eight people never share one (the first version, five
+      hashed hues at 60% on the border only, was too faint and collided).
+      Settings: filled, borders or off
 
 - [x] Group messages turned blue when one member read them: receipts are
       now kept per person, and the ticks are what's true of everyone

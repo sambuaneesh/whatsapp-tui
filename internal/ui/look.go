@@ -9,7 +9,7 @@ type lookSettings struct {
 	gap       int  // blank lines between messages
 	senderGap bool // one more when the sender changes
 	corners   [6]string
-	tint      bool // group bubbles' borders in their sender's colour
+	tint      tintMode // group bubbles in their sender's colour
 }
 
 var bubbleStyles = map[string][6]string{ // ┌ ┐ └ ┘ ─ │
@@ -42,14 +42,36 @@ func lookFor(spacing, bubble string) lookSettings {
 	return l
 }
 
-// groupTint: colour group bubbles by sender (Settings; on unless turned
-// off).
-var groupTint = true
+type tintMode int
 
-// SetGroupTint turns sender colours on group bubbles on or off.
-func SetGroupTint(on bool) {
-	groupTint = on
-	look.tint = on
+const (
+	tintFill   tintMode = iota // a coloured border and a faint wash inside
+	tintBorder                 // just the border
+	tintOff
+)
+
+// Settings' names for them.
+var tintChoices = []string{"filled", "borders", "off"}
+
+func tintFromName(s string) tintMode {
+	switch strings.ToLower(s) {
+	case "borders", "border":
+		return tintBorder
+	case "off", "none", "plain":
+		return tintOff
+	}
+	return tintFill
+}
+
+func (t tintMode) String() string { return tintChoices[t] }
+
+// groupTint: how group bubbles show their sender (Settings).
+var groupTint = tintFill
+
+// SetGroupTint sets it ("filled", "borders", "off").
+func SetGroupTint(name string) {
+	groupTint = tintFromName(name)
+	look.tint = groupTint
 }
 
 // SetLook sets the spacing and bubble style (from the config at start,

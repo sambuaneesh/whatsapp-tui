@@ -47,11 +47,16 @@ func init() {
 	// messages), rose (selected) and love (mentions you, not sent). Peach
 	// and periwinkle are blends, to have five that stay apart.
 	for _, p := range []*Palette{&RosePine, &RosePineMoon} {
-		p.senders = []lipgloss.Color{p.Gold, p.Foam, p.Leaf, mix(p.Gold, p.Love, 0.5), mix(p.Foam, p.Iris, 0.5)}
+		p.senders = []lipgloss.Color{
+			p.Gold, p.Foam, p.Leaf, mix(p.Gold, p.Love, 0.5), // gold, foam, sage, peach
+			mix(p.Foam, p.Iris, 0.5), mix(p.Gold, p.Leaf, 0.55), // periwinkle, olive
+			mix(p.Foam, p.Pine, 0.45), mix(p.Love, p.Iris, 0.45), // sky, orchid
+		}
 	}
 	// Dawn's gold is too light on its cream background
 	d := &RosePineDawn
-	d.senders = []lipgloss.Color{d.Pine, d.Foam, d.Leaf, mix(d.Gold, d.Love, 0.55), mix(d.Pine, d.Iris, 0.5)}
+	d.senders = []lipgloss.Color{d.Pine, d.Foam, d.Leaf, mix(d.Gold, d.Love, 0.55),
+		mix(d.Pine, d.Iris, 0.5), mix(d.Gold, d.Leaf, 0.5), mix(d.Foam, d.Pine, 0.5), mix(d.Love, d.Iris, 0.5)}
 	ApplyTheme("rose-pine")
 }
 
@@ -71,11 +76,10 @@ func hexRGB(s string) [3]int {
 	return [3]int{r, g, b}
 }
 
-// senderTint is a group member's bubble border: their colour, softened
-// toward the background so the chat stays calm.
-func senderTint(id string) lipgloss.Color {
-	return mix(senderColor(id), pal.Base, 0.4)
-}
+// Group bubbles in their sender's colour: the border a touch softened,
+// and (filled) a faint wash of it inside.
+func bubbleBorderTint(c lipgloss.Color) lipgloss.Color { return mix(c, pal.Base, 0.08) }
+func bubbleFillTint(c lipgloss.Color) lipgloss.Color   { return mix(c, pal.Base, 0.82) }
 
 // ThemeByName returns the palette for a config value; unknown names fall back
 // to the main variant.

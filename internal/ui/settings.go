@@ -112,15 +112,16 @@ func settingsList() []setting {
 				m.restyle()
 				return m, nil, nil
 			}},
-		{group: "Appearance", label: "Colour group messages by sender", help: "each person's bubbles in their own soft colour",
-			values: onOffChoices,
-			get:    func(m Model) string { return onOff(look.tint) },
+		{group: "Appearance", label: "Group messages by sender", help: "each person in their own colour: filled bubbles, just borders, or off",
+			values: tintChoices,
+			get:    func(m Model) string { return look.tint.String() },
 			set: func(m Model, v string) (Model, tea.Cmd, error) {
-				if err := saveUI("plain_groups", fmt.Sprint(v == "off")); err != nil {
+				if err := saveUI("group_colors", v); err != nil {
 					return m, nil, err
 				}
-				config.Config.Ui.PlainGroups = v == "off"
-				SetGroupTint(v == "on")
+				saveUI("plain_groups", "false")
+				config.Config.Ui.GroupColors, config.Config.Ui.PlainGroups = v, false
+				SetGroupTint(v)
 				m.restyle()
 				return m, nil, nil
 			}},

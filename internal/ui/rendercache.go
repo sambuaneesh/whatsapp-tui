@@ -100,6 +100,9 @@ func (m Model) bubbleKey(msg messages.Message, showSender, selected bool, maxInn
 	if m.search != nil {
 		k = k.str(m.search.query)
 	}
+	if !msg.FromMe && m.current != nil && isGroup(m.current.JID) {
+		k = k.str(string(m.groupColor(msg.ContactId))).int(int(look.tint))
+	}
 	// the picture: loading, failed or drawn (and which drawing)
 	if meta, ok := msg.MediaMeta(); ok && m.img.enabled() {
 		cols, rows := m.mediaCells(meta, maxInner)

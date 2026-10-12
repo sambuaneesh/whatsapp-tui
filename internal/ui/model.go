@@ -81,6 +81,7 @@ type Model struct {
 	noindex         map[string]bool          // chats search doesn\'t index
 	settings        *settingsView            // the settings screen, when open
 	minfo           *msgInfoView             // Message info (i in visual mode), when open
+	gcolors         *groupColors             // who has which colour in the open group
 	engaged         bool                     // you clicked or typed in the window since it got focus (hover isn't reading)
 	openedPrivately bool                     // the open chat was opened in private reading: it stays unread
 	aiStash         Assistant                // the model, while AI help is turned off
@@ -197,7 +198,7 @@ type Options struct {
 	PaintBackground bool   // fill the screen with the theme's base colour
 	MessageSpacing  string // compact, normal, roomy
 	BubbleStyle     string // rounded, square, thick, double, none
-	PlainGroups     bool   // don't colour group bubbles by sender
+	GroupColors     string // filled (default), borders or off
 
 	Mouse bool // mouse tracking is on (turned back on after other programs)
 
@@ -258,7 +259,7 @@ const composePlaceholder = "press i to type a message"
 // initial seeds the chat list with cached conversations.
 func New(commands chan<- messages.Command, initial []*messages.Conversation, opts Options) Model {
 	ApplyTheme(opts.Theme)
-	SetGroupTint(!opts.PlainGroups)
+	SetGroupTint(opts.GroupColors)
 	SetLook(opts.MessageSpacing, opts.BubbleStyle)
 	sidebarWidth := opts.SidebarWidth
 	compose := newCompose()
@@ -280,6 +281,7 @@ func New(commands chan<- messages.Command, initial []*messages.Conversation, opt
 		bubbles:     newBubbleCache(),
 		memo:        &listMemo{},
 		rows:        newBubbleCache(),
+		gcolors:     &groupColors{},
 		recent:      &recents{},
 		preload:     newPreload(),
 		compose:     compose,
