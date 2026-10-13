@@ -112,7 +112,7 @@ func settingsList() []setting {
 				m.restyle()
 				return m, nil, nil
 			}},
-		{group: "Appearance", label: "Group messages by sender", help: "each person in their own colour: filled bubbles, just borders, or off",
+		{group: "Appearance", label: "Group colours by sender", help: "each person's bubble border in their own colour, or off",
 			values: tintChoices,
 			get:    func(m Model) string { return look.tint.String() },
 			set: func(m Model, v string) (Model, tea.Cmd, error) {

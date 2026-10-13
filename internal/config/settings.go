@@ -78,7 +78,7 @@ type Ui struct {
 	MessageSpacing   string // compact, normal or roomy: blank lines between messages
 	BubbleStyle      string // rounded, square, thick, double or none
 	PlainGroups      bool   // old switch: true means group_colors = off
-	GroupColors      string // filled, borders or off: group bubbles in their sender's colour
+	GroupColors      string // borders or off: group bubbles in their sender's colour
 }
 
 type Colors struct {
@@ -147,7 +147,7 @@ var Config = IniFile{
 		HighlightOpacity: 0.8,
 		MessageSpacing:   "normal",
 		BubbleStyle:      "rounded",
-		GroupColors:      "filled",
+		GroupColors:      "borders",
 	},
 	&Colors{
 		Background:      "black",

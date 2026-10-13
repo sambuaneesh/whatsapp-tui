@@ -192,7 +192,9 @@ Results (before → after):
       (name, border, a soft wash inside); eight hues, handed out per chat
       so up to eight people never share one (the first version, five
       hashed hues at 60% on the border only, was too faint and collided).
-      Settings: filled, borders or off
+      A soft fill inside bubbles was tried and dropped: terminal cells
+      can't be part-filled, so it showed as a box inside the border.
+      Settings: borders or off
 
 - [x] Group messages turned blue when one member read them: receipts are
       now kept per person, and the ticks are what's true of everyone

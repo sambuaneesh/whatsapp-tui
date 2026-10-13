@@ -375,17 +375,8 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 	if failed || mentionsYou {
 		border = pal.Love
 	}
-	var fill string // a faint wash of the sender's colour inside (groups)
-	if !msg.FromMe && look.tint != tintOff && m.current != nil && isGroup(m.current.JID) && msg.ContactId != "" {
-		c := m.groupColor(msg.ContactId) // who's who at a glance (Settings)
-		if !mentionsYou {
-			border = bubbleBorderTint(c)
-		}
-		if look.tint == tintFill && !selected && msg.Deleted == 0 {
-			if seq := lipgloss.ColorProfile().Color(string(bubbleFillTint(c))).Sequence(true); seq != "" {
-				fill = "\x1b[" + seq + "m"
-			}
-		}
+	if !msg.FromMe && !mentionsYou && look.tint != tintOff && m.current != nil && isGroup(m.current.JID) && msg.ContactId != "" {
+		border = bubbleBorderTint(m.groupColor(msg.ContactId)) // who's who at a glance (Settings)
 	}
 	if msg.Deleted != 0 {
 		border = pal.HighlightMed // faded: no longer there for the others
@@ -523,11 +514,7 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 		blk = make([]string, 0, len(lines)+2)
 		blk = append(blk, bc.Render(ch[0]+edge+ch[1]))
 		for _, l := range lines {
-			body := " " + padRight(l, inner) + " "
-			if fill != "" {
-				body = paintBackground(body, fill)
-			}
-			blk = append(blk, side+body+side)
+			blk = append(blk, side+" "+padRight(l, inner)+" "+side)
 		}
 		blk = append(blk, bc.Render(ch[2]+edge+ch[3]))
 		blkW = inner + 4

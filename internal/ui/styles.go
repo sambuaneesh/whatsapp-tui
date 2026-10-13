@@ -76,10 +76,11 @@ func hexRGB(s string) [3]int {
 	return [3]int{r, g, b}
 }
 
-// Group bubbles in their sender's colour: the border a touch softened,
-// and (filled) a faint wash of it inside.
-func bubbleBorderTint(c lipgloss.Color) lipgloss.Color { return mix(c, pal.Base, 0.08) }
-func bubbleFillTint(c lipgloss.Color) lipgloss.Color   { return mix(c, pal.Base, 0.82) }
+// bubbleBorderTint is a group member's bubble border: their colour, a
+// little softened. (A wash inside the bubble was tried: terminal cells
+// can't be part-filled, so it stops half a cell short of the border and
+// looks like a box inside a box.)
+func bubbleBorderTint(c lipgloss.Color) lipgloss.Color { return mix(c, pal.Base, 0.25) }
 
 // ThemeByName returns the palette for a config value; unknown names fall back
 // to the main variant.

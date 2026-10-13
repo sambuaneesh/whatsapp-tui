@@ -198,7 +198,7 @@ type Options struct {
 	PaintBackground bool   // fill the screen with the theme's base colour
 	MessageSpacing  string // compact, normal, roomy
 	BubbleStyle     string // rounded, square, thick, double, none
-	GroupColors     string // filled (default), borders or off
+	GroupColors     string // borders (default) or off
 
 	Mouse bool // mouse tracking is on (turned back on after other programs)
 

@@ -45,28 +45,25 @@ func lookFor(spacing, bubble string) lookSettings {
 type tintMode int
 
 const (
-	tintFill   tintMode = iota // a coloured border and a faint wash inside
-	tintBorder                 // just the border
+	tintBorder tintMode = iota // the border in their colour
 	tintOff
 )
 
-// Settings' names for them.
-var tintChoices = []string{"filled", "borders", "off"}
+// Settings' names for them ("filled", an earlier option, reads as borders).
+var tintChoices = []string{"borders", "off"}
 
 func tintFromName(s string) tintMode {
 	switch strings.ToLower(s) {
-	case "borders", "border":
-		return tintBorder
 	case "off", "none", "plain":
 		return tintOff
 	}
-	return tintFill
+	return tintBorder
 }
 
 func (t tintMode) String() string { return tintChoices[t] }
 
 // groupTint: how group bubbles show their sender (Settings).
-var groupTint = tintFill
+var groupTint = tintBorder
 
 // SetGroupTint sets it ("filled", "borders", "off").
 func SetGroupTint(name string) {
