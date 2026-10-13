@@ -92,7 +92,8 @@ With the mouse: click a chat to open it, click a link to open it, click a
 photo, sticker, GIF, video or voice note (`▶ 🎤`) to view or play it, click the quote in a reply to jump to
 the message it replies to (selected, as in visual mode), double-click a message
 to reply to it, right-click a message to select it (ready for `r` `f` `y` `d` `i`…) and
-right-click it again to react (click an emoji on the bar),
+right-click it again to react (click an emoji on the bar; then you're
+back in the box, writing),
 click the reactions under a message to see who reacted (click yours to take
 it back), and scroll with the wheel.
 

@@ -70,6 +70,46 @@ func TestRightClickSelectsThenReacts(t *testing.T) {
 	}
 }
 
+func TestReactingByRightClickGoesBackToWriting(t *testing.T) {
+	a := &fakeActions{}
+	m := visualModel(t, a, fakeClip{})
+	x, y := findLast(t, m, "yes!")
+	right := func() {
+		next, _ := m.Update(tea.MouseMsg{X: x + 1, Y: y, Button: tea.MouseButtonRight, Action: tea.MouseActionPress})
+		m = next.(Model)
+		x, y = findLast(t, m, "yes!")
+	}
+	right()
+	right()
+	if !m.picker {
+		t.Fatal("no reaction bar")
+	}
+	m, cmds := keys(t, m, "2")
+	runCmds(cmds...)
+	if m.mode != modeInsert || m.picker || len(a.reactions) != 1 {
+		t.Fatalf("after reacting: mode %v picker %v reactions %v", m.mode, m.picker, a.reactions)
+	}
+	// through the full emoji grid too
+	m, _ = keys(t, m, "esc")
+	x, y = findLast(t, m, "yes!")
+	right()
+	right()
+	m, cmds = keys(t, m, "+")
+	if m.emo == nil {
+		t.Fatal("no grid")
+	}
+	m, cmds = keys(t, m, "enter")
+	runCmds(cmds...)
+	if m.mode != modeInsert || m.emo != nil {
+		t.Fatalf("after the grid: mode %v", m.mode)
+	}
+	// with the keyboard (v, r), you stay in visual mode as before
+	m, _ = keys(t, m, "esc", "v", "r", "1")
+	if m.mode != modeVisual {
+		t.Fatalf("keyboard react: mode %v", m.mode)
+	}
+}
+
 func TestEmojiGrid(t *testing.T) {
 	a := &fakeActions{}
 	m := visualModel(t, a, fakeClip{})

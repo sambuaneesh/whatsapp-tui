@@ -81,6 +81,7 @@ type Model struct {
 	noindex         map[string]bool          // chats search doesn\'t index
 	settings        *settingsView            // the settings screen, when open
 	minfo           *msgInfoView             // Message info (i in visual mode), when open
+	reactByMouse    bool                     // the reaction bar came from a second right-click: back to typing after
 	gcolors         *groupColors             // who has which colour in the open group
 	engaged         bool                     // you clicked or typed in the window since it got focus (hover isn't reading)
 	openedPrivately bool                     // the open chat was opened in private reading: it stays unread

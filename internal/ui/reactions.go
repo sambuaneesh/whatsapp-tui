@@ -22,7 +22,7 @@ import (
 
 // openPicker shows the quick-reaction bar for the selected message.
 func (m *Model) openPicker() tea.Cmd {
-	m.picker = true
+	m.picker, m.reactByMouse = true, false // the mouse path sets it after
 	m.cmdline.Prompt = "react: "
 	m.cmdline.SetValue("")
 	return m.cmdline.Focus()
@@ -36,6 +36,8 @@ func (m *Model) closePicker() {
 
 // react sends emoji as your reaction to target ("" removes yours).
 func (m Model) react(target messages.Message, emoji string) (tea.Model, tea.Cmd) {
+	byMouse := m.reactByMouse
+	m.reactByMouse = false
 	m.closePicker()
 	m.emo = nil
 	if m.actions == nil {
@@ -46,9 +48,16 @@ func (m Model) react(target messages.Message, emoji string) (tea.Model, tea.Cmd)
 	if emoji == "" {
 		label = "Reaction removed"
 	}
-	return m, m.action(label, func(ctx context.Context) (string, error) {
+	send := m.action(label, func(ctx context.Context) (string, error) {
 		return "", a.SendReaction(ctx, target, emoji)
 	})
+	if byMouse {
+		// reacted with the mouse (right-click twice): back to writing
+		m.exitVisual()
+		m.mode = modeInsert
+		return m, tea.Batch(send, m.compose.Focus())
+	}
+	return m, send
 }
 
 func (m Model) handlePicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -57,6 +66,7 @@ func (m Model) handlePicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	empty := m.cmdline.Value() == ""
 	switch {
 	case key == "esc":
+		m.reactByMouse = false
 		m.closePicker()
 		return m, nil
 	case empty && len(key) == 1 && key >= "1" && key <= "6":
@@ -176,7 +186,9 @@ func (m Model) rightClickMessage(x, y int) (tea.Model, tea.Cmd) {
 	m.focus = paneMessages
 	m.refreshMessages(false)
 	if again && !m.picker {
-		return m, m.openPicker()
+		cmd := m.openPicker()
+		m.reactByMouse = true
+		return m, cmd
 	}
 	m.picker = false
 	return m, nil
@@ -237,7 +249,7 @@ func (m Model) handleEmoji(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	cols, rows := m.emojiGeom()
 	switch msg.String() {
 	case "esc":
-		m.emo = nil
+		m.emo, m.reactByMouse = nil, false
 		return m, nil
 	case "enter":
 		if len(e.items) > 0 {
@@ -302,7 +314,7 @@ func (m Model) mouseEmoji(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m.react(e.target, e.items[i].Char)
 		}
 	case tea.MouseButtonRight:
-		m.emo = nil
+		m.emo, m.reactByMouse = nil, false
 	}
 	return m, nil
 }

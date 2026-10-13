@@ -141,7 +141,7 @@ var helpSections = []struct {
 		{"", "click a quote: jump to the original"},
 		{"", "double-click a message to reply"},
 		{"", "right-click a message: select it"},
-		{"", "right-click it again: react"},
+		{"", "right-click it again: react, then write"},
 		{"", "click reactions to see who reacted"},
 		{"", "click 🔔 in the status bar: notifications"},
 		{"", "click 👁/🙈 there: private reading on/off"},
