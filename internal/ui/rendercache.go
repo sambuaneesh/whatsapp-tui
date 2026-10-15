@@ -87,6 +87,12 @@ func (m Model) bubbleKey(msg messages.Message, showSender, selected bool, maxInn
 	for _, r := range msg.Reactions {
 		k = k.str(r.Sender).str(r.Emoji)
 	}
+	if p := msg.Poll; p != nil {
+		k = k.str("poll").int(p.Voters)
+		for _, o := range p.Options {
+			k = k.int(len(o.Voters)).bool(o.Mine)
+		}
+	}
 	if len(msg.Mentions) > 0 {
 		users := make([]string, 0, len(msg.Mentions))
 		for u := range msg.Mentions {

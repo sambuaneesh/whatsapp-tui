@@ -799,11 +799,13 @@ Priya: @You you're coming right?</div>
     </div>
     <div class="feat">
       <h3>Everything shows</h3>
-      <p>Polls with their options, events with time and place, live location and places as a clickable map link, contact cards, view-once messages (marked, since only your phone may open them), forwarded marks, edits, and WhatsApp-style formatting: <b>*bold*</b>, <i>_italic_</i>, <s>~strike~</s>, <code>`code`</code>, quotes and lists.</p>
-      <pre class="scr">📊 Poll: Dinner where?
-○ Paradise
-○ Bawarchi
-(pick up to 2)</pre>
+      <p>Polls with their results (votes per option, a bar each, ● on yours; <kbd>v</kbd> select it, <kbd>i</kbd> shows who voted for what), events with time and place, live location and places as a clickable map link, contact cards, view-once messages (marked, since only your phone may open them), forwarded marks, edits, and WhatsApp-style formatting: <b>*bold*</b>, <i>_italic_</i>, <s>~strike~</s>, <code>`code`</code>, quotes and lists.</p>
+      <pre class="scr"><b>📊 Dinner where?</b>
+<b>● Paradise</b>              <span style="color:var(--muted)">3</span>
+<span class="w-iris">━━━━━━━━━━━━</span><span style="color:var(--muted)">━━━━━━</span>
+○ Bawarchi              <span style="color:var(--muted)">1</span>
+<span class="w-foam">━━━━</span><span style="color:var(--muted)">━━━━━━━━━━━━━━</span>
+<span style="color:var(--muted)">4 votes · pick up to 2</span></pre>
     </div>
     <div class="feat wide">
       <h3>Your messages, at a glance</h3>
@@ -1125,7 +1127,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
       ] },
     { id: "lab", name: "Systems Lab", group: true, time: "Mon",
       msgs: [
-        { who: "Ravi", c: "w-gold", t: "📊 Poll: Demo day?\n○ Thursday\n○ Friday", time: "11:00" },
+        { who: "Ravi", c: "w-gold", t: "📊 Demo day?\n○ Thursday   2\n● Friday     3\n5 votes", time: "11:00" },
         { me: true, t: "*Friday* works, pushing the fix tonight", time: "11:20", st: "■■" },
       ] },
     { id: "cell", name: "Placement Cell", group: true, time: "Sun",
@@ -1921,7 +1923,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["write", "ctrl+a", "select all; type to replace, ctrl+c copy, ctrl+x cut"], ["write", "ctrl+← ctrl+→", "jump a word"], ["write", "ctrl+backspace", "delete a word"],
     ["write", "esc", "back to normal mode (what you wrote stays as a draft)"],
     ["visual", "enter", "reply"], ["visual", "p", "reply privately (groups)"], ["visual", "r", "react: 1–6, x removes, + or a name for any emoji"],
-    ["visual", "w", "who reacted"], ["visual", "i", "message info: who read it, when; who's still waiting"], ["visual", "e", "edit your message (first 15 minutes)"], ["visual", "f", "forward (space picks several chats)"],
+    ["visual", "w", "who reacted"], ["visual", "i", "message info: who read it, when; who's still waiting (on a poll: who voted for what)"], ["visual", "e", "edit your message (first 15 minutes)"], ["visual", "f", "forward (space picks several chats)"],
     ["visual", "y", "copy the text or picture"], ["visual", "s", "save media to Downloads"], ["visual", "d", "delete: enter for you, e for everyone"],
     ["visual", "space", "view full screen, play a voice note or video"], ["visual", "o", "open in its app, or open the message's link"],
     ["visual", "V", "select several: then y copy, f forward, d delete, s save"], ["visual", "R", "retry a message that didn't send"], ["visual", "P", "pin for everyone, 7 days (again: unpin)"],

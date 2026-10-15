@@ -210,6 +210,12 @@ func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
 			if err != nil {
 				continue
 			}
+			if sm.handlePollVote(evt, true) {
+				continue
+			}
+			if ups := webMsg.GetPollUpdates(); len(ups) > 0 {
+				sm.storeHistoryPollVotes(chatJID, evt.Info.ID, ups)
+			}
 			sm.canonicalSource(context.Background(), &evt.Info.MessageSource)
 			// Reactions to this message, then reaction messages themselves.
 			for _, r := range webMsg.GetReactions() {

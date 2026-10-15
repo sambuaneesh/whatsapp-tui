@@ -436,6 +436,10 @@ func (m Model) renderBubble(msg messages.Message, showSender, selected bool, max
 		lines = append(lines, styleMuted.Italic(true).Render(msg.Text))
 		text = ""
 	}
+	if msg.Poll != nil && !hasMedia {
+		lines = append(lines, pollLines(msg.Poll, maxInner)...)
+		text = ""
+	}
 	if playableAudio(msg) && text != "" {
 		text = "▶ " + text // click (or space) plays it
 		parts.media = lineRange{len(lines), 1}

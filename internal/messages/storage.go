@@ -92,6 +92,9 @@ func (md *MessageDatabase) InitWithDB(db *sql.DB) error {
 
 	md.initFTS()
 	md.initEmbeddings()
+	if err := md.initPolls(); err != nil {
+		return fmt.Errorf("failed to create poll_votes table: %w", err)
+	}
 	if err := md.initReceipts(); err != nil {
 		return fmt.Errorf("failed to create receipts table: %w", err)
 	}

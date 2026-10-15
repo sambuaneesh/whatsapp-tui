@@ -37,6 +37,7 @@ func (sm *SessionManager) SearchHistory(ctx context.Context, chat, query string)
 	}
 	sm.resolveSenders(msgs)
 	sm.attachReactions(msgs)
+	sm.attachPolls(msgs)
 	sm.selfChatRead(chat, msgs)
 	sm.resolveMentions(msgs)
 	return msgs, len(matches), ctx.Err()
@@ -126,6 +127,7 @@ func (sm *SessionManager) LoadAround(ctx context.Context, chat, msgID string) ([
 	}
 	sm.resolveSenders(msgs)
 	sm.attachReactions(msgs)
+	sm.attachPolls(msgs)
 	sm.selfChatRead(chat, msgs)
 	sm.resolveMentions(msgs)
 	return msgs, ctx.Err()

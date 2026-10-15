@@ -399,6 +399,9 @@ func (eh *eventHandler) handleMessage(evt *events.Message) {
 	if evt.Info.Chat.Server == types.BroadcastServer {
 		return // status updates and broadcast lists aren't chats (history sync skips them too)
 	}
+	if eh.sm.handlePollVote(evt, false) {
+		return // before canonicalSource: the vote's key uses the addresses as received
+	}
 	eh.sm.canonicalSource(context.Background(), &evt.Info.MessageSource)
 	if r := evt.Message.GetReactionMessage(); r != nil {
 		eh.sm.handleReaction(evt.Info.Chat.String(), evt.Info.Sender, evt.Info.IsFromMe, r)

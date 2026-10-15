@@ -86,6 +86,7 @@ func (sm *SessionManager) Messages(_ context.Context, chat string, limit int, be
 	}
 	sm.resolveSenders(msgs)
 	sm.attachReactions(msgs)
+	sm.attachPolls(msgs)
 	sm.resolveMentions(msgs)
 	return msgs, nil
 }

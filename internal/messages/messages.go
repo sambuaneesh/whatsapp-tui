@@ -73,6 +73,7 @@ type Message struct {
 	QuotedText   string
 
 	Reactions []Reaction // filled in when loading a chat
+	Poll      *Poll      // a poll's votes, filled in when loading a chat
 
 	Status int // delivery state of your own messages (Status* constants)
 

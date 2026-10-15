@@ -97,6 +97,9 @@ Results (before → after):
       (GOGC 50). Re-measure on the live app after the next restart.
 - [x] 3. Show polls (question + options), live location and events, and
       several-contact cards; locations get a map link
+- [x] Poll results: votes are decrypted with the poll's secret and kept
+      per voter (latest wins; history sync's votes too); bubbles show
+      counts and bars, i lists who voted for what
 - [x] 4. Animated stickers/GIFs striped: rendered 12 real animated
       stickers concurrently in kitty with the current image path (raw
       pixels at display size, serialised writes): no stripes. Confirm in

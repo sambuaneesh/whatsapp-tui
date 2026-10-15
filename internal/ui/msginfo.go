@@ -41,6 +41,10 @@ func (m Model) openMessageInfo(sel messages.Message) (tea.Model, tea.Cmd) {
 	if !ok {
 		return m, nil
 	}
+	if sel.Poll != nil {
+		m.minfo = &msgInfoView{msg: sel} // who voted for what
+		return m, nil
+	}
 	if !sel.FromMe {
 		m.notice, m.noticeErr = "message info is for your own messages", true
 		return m, nil
@@ -95,6 +99,15 @@ func receiptTime(ms int64, now time.Time) string {
 
 func (m Model) messageInfoLines(width int) []string {
 	v := m.minfo
+	if v.msg.Poll != nil {
+		p := v.msg.Poll
+		for _, cur := range m.msgs {
+			if cur.Id == v.msg.Id && cur.Poll != nil {
+				p = cur.Poll // votes that came in since it opened
+			}
+		}
+		return pollInfoLines(p, width)
+	}
 	now := time.Now()
 	text := strings.ReplaceAll(prettyTags(v.msg.Text), "\n", " ")
 	lines := []string{
