@@ -133,6 +133,16 @@ func (sm *SessionManager) processHistorySync(data *waHistorySync.HistorySync) {
 		msgCount += len(c.GetMessages())
 	}
 	sm.debugf("history sync %s: %d conversations, %d messages", data.GetSyncType(), len(data.GetConversations()), msgCount)
+	if data.GetSyncType() == waHistorySync.HistorySync_ON_DEMAND {
+		for _, c := range data.GetConversations() {
+			ms := c.GetMessages()
+			first, last := "", ""
+			if len(ms) > 0 {
+				first, last = ms[0].GetMessage().GetKey().GetID(), ms[len(ms)-1].GetMessage().GetKey().GetID()
+			}
+			sm.debugf("  on demand %s: %d messages (%s … %s)", c.GetID(), len(ms), first, last)
+		}
+	}
 	client := sm.getClient()
 	if client == nil || !client.IsConnected() {
 		sm.uiHandler.PrintError(errors.New("not connected — cannot process history sync"))

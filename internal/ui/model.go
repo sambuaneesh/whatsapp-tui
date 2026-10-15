@@ -685,6 +685,12 @@ func (m *Model) openChat(c *messages.Conversation) tea.Cmd {
 		m.editing = nil
 		m.attachments = nil
 		m.mention, m.chosen = nil, nil
+		if m.search != nil && m.mode == modeChatSearch {
+			// a / search was being typed (and another chat clicked)
+			m.mode = modeNormal // its selection was in the other chat
+			m.cmdline.Blur()
+			m.cmdline.Prompt = ":"
+		}
 		m.search = nil
 		m.keepOlder = false
 		m.compose.SetHeight(1)

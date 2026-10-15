@@ -98,6 +98,12 @@ func (m Model) nearestMatch(from int) int {
 
 func (m Model) handleChatSearch(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	s := m.search
+	if s == nil { // the search went away (another chat opened): stop typing it
+		m.mode = modeNormal
+		m.cmdline.Blur()
+		m.cmdline.Prompt = ":"
+		return m, nil
+	}
 	switch msg.String() {
 	case "esc":
 		// cancel: back to where we were

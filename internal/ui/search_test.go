@@ -248,3 +248,21 @@ func TestMatchingLikeTheIndex(t *testing.T) {
 		t.Fatalf("ranges %v", r)
 	}
 }
+
+// Opening another chat (a click) while typing a / search used to leave the
+// search mode on with no search, and the next key crashed the app.
+func TestOpeningAnotherChatEndsSearch(t *testing.T) {
+	m, _ := searchModel(t)
+	m, _ = keys(t, m, "/")
+	m = typeQuery(t, m, "pizza")
+	m.openChat(&messages.Conversation{JID: "d@s.whatsapp.net", Name: "D"})
+	if m.mode == modeChatSearch {
+		t.Fatal("still typing a search after another chat opened")
+	}
+	m, _ = keys(t, m, "x", "j") // must not panic
+	m.mode, m.search = modeChatSearch, nil
+	m, _ = keys(t, m, "x")
+	if m.mode != modeNormal {
+		t.Fatalf("mode = %d", m.mode)
+	}
+}
