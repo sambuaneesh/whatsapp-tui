@@ -315,29 +315,10 @@ doesn't either, unless you type a capital. When that finds nothing, the text
 as typed is looked for anywhere (inside words, emoji). A full-text index
 makes it fast (0.3 ms over 50,000 messages); it's built automatically.
 
-**By meaning** (optional): with a local model running, `S` also lists up to
-20 messages close in meaning to what you typed, marked **≈ similar in
-meaning**: `flat address` finds "send me the location of the apartment".
-Everything stays on your machine. Set it up once:
-
-```sh
-sudo pacman -S ollama-cuda         # or ollama (CPU); other distros: ollama.com
-sudo systemctl enable --now ollama
-ollama pull embeddinggemma         # ~620 MB
-```
-
-The app indexes your messages in the background (newest first; a few
-minutes for tens of thousands), then new ones every 15 minutes. It's gentle
-on a gaming machine: Ollama gets 2 CPU threads, unloads the model from the
-GPU 10 seconds after indexing (2 minutes after a search), and indexing waits
-while the GPU is over 50% busy (`semantic_pause_gaming = false` to index
-anyway). Without Ollama it does nothing. `semantic_search = false` turns it
-off.
-
 **Leaving a chat out.** Every chat is indexed for search unless you say
 otherwise: `:noindex` in a chat (or `F1` → "don't index", or on a chat
-selected in the list) takes its messages out of the word index, drops
-their meaning vectors and stops indexing new ones; searching all chats
+selected in the list) takes its messages out of the word index and stops
+indexing new ones; searching all chats
 (and the API's `search`) then skips it. `/` inside that chat still finds
 things, by plain matching. `:index` puts it back; `:noindex list` shows the
 chats you left out (`enter` indexes one again). The chat's header says
@@ -477,8 +458,7 @@ In a chat, select a message (`v`) and:
   you back to it in its chat.
 - `T` makes a task of it: the `:task` line opens with its text to edit; the
   task remembers the message (`↩ Arjun`), and `enter` on it goes back
-  there. With the local model, the text comes worded as a task with its
-  date ("Send Arjun the slides before friday evening").
+  there.
 
 ### Sharing a list
 
@@ -520,27 +500,6 @@ whatsapp-tui capture                     # a one-line prompt to add a task
 `capture` shows what it read as you type (`→ Shopping  📅 Fri 9 Oct 18:00
 #weekend`); on Omarchy it's bound to **Super+Shift+T** as a small floating
 window. Scripts can use the same through the [API](docs/API.md#lists-tasks-and-notes).
-
-## The local model (AI)
-
-With [Ollama](https://ollama.com) running and `qwen3:4b` pulled (`ollama
-pull qwen3:4b`, 2.5 GB), a small model on your own machine helps where
-rules can't. About a second per answer on a mid-range GPU; it loads only
-when asked and leaves GPU memory two minutes later. Nothing leaves your
-machine.
-
-| What | How |
-|---|---|
-| A message as a task | `T` on it: the `:task` line comes worded with its date |
-| The to-dos in a chat | `:todos` (or `F1` → "find to-dos"): the requests and promises in the last 60 messages; `enter` adds each to the Inbox |
-| Catch me up | `:catchup`: a few points on what was said, and what people are waiting on you for (`enter` makes it a task) |
-| Plan my day | `:plan`: times for today's tasks around the ones that have one; "use this plan" sets them (`u` undoes) |
-
-It never does calendar sums (a 4B model gets them wrong most of the
-time; we tried): it copies the time words out of a message ("before
-friday evening") and the app's own parser turns them into a date. What it
-suggests always waits for your `enter`. Turn it off with `ai = false`;
-another model with `ai_model`.
 
 ## Running in the background
 
@@ -596,7 +555,7 @@ the few marked ↻ apply when the app starts again (`:q!`, then open it).
 | Appearance | theme (Rosé Pine, Moon, Dawn) · group colours by sender (borders, off) · space between messages (compact, normal, roomy) · bubble borders (rounded ╭, square ┌, thick ┏, double ╔, none) · chat list width · paint the background · mouse · pictures ↻ · profile pictures ↻ · see-through highlights ↻ |
 | Notifications & privacy | notifications (all, popup, sound, off) · private reading |
 | The app | keep running when closed ↻ · downloads folder · media kept on disk · scripts may send ↻ |
-| Search & AI | search by meaning ↻ · pause indexing while gaming ↻ · chats left out of search · AI help · AI model ↻ |
+| Search | chats left out of search |
 | Your lists | mirror to a folder |
 
 Everything is also in `~/.config/whatsapp-tui/config.ini` (macOS: `~/Library/Application
@@ -610,12 +569,6 @@ background    = true           ; keep running when the window closes
 private_reading = false        ; true: no read receipts until you mark a chat read
 media_cache_mb  = 1024         ; downloaded media kept on disk
 api_allow_send  = false        ; true: scripts may send through the local API
-semantic_search = true         ; search by meaning when Ollama runs (see "How search matches")
-ollama_url      = http://127.0.0.1:11434
-embed_model     = embeddinggemma
-semantic_pause_gaming = true   ; don't index while the GPU is busy (games)
-ai              = true         ; the local chat model's help (see "The local model")
-ai_model        = qwen3:4b
 obsidian_dir    =              ; mirror your lists and notes here (:mirror)
 
 [ui]
@@ -634,8 +587,6 @@ qr_compact       = false       ; smaller login QR code
 
 ## When something's off
 
-- **The AI commands say the model isn't available:** start Ollama
-  (`ollama serve`, or its service) and `ollama pull qwen3:4b`.
 - **A chat is archived (or pinned, or muted) here but not on your phone:**
   `:resync` (or `F1` → "resync") fetches those settings from WhatsApp again
   and makes this device match the phone. It also happens on every start,

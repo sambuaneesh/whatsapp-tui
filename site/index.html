@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>whatsapp-tui</title>
-<meta name="description" content="WhatsApp in your terminal, vim-style: sub-millisecond redraws, runs in the background, send later, snooze, read without blue ticks, search by meaning, and a local API for your scripts.">
+<meta name="description" content="WhatsApp in your terminal, vim-style: sub-millisecond redraws, runs in the background, send later, snooze, read without blue ticks, fast search, your own lists and notes, and a local API for your scripts.">
 <meta name="theme-color" content="#191724">
 <meta property="og:title" content="whatsapp-tui">
 <meta property="og:description" content="WhatsApp in your terminal, vim-style. Fast, always on, and scriptable.">
@@ -234,8 +234,6 @@ section { padding-block: 56px 24px; border-top: 1px solid var(--hl-med); scroll-
 .hit { font-size: 15px; padding: 6px 10px; border-radius: 7px; background: var(--base); border: 1px solid var(--hl-low); }
 .hit .meta { font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .hit mark { background: var(--gold); color: var(--base); border-radius: 3px; padding: 0 1px; }
-.hit.sim { border-style: dashed; border-color: var(--iris); }
-.hit.sim .meta { color: var(--iris); }
 
 /* palette demo */
 .pal { background: var(--base); border: 1.5px solid var(--rose); border-radius: 10px; overflow: hidden; font-family: var(--mono); box-shadow: 0 14px 40px rgb(0 0 0 / .28); }
@@ -376,7 +374,6 @@ td.mono { white-space: nowrap; }
     <nav aria-label="Sections">
       <a href="#palette">ctrl+p</a>
       <a href="#lists">lists</a>
-      <a href="#ai" class="opt">ai</a>
       <a href="#always-on">always on</a>
       <a href="#triage" class="opt">triage</a>
       <a href="#later">later</a>
@@ -396,7 +393,7 @@ td.mono { white-space: nowrap; }
 <div class="hero">
   <div style="display:grid;gap:18px">
     <h1>whatsapp<span class="dim">-</span>tui<span class="cur" aria-hidden="true"></span></h1>
-    <p class="lede">WhatsApp in your terminal, driven by the keyboard like vim. <b>It redraws in a third of a millisecond</b>, gets you to any chat with <kbd>ctrl+p</kbd> like VS Code, keeps running when you close the window, and does what the official apps can't: send later, snooze chats, read without blue ticks, search by meaning, and talk to your own scripts. Next to your chats sits <b>a space of your own</b>: today's tasks, lists, notes and saved messages, mirrored to Obsidian, with a small AI on your own machine.</p>
+    <p class="lede">WhatsApp in your terminal, driven by the keyboard like vim. <b>It redraws in a third of a millisecond</b>, gets you to any chat with <kbd>ctrl+p</kbd> like VS Code, keeps running when you close the window, and does what the official apps can't: send later, snooze chats, read without blue ticks, and talk to your own scripts. Next to your chats sits <b>a space of your own</b>: today's tasks, lists, notes and saved messages, mirrored to Obsidian.</p>
     <div class="cta-row">
       <div class="copyline"><span><span class="p">$</span> yay -S whatsapp-tui-git</span><button class="btn" data-copy="yay -S whatsapp-tui-git">copy</button></div>
     </div>
@@ -562,69 +559,6 @@ Added: ☐ call mom #family  (today 18:00 · Inbox · #14)
       <h3>Reminders</h3>
       <p>A task with a time pings you when it's due, through the same notifications as your messages, even with the window closed.</p>
     </div>
-  </div>
-</section>
-
-<section id="ai">
-  <div class="eyebrow"><span class="badge b-iris">AI</span>qwen3:4b, on your own machine</div>
-  <h2>A small model that knows when to stay quiet.</h2>
-  <p class="intro">With Ollama and <code>qwen3:4b</code> (2.5 GB), a local model helps where rules can't. About a second per answer on a mid-range GPU, loaded only when you ask, gone from GPU memory two minutes later. Nothing leaves your machine. It never does the calendar sums small models get wrong: it copies the time words out, and the app's own parser turns them into dates. Every example below is its real answer, word for word (small models have quirks, which is why everything it suggests waits for your enter).</p>
-  <div class="grid">
-    <div class="feat">
-      <h3><kbd>T</kbd> a message, as a task</h3>
-      <div class="io">
-        <div class="in">Arjun: can you send me the slides before friday evening?</div>
-        <div class="arrow">↓ the :task line, filled in for you to check</div>
-        <div class="out">:task send slides to Arjun before friday evening
-<span style="color:var(--muted)">→</span> ☐ send slides to Arjun  <span class="w-gold">⏰ Fri 18:00</span>  <span class="w-iris">↩ Arjun</span></div>
-      </div>
-    </div>
-    <div class="feat">
-      <h3><code>:todos</code> what you owe a chat</h3>
-      <div class="io">
-        <div class="in">Priya: who's booking the cab for saturday?
-You: I'll do it tonight
-Ravi: also someone send me the wifi password
-Priya: thanks for the cake yesterday!
-Arjun: @You can you bring the projector to the lab on monday morning?</div>
-        <div class="arrow">↓ enter adds each to 📥 Inbox</div>
-        <div class="out">☐ Do cab booking for Saturday   <span class="w-gold">tonight</span> · You
-☐ Send wifi password            Ravi
-☐ Bring projector to lab        <span class="w-gold">monday morning</span> · Arjun</div>
-      </div>
-    </div>
-    <div class="feat">
-      <h3><code>:catchup</code> a busy chat, in a few lines</h3>
-      <div class="io">
-        <div class="in">Priya: dinner at 8 at Paradise?
-Ravi: I'm in
-Arjun: can't, exam tomorrow
-Priya: ok 7 of us then, booking
-Priya: @You you're coming right?</div>
-        <div class="arrow">↓</div>
-        <div class="out">• Priya confirms dinner at Paradise at 8 for 7 people
-• Ravi agrees to attend
-• Arjun can't attend due to exam
-• Priya asks if @You is coming
-☐ Reply to Priya about coming to dinner   <span style="color:var(--muted)">enter: a task</span></div>
-      </div>
-    </div>
-    <div class="feat">
-      <h3><code>:plan</code> my day</h3>
-      <div class="io">
-        <div class="in">10:00 · call mom at 18:00 · finish slides ! · gym · pay electricity bill</div>
-        <div class="arrow">↓ "use this plan" sets the times (u undoes)</div>
-        <div class="out">11:00  finish slides
-12:30  gym
-14:00  pay electricity bill
-18:00  call mom</div>
-      </div>
-    </div>
-    <div class="feat">
-      <h3>What it doesn't do</h3>
-      <p>Calendar sums. Asked which day "a week from friday" is, a 4B model is wrong most of the time (we tried, with and without examples). So it only copies the time words out of a message, and the app's own parser, which reads <code>a week from friday</code>, <code>first monday of november</code>, <code>two days before the 12th</code> and the rest, works out the date. Instantly, and right.</p>
-    </div>
-  </div>
   </div>
 </section>
 
@@ -850,7 +784,7 @@ Priya: @You you're coming right?</div>
 <section id="search">
   <div class="eyebrow"><span class="badge b-foam">SEARCH</span>everything you've ever been sent</div>
   <h2>Search that finds what you meant.</h2>
-  <p class="intro"><kbd>/</kbd> searches the chat you're in (its whole history), <kbd>S</kbd> searches every chat. Every word you type, in any order; accents ignored; capitals make it exact. A full-text index answers in <b>0.3 ms</b> over 50,000 messages. With a local model installed, it also finds messages by meaning.</p>
+  <p class="intro"><kbd>/</kbd> searches the chat you're in (its whole history), <kbd>S</kbd> searches every chat. Every word you type, in any order; accents ignored; capitals make it exact. A full-text index answers in <b>0.3 ms</b> over 50,000 messages.</p>
   <div class="two">
     <div class="play">
       <label for="sq">Search a sample of chat messages</label>
@@ -861,7 +795,6 @@ Priya: @You you're coming right?</div>
     <div class="points">
       <div class="point"><span class="k"><kbd>w</kbd></span><h3>Every word, any order</h3><p><code>flat addr</code> finds "the address of the flat". Word beginnings count; nothing has to be next to anything.</p></div>
       <div class="point"><span class="k"><kbd>é</kbd></span><h3>Accents and case</h3><p><code>cafe</code> finds "Café". Lowercase matches any case; type a capital and it's exact (vim's smartcase).</p></div>
-      <div class="point"><span class="k"><kbd>≈</kbd></span><h3>By meaning</h3><p>With Ollama and EmbeddingGemma on your machine, <kbd>S</kbd> adds up to 20 messages <b>close in meaning</b>: <code>flat address</code> also finds "send me the location of the apartment". Indexed in the background; nothing leaves your computer. Gentle on a gaming PC: two CPU threads, the model leaves the GPU seconds after use, and indexing waits while a game has the GPU busy.</p></div>
       <div class="point"><span class="k"><kbd>n</kbd></span><h3>Then act on it</h3><p><kbd>enter</kbd> selects the match, ready for <kbd>r</kbd> <kbd>f</kbd> <kbd>y</kbd>…; <kbd>n</kbd> <kbd>N</kbd> go to older and newer matches.</p></div>
       <div class="point"><span class="k"><kbd>∅</kbd></span><h3>Leave a chat out</h3><p>A noisy group you never search? <code>:noindex</code> in it (or <kbd>F1</kbd> → "don't index"): its messages leave the index and searching all chats skips it; <kbd>/</kbd> inside it still works. Every chat is indexed until you say so; <code>:noindex list</code> shows the ones you left out.</p></div>
     </div>
@@ -936,7 +869,7 @@ Priya: @You you're coming right?</div>
         <tr><td class="mono">status</td><td>connected? sending allowed?</td></tr>
         <tr><td class="mono">chats</td><td>the chat list, pinned first</td></tr>
         <tr><td class="mono">messages</td><td>a chat's messages, page by page</td></tr>
-        <tr><td class="mono">search</td><td>words, then meaning (<span class="mono">"similar": true</span>)</td></tr>
+        <tr><td class="mono">search</td><td>messages with every word, newest first</td></tr>
         <tr><td class="mono">send · reply</td><td>needs <span class="mono">api_allow_send</span>; 20 a minute</td></tr>
         <tr><td class="mono">mark_read · mark_unread</td><td>everywhere, like on the phone</td></tr>
         <tr><td class="mono">schedule</td><td>send, snooze or nudge at "tomorrow 9am"</td></tr>
@@ -994,9 +927,8 @@ f.write(json.dumps({<span class="s">"id"</span>: <span class="v">1</span>, <span
     Notifications                <span class="w-gold">all</span>
     Private reading              <span style="color:var(--muted)">off</span>
 
-  <span class="w-iris">Search &amp; AI</span>
+  <span class="w-iris">Search</span>
     Chats left out of search     <span style="color:var(--muted)">none</span>  ›
-    AI help (local model)        <span class="w-gold">on</span>
 
   <span class="w-iris">Your lists</span>
     Mirror to a folder           <span class="w-gold">~/vault/WhatsApp TUI</span>  ✎</pre>
@@ -1017,7 +949,6 @@ background      = <span class="s">true</span>      <span class="c">; keep runnin
 private_reading = <span class="s">false</span>     <span class="c">; no read receipts until you mark read</span>
 media_cache_mb  = <span class="s">1024</span>
 api_allow_send  = <span class="s">false</span>
-semantic_search = <span class="s">true</span>      <span class="c">; when Ollama runs</span>
 download_path   = <span class="s">~/Downloads</span></pre></div>
     <div class="points">
       <div class="point"><span class="k"><kbd>◐</kbd></span><h3>Three Rosé Pine themes</h3><p>Main, Moon and Dawn, the palette this page is in. In kitty, highlights can be see-through over a transparent window.</p></div>
@@ -1039,11 +970,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
 <span class="fn">git</span> clone git@github.com:sambuaneesh/whatsapp-tui.git
 <span class="kw">cd</span> whatsapp-tui
 <span class="fn">make</span> install         <span class="c"># to ~/.local/bin, plus a launcher entry</span>
-<span class="fn">whatsapp-tui</span>         <span class="c"># scan the QR: WhatsApp → Settings → Linked devices</span>
-
-<span class="c"># optional, for search by meaning (all local)</span>
-<span class="fn">sudo</span> pacman -S ollama-cuda &amp;&amp; <span class="fn">sudo</span> systemctl enable --now ollama
-<span class="fn">ollama</span> pull embeddinggemma</pre></div>
+<span class="fn">whatsapp-tui</span>         <span class="c"># scan the QR: WhatsApp → Settings → Linked devices</span></pre></div>
     <div class="feat">
       <h3>Works best with</h3>
       <div class="tbl"><table>
@@ -1053,7 +980,6 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
         <tr><td>ffmpeg</td><td>GIFs, making stickers</td></tr>
         <tr><td>yazi</td><td>picking files to attach</td></tr>
         <tr><td>wl-clipboard</td><td>clipboard on Wayland</td></tr>
-        <tr><td>Ollama</td><td>search by meaning (optional)</td></tr>
       </table></div>
       <p class="note">Linux and macOS; Windows through WSL. whatsapp-tui is an unofficial client built on whatsmeow. Some people report WhatsApp banning accounts for unofficial clients, so anything that sends on its own is opt-in, rate-limited and visible.</p>
     </div>
@@ -1576,7 +1502,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
   function runTime() {
     const now = new Date(), r = parseWhen(tp.value, now);
     if (r === "passed") tpOut.innerHTML = `<span class="bad">that time has passed</span>`;
-    else if (!r) tpOut.innerHTML = `<span class="bad">not a time I understand: try 9am, 21:30, tomorrow 9am, in 2h, fri 5pm, next week, 12 oct 3pm or tonight (the local model can guess the rest)</span>`;
+    else if (!r) tpOut.innerHTML = `<span class="bad">not a time I understand: try 9am, 21:30, tomorrow 9am, in 2h, fri 5pm, next week, 12 oct 3pm or tonight</span>`;
     else tpOut.innerHTML = `<span class="ok">Will send to Priya ${describe(r, now)}</span><br><span style="color:var(--muted)">${r.toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>`;
   }
   ["9am", "tonight", "in an hour", "tomorrow 9:30", "fri 5pm", "next week", "day after tomorrow at 4", "by the 12th", "a week from friday", "first monday of november", "the weekend after next", "two days before the 12th", "12 oct 3pm", "00:35am"].forEach((x) => {
@@ -1597,7 +1523,6 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["Priya", "Priya", "where is the house warming tomorrow?"],
     ["Hostel 4th floor", "Arjun", "dinner at 8? Paradise or Bawarchi"],
   ];
-  const meaning = { address: "place", location: "place", where: "place", flat: "home", apartment: "home", house: "home", dinner: "food", eat: "food", coffee: "drink", cafe: "drink" };
   const fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "");
   function words(q) { const exact = /[A-Z]/.test(q); return { ws: q.split(/\s+/).filter(Boolean).map((w) => (exact ? fold(w) : fold(w).toLowerCase())), exact }; }
   function runSearch() {
@@ -1613,16 +1538,9 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     };
     const exactHits = corpus.filter((c) => hit(c[2]));
     exactHits.forEach((c) => out.push(`<div class="hit"><div class="meta">${esc(c[0])} · ${esc(c[1])}</div>${mark(c[2])}</div>`));
-    const concepts = new Set(ws.map((w) => meaning[w]).filter(Boolean));
-    if (concepts.size) {
-      corpus.filter((c) => !exactHits.includes(c)).filter((c) => {
-        const cs = new Set(fold(c[2]).toLowerCase().split(/[^a-z]+/).map((w) => meaning[w]).filter(Boolean));
-        return [...concepts].every((x) => cs.has(x));
-      }).forEach((c) => out.push(`<div class="hit sim"><div class="meta">≈ ${esc(c[0])} · similar in meaning</div>${esc(c[2])}</div>`));
-    }
     $("#sq-out").innerHTML = out.join("") || `<p class="note">No messages match all of those words.</p>`;
   }
-  ["flat address", "flat addr", "cafe", "Café", "dinner", "where house"].forEach((x) => {
+  ["flat address", "flat addr", "cafe", "Café", "dinner"].forEach((x) => {
     const b = document.createElement("button"); b.className = "chip"; b.textContent = x; b.type = "button";
     b.addEventListener("click", () => { $("#sq").value = x; runSearch(); }); $("#sq-chips").appendChild(b);
   });
@@ -1898,7 +1816,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["palette", "ctrl+p", "go to any chat or contact (fuzzy, recent first)"], ["palette", "ctrl+p enter", "back to the previous chat"],
     ["palette", "F1 · ctrl+shift+p", "every command, by name"], ["palette", "> · #", "in ctrl+p: commands · search messages"],
     ["palette", "enter · alt+enter", "open · open beside (split view)"], ["palette", "ctrl+f", "find in this chat"],
-    ["palette", "F3 · shift+F3", "next · previous match"], ["palette", "ctrl+, · :settings", "settings: theme, spacing, bubbles, notifications, AI"], ["palette", "ctrl+shift+f", "search messages in every chat"],
+    ["palette", "F3 · shift+F3", "next · previous match"], ["palette", "ctrl+, · :settings", "settings: theme, spacing, bubbles, notifications, search"], ["palette", "ctrl+shift+f", "search messages in every chat"],
     ["lists", "i then type", "add a task: call mom 6pm #family !, shopping: eggs"], ["lists", "x · e · d · u", "done · edit · delete · undo"],
     ["lists", "t · !", "when (t tomorrow 9am) · important"], ["lists", "J K · > <", "reorder · into / out of a checklist"],
     ["lists", "enter", "fold a checklist · open a page · go to a saved message"], ["lists", "m · f · Y · c", "move to a list · send to a chat · copy · clear done"],
@@ -1907,8 +1825,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["command", ":task <text>", "add a task from anywhere"], ["command", ":list · :notebook <name>", "open (or make) a list · a notebook"],
     ["command", ":note <title>", "add a note page"], ["command", ":rename · :icon · :deletelist", "the open list"],
     ["command", ":share · :unshare", "link a list to a chat (done: eggs ticks it)"], ["command", ":mirror <folder> · off", "mirror lists and notes to Obsidian"],
-    ["ai", ":todos", "the to-dos in this chat (local model)"], ["ai", ":catchup", "what was said, and what's waiting on you"],
-    ["ai", ":plan", "times for today's tasks"], ["ai", "T", "a message worded as a task, with its date"],
+    ["visual", "T", "a task from this message"],
     ["list", "j k · gg G", "move · top / bottom"], ["list", "ctrl+d ctrl+u", "half a page"], ["list", "enter / l", "open the chat"],
     ["list", "/", "filter chats and contacts by name or number; enter opens"], ["list", "S", "search messages in every chat"], ["list", "u", "only unread chats"],
     ["list", "A", "archived chats"], ["list", "K", "chat info: description, members, picture"], ["list", "V", "profile picture, full screen"],
@@ -1940,7 +1857,7 @@ download_path   = <span class="s">~/Downloads</span></pre></div>
     ["command", ":download-dir [dir]", "show or change where downloads go"], ["command", ":q · :q!", "close the window (keeps running) · quit for real"],
     ["command", ":logout", "unlink this device"],
   ];
-  const ctxs = ["all", "palette", "lists", "ai", "list", "triage", "chat", "write", "visual", "command"];
+  const ctxs = ["all", "palette", "lists", "list", "triage", "chat", "write", "visual", "command"];
   let ctx = "all";
   const kctx = $("#kctx");
   ctxs.forEach((c) => { const b = document.createElement("button"); b.type = "button"; b.className = "chip" + (c === "all" ? " on" : ""); b.textContent = c; b.addEventListener("click", () => { ctx = c; kctx.querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", x === b)); runKeys(); }); kctx.appendChild(b); });

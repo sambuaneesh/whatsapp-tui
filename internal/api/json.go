@@ -41,7 +41,6 @@ type MessageJSON struct {
 	Deleted    bool              `json:"deleted,omitempty"`
 	Mentions   map[string]string `json:"mentions,omitempty"` // number -> name
 	Reactions  []ReactionBrief   `json:"reactions,omitempty"`
-	Similar    bool              `json:"similar,omitempty"` // search: found by meaning
 }
 
 // ReactionBrief is a reaction on a message.

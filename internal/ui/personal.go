@@ -1373,8 +1373,7 @@ func (m Model) tickOffShared(msg messages.Message) (string, bool) {
 type msgSource struct{ chat, msg, sender string }
 
 // taskFromMessage starts a task from the selected message: the :task line,
-// filled in with it (the local model, when there is one, words it as a
-// task with its date).
+// filled in with it.
 func (m Model) taskFromMessage(sel messages.Message) (tea.Model, tea.Cmd) {
 	if m.personal == nil {
 		return m, nil
@@ -1393,12 +1392,7 @@ func (m Model) taskFromMessage(sel messages.Message) (tea.Model, tea.Cmd) {
 	}
 	m.exitVisual()
 	next, cmd := prefill("task " + text)(m)
-	nm := next.(Model)
-	if ai := nm.aiTaskFromMessage(sel); ai != nil {
-		nm.notice, nm.noticeErr = "", false
-		return nm, tea.Batch(cmd, ai)
-	}
-	return nm, cmd
+	return next, cmd
 }
 
 // saveMessage keeps the selected message in 🔖 Saved.
@@ -1596,9 +1590,6 @@ func (m Model) personalCommand(fields []string) (tea.Model, tea.Cmd, bool) {
 		}
 		m.afterChange(m.personal.DeleteList(l.ID), "Deleted the list "+l.Name+" · :undo brings it back")
 		return m, nil, true
-	case "plan":
-		next, cmd := m.planDay()
-		return next, cmd, true
 	case "mirror", "obsidian":
 		next, cmd := m.setMirror(arg)
 		return next, cmd, true

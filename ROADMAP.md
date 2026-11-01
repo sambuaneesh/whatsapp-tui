@@ -74,11 +74,11 @@ Results (before → after):
 - [ ] Natural-language times through the local model ("saturday morning
       before the match"), shown for confirmation
 
-## 3. Local AI (all off by default, per chat)
+## 3. Local AI (removed 2026-11-01: unused; see "AI removed" below)
 
 - [ ] Voice-note transcription (whisper.cpp on the GPU; IndicConformer for
       Telugu), searchable
-- [x] Full-text + meaning search (SQLite FTS5 + EmbeddingGemma via Ollama)
+- [x] Full-text search (SQLite FTS5); meaning search was added, then removed
 - [ ] "Catch me up" summaries for busy groups (local 4B model; optional
       Claude)
 - [ ] Smart notifications: only what matters in muted groups
@@ -121,8 +121,7 @@ Results (before → after):
       index +0.7 MB; safe fallback without FTS5
 - [x] 20b. Search by meaning: local EmbeddingGemma via Ollama, 256-dim
       int8 vectors (~12 MB for 50k messages), indexed in the background;
-      `S` adds "≈ similar in meaning" hits. Inactive until Ollama is
-      installed (`ollama pull embeddinggemma`).
+      `S` adds "≈ similar in meaning" hits. Removed 2026-11-01.
 
 ## Palette, like VS Code (2026-10-06)
 
@@ -168,7 +167,8 @@ Results (before → after):
       catch up, plan my day; the parser reads many more time phrases
       ("by the 12th", "a week from friday", "first monday of november").
       AI date guessing was tried and dropped: qwen3:4b without thinking
-      gets calendar lookups wrong most of the time
+      gets calendar lookups wrong most of the time. The model's features
+      were removed 2026-11-01; the time parser stays
 
 ## Search indexing per chat (2026-10-06)
 
@@ -244,3 +244,12 @@ Results (before → after):
 
 - Some people report bans for using unofficial WhatsApp clients: anything
   that sends on its own must be opt-in, rate-limited and visible.
+
+## AI removed (2026-11-01)
+
+- [x] Unused, so gone: search by meaning (EmbeddingGemma vectors, the
+      background indexer, "≈ similar" hits, `"similar"` in the API) and the
+      local chat model (`:todos`, `:catchup`, `:plan`, `T` wording). The
+      embeddings table is dropped and the database vacuumed on the next
+      start; the old config keys are ignored. `T` still makes a task from
+      a message, worded by you.

@@ -88,7 +88,6 @@ func chatIs(f func(c *messages.Conversation) bool) func(Model) bool {
 }
 
 func hasPersonal(m Model) bool { return m.personal != nil }
-func aiInChat(m Model) bool    { return m.ai != nil && inChat(m) }
 func inList(m Model) bool      { return m.inPersonal() && m.pv.page == nil }
 func onItem(m Model) bool {
 	_, ok := m.selectedItem()
@@ -330,11 +329,6 @@ func commandList() []command {
 		{id: "noindex.list", title: "Search: Chats Not Indexed…", keys: ":noindex list",
 			when: func(m Model) bool { return len(m.noindex) > 0 }, run: ex("noindex list")},
 
-		// The local model (Ollama)
-		{id: "ai.catchup", title: "AI: Catch Me Up on This Chat", keys: ":catchup", when: aiInChat, run: ex("catchup")},
-		{id: "ai.todos", title: "AI: Find To-dos in This Chat", keys: ":todos", when: aiInChat, run: ex("todos")},
-		{id: "ai.plan", title: "AI: Plan My Day (Times for Today's Tasks)", keys: ":plan", when: func(m Model) bool { return m.ai != nil && m.personal != nil }, run: ex("plan")},
-
 		// Pins and mutes
 		{id: "pinned", title: "Go: Pinned Message", keys: "click 📌", when: func(m Model) bool { return inChat(m) && len(m.pins) > 0 },
 			run: func(m Model) (tea.Model, tea.Cmd) { return m.jumpToPin() }},
@@ -374,7 +368,7 @@ func commandList() []command {
 		{id: "downloads.set", title: "Downloads: Change the Folder…", keys: ":download-dir", when: always, run: prefill("download-dir ")},
 
 		// App
-		{id: "settings", title: "Settings (Theme, Spacing, Bubbles, Notifications, AI…)", keys: "ctrl+,  :settings", when: always,
+		{id: "settings", title: "Settings (Theme, Spacing, Bubbles, Notifications, Search…)", keys: "ctrl+,  :settings", when: always,
 			run: func(m Model) (tea.Model, tea.Cmd) { m.openSettings(); return m, nil }},
 		{id: "help", title: "Help: Keyboard Shortcuts", keys: "?", when: always, run: ex("help")},
 		{id: "close", title: "App: Close the Window (Keeps Running)", keys: ":q", when: always, run: ex("q")},

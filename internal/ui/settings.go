@@ -231,22 +231,8 @@ func settingsList() []setting {
 				return m, nil, saveGeneralKey("api_allow_send", fmt.Sprint(v == "on"))
 			}},
 
-		// ---------- Search and AI ----------
-		{group: "Search & AI", label: "Search by meaning", help: "EmbeddingGemma through Ollama, on your machine",
-			values: onOffChoices, restart: true,
-			get: func(m Model) string { return onOff(config.Config.General.SemanticSearch) },
-			set: func(m Model, v string) (Model, tea.Cmd, error) {
-				config.Config.General.SemanticSearch = v == "on"
-				return m, nil, saveGeneralKey("semantic_search", fmt.Sprint(v == "on"))
-			}},
-		{group: "Search & AI", label: "Pause indexing while gaming", help: "waits while the GPU is over 50% busy",
-			values: onOffChoices, restart: true,
-			get: func(m Model) string { return onOff(config.Config.General.SemanticPauseGaming) },
-			set: func(m Model, v string) (Model, tea.Cmd, error) {
-				config.Config.General.SemanticPauseGaming = v == "on"
-				return m, nil, saveGeneralKey("semantic_pause_gaming", fmt.Sprint(v == "on"))
-			}},
-		{group: "Search & AI", label: "Chats left out of search", help: "enter lists them; :noindex in a chat leaves it out",
+		// ---------- Search ----------
+		{group: "Search", label: "Chats left out of search", help: "enter lists them; :noindex in a chat leaves it out",
 			get: func(m Model) string {
 				if len(m.noindex) == 0 {
 					return "none"
@@ -254,27 +240,6 @@ func settingsList() []setting {
 				return strconv.Itoa(len(m.noindex))
 			},
 			action: func(m Model) (tea.Model, tea.Cmd) { m.settings = nil; return m.showNotIndexed() }},
-		{group: "Search & AI", label: "AI help (local model)", help: "T worded, :todos, :catchup, :plan",
-			values: onOffChoices,
-			get:    func(m Model) string { return onOff(m.ai != nil) },
-			set: func(m Model, v string) (Model, tea.Cmd, error) {
-				if err := saveGeneralKey("ai", fmt.Sprint(v == "on")); err != nil {
-					return m, nil, err
-				}
-				config.Config.General.Ai = v == "on"
-				switch {
-				case v == "off" && m.ai != nil:
-					m.aiStash, m.ai = m.ai, nil
-				case v == "on" && m.ai == nil && m.aiStash != nil:
-					m.ai, m.aiStash = m.aiStash, nil
-				case v == "on" && m.ai == nil:
-					m.notice, m.noticeErr = "AI help comes on when the app starts again", false
-				}
-				return m, nil, nil
-			}},
-		{group: "Search & AI", label: "AI model", help: "an Ollama chat model (ollama pull it first)", restart: true,
-			get:  func(m Model) string { return nonEmpty(config.Config.General.AiModel, "qwen3:4b") },
-			edit: "set ai_model "},
 
 		// ---------- Your lists ----------
 		{group: "Your lists", label: "Mirror to a folder", help: "Markdown, both ways (an Obsidian vault folder)",

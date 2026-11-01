@@ -18,14 +18,12 @@ import (
 	"github.com/charmbracelet/x/term"
 	"github.com/muesli/termenv"
 
-	"github.com/Srindot/whatsapp-tui/internal/ai"
 	"github.com/Srindot/whatsapp-tui/internal/api"
 	"github.com/Srindot/whatsapp-tui/internal/config"
 	"github.com/Srindot/whatsapp-tui/internal/daemon"
 	"github.com/Srindot/whatsapp-tui/internal/messages"
 	"github.com/Srindot/whatsapp-tui/internal/notify"
 	"github.com/Srindot/whatsapp-tui/internal/personal"
-	"github.com/Srindot/whatsapp-tui/internal/semantic"
 	"github.com/Srindot/whatsapp-tui/internal/termimg"
 	"github.com/Srindot/whatsapp-tui/internal/ui"
 )
@@ -202,10 +200,6 @@ func run() error {
 		defer mirror.Stop()
 		opts.Mirror = mirror
 	}
-	if g := config.Config.General; g.Ai && g.AiModel != "" {
-		// the local chat model: tasks from messages, odd dates, plans, catch-ups
-		opts.AI = &ai.Client{URL: g.OllamaUrl, Model: g.AiModel}
-	}
 	opts.Mouse = config.Config.Ui.Mouse
 	opts.PrivateReading = config.Config.General.PrivateReading
 	opts.Notifications, opts.Notifier = config.NotificationMode(), notify.System{}
@@ -281,14 +275,6 @@ func run() error {
 
 	if err := sm.StartManager(); err != nil {
 		return fmt.Errorf("start: %w", err)
-	}
-	// search by meaning, if a local model runs (does nothing otherwise)
-	if g := config.Config.General; g.SemanticSearch && g.OllamaUrl != "" {
-		var busy func() bool
-		if g.SemanticPauseGaming {
-			busy = func() bool { return semantic.GPUBusy(50) }
-		}
-		sm.StartSemanticGentle(semantic.Ollama{URL: strings.TrimRight(g.OllamaUrl, "/"), Model: g.EmbedModel}, busy)
 	}
 	// the local API for scripts and hooks (docs/API.md)
 	apiOpts := api.Options{

@@ -147,10 +147,8 @@ func (md *MessageDatabase) NotIndexed() ([]string, error) {
 	return out, rows.Err()
 }
 
-// SetIndexed turns search indexing on or off for a chat. Off takes its
-// messages out of the word index and drops their meaning vectors; on puts
-// them back in the word index (meaning vectors come back as the
-// background indexer gets to them).
+// SetIndexed turns search indexing on or off for a chat: its messages go
+// out of the word index, or back in.
 func (md *MessageDatabase) SetIndexed(jid string, on bool) error {
 	if md.Indexed(jid) == on {
 		return nil
@@ -176,9 +174,6 @@ func (md *MessageDatabase) SetIndexed(jid string, on bool) error {
 				return fail(err)
 			}
 		}
-		if _, err := tx.Exec(`DELETE FROM embeddings WHERE msg_id IN (SELECT id FROM messages WHERE chat_id = ?)`, jid); err != nil {
-			return fail(err)
-		}
 		if _, err := tx.Exec(`INSERT OR IGNORE INTO noindex (jid) VALUES (?)`, jid); err != nil {
 			return fail(err)
 		}
@@ -188,13 +183,7 @@ func (md *MessageDatabase) SetIndexed(jid string, on bool) error {
 
 // SetChatIndexed turns search indexing on or off for a chat.
 func (sm *SessionManager) SetChatIndexed(jid string, on bool) error {
-	if err := sm.db.SetIndexed(jid, on); err != nil {
-		return err
-	}
-	if on {
-		sm.indexMeaningSoon()
-	}
-	return nil
+	return sm.db.SetIndexed(jid, on)
 }
 
 // ChatIndexed reports whether a chat is indexed for search.
@@ -204,4 +193,17 @@ func (sm *SessionManager) ChatIndexed(jid string) bool { return sm.db.Indexed(ji
 func (sm *SessionManager) NotIndexedChats() []string {
 	list, _ := sm.db.NotIndexed()
 	return list
+}
+
+// dropEmbeddings removes the vectors search by meaning kept (that feature
+// is gone) and gives their space back to the disk.
+func (md *MessageDatabase) dropEmbeddings() {
+	var n int
+	md.db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'embeddings'`).Scan(&n)
+	if n == 0 {
+		return
+	}
+	if _, err := md.db.Exec(`DROP TABLE embeddings`); err == nil {
+		md.db.Exec(`VACUUM`)
+	}
 }

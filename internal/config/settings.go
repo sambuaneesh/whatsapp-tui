@@ -33,13 +33,7 @@ type General struct {
 	MediaCacheMb        int    // downloaded media kept (MB); least recently used go first
 	PrivateReading      bool   // open chats without sending read receipts (mark read yourself)
 	ApiAllowSend        bool   // let scripts send through the local API (docs/API.md)
-	SemanticSearch      bool   // search by meaning with a local model (Ollama)
-	OllamaUrl           string // where Ollama listens
-	EmbedModel          string // its embedding model
-	SemanticPauseGaming bool   // don't index while the GPU is busy (over 50%)
 	ObsidianDir         string // mirror your lists and notes to this folder as Markdown ("" off)
-	Ai                  bool   // let the local chat model help (dates, tasks from chats, plans, summaries)
-	AiModel             string // the Ollama chat model for that
 	NotificationTimeout int64
 	BacklogMsgQuantity  int
 }
@@ -109,12 +103,6 @@ var Config = IniFile{
 		NotificationTimeout: 60,
 		Background:          true,
 		MediaCacheMb:        1024,
-		SemanticSearch:      true,
-		OllamaUrl:           "http://127.0.0.1:11434",
-		EmbedModel:          "embeddinggemma",
-		SemanticPauseGaming: true,
-		Ai:                  true,
-		AiModel:             "qwen3:4b",
 		BacklogMsgQuantity:  10,
 	},
 	&Keymap{

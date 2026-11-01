@@ -92,15 +92,13 @@ map --when-focus-on var:whatsapp_tui ctrl+comma send_text all \e[28~
 **Your own space:** 📋 Today is pinned on top of your chats, and your task
 lists, notes and saved messages are chats of their own: type `call mom
 6pm #family !` and it's a task due at 18:00; `x` ticks it off. They can
-mirror to an Obsidian vault both ways, and a small local model (Ollama,
-`qwen3:4b`) can turn messages into tasks, find the to-dos in a chat, plan
-your day and catch you up. See [USAGE.md](USAGE.md#your-own-space-lists-notes-saved).
+mirror to an Obsidian vault both ways. See [USAGE.md](USAGE.md#your-own-space-lists-notes-saved).
 
 Scripts and tools can use it through a local API and hooks: see
 [docs/API.md](docs/API.md).
 
 `ctrl+,` (or `:settings`) opens the settings: theme, the space between
-messages, bubble borders, notifications, AI and more, changed with the
+messages, bubble borders, notifications, search and more, changed with the
 arrow keys. They live in `~/.config/whatsapp-tui/config.ini` (on macOS:
 `~/Library/Application Support/whatsapp-tui/`): theme, images, mouse,
 download folder. `--debug` writes logs to `~/.cache/whatsapp-tui/debug.log`.

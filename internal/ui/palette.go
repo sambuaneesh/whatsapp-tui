@@ -37,7 +37,7 @@ type paletteState struct {
 	pickTitle string
 	only      func(c *messages.Conversation) bool
 	onPick    func(m Model, c *messages.Conversation) (tea.Model, tea.Cmd)
-	actions   []palItem // a list of things to do (the local model's suggestions…)
+	actions   []palItem // a list of things to do (chats not indexed…)
 
 	cands []palCand // chats and contacts, gathered when opened
 	items []palItem

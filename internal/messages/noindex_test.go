@@ -9,7 +9,6 @@ func TestTurningIndexingOffForAChat(t *testing.T) {
 	md := newTestDB(t)
 	addTestMsg(t, md, Message{Id: "a1", ChatId: "work@g.us", Text: "invoice for the flat", Timestamp: 100})
 	addTestMsg(t, md, Message{Id: "b1", ChatId: "spam@g.us", Text: "flat sale flat sale", Timestamp: 101})
-	md.SaveEmbeddings(map[string][]byte{"a1": {1}, "b1": {2}})
 	ids := func(chat, q string) string {
 		t.Helper()
 		msgs, err := md.SearchMessages(chat, q, 10)
@@ -56,18 +55,6 @@ func TestTurningIndexingOffForAChat(t *testing.T) {
 	if got := ids("spam@g.us", "flat"); got != "b1" {
 		t.Fatalf("in-chat search: %s", got)
 	}
-	// its meaning vectors are gone, and it isn't queued for new ones
-	var n int
-	md.db.QueryRow(`SELECT COUNT(*) FROM embeddings WHERE msg_id = 'b1'`).Scan(&n)
-	if n != 0 {
-		t.Fatal("vectors kept")
-	}
-	todo, _ := md.UnembeddedMessages(10)
-	for _, m := range todo {
-		if m.ChatId == "spam@g.us" {
-			t.Fatal("queued for meaning vectors")
-		}
-	}
 	if list, _ := md.NotIndexed(); len(list) != 1 || list[0] != "spam@g.us" {
 		t.Fatalf("list: %v", list)
 	}
@@ -80,4 +67,17 @@ func TestTurningIndexingOffForAChat(t *testing.T) {
 	if got := ids("", "flat"); got != "b1,a1" {
 		t.Fatalf("back on: %s", got)
 	}
+}
+
+func TestOldMeaningVectorsAreDropped(t *testing.T) {
+	md := newTestDB(t)
+	md.db.Exec(`CREATE TABLE embeddings (msg_id TEXT PRIMARY KEY, vec BLOB)`)
+	md.db.Exec(`INSERT INTO embeddings VALUES ('a', x'01')`)
+	md.dropEmbeddings()
+	var n int
+	md.db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE name = 'embeddings'`).Scan(&n)
+	if n != 0 {
+		t.Fatal("embeddings table kept")
+	}
+	md.dropEmbeddings() // nothing left: no-op
 }

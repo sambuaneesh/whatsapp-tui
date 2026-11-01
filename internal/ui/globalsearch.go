@@ -95,11 +95,10 @@ func (m Model) applyGlobalHits(r globalHitsMsg) (tea.Model, tea.Cmd) {
 		return m, nil // closed, or typed over
 	}
 	g.loading, g.err = false, r.err
-	// Narrow the word matches with smartcase; matches by meaning don't
-	// contain the words, so they're kept as they are.
+	// narrow the matches with smartcase
 	g.hits = g.hits[:0]
 	for _, h := range r.hits {
-		if h.Similar || matchesQuery(h.Text, g.query) {
+		if matchesQuery(h.Text, g.query) {
 			g.hits = append(g.hits, h)
 		}
 	}
@@ -308,11 +307,6 @@ func (m Model) renderGlobalSearch(width, height int) string {
 			marker = paint(styleAccent, sel).Render("▌ ")
 		}
 		chat := paint(senderStyle(h.ChatId), sel).Render(h.ChatName)
-		if h.Similar {
-			// found by meaning, not by the words typed
-			chat = paint(lipgloss.NewStyle().Foreground(pal.Iris), sel).Render("≈ ") + chat +
-				paint(styleMuted, sel).Render("  similar in meaning")
-		}
 		when := paint(styleDim, sel).Render(listTime(int64(h.Timestamp), now)+" "+toTime(int64(h.Timestamp)).Format("15:04")) + fill.Render(" ")
 		who := m.senderName(h.Message)
 		if isGroup(h.ChatId) || h.FromMe {

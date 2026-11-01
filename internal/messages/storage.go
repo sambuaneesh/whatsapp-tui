@@ -91,7 +91,7 @@ func (md *MessageDatabase) InitWithDB(db *sql.DB) error {
 	md.db.Exec(`DELETE FROM conversations WHERE jid LIKE '%@broadcast'`)
 
 	md.initFTS()
-	md.initEmbeddings()
+	md.dropEmbeddings()
 	if err := md.initPolls(); err != nil {
 		return fmt.Errorf("failed to create poll_votes table: %w", err)
 	}

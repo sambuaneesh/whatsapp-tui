@@ -37,7 +37,7 @@ func TestSettings(t *testing.T) {
 		t.Fatal("F15 should open settings")
 	}
 	v := stripANSI(m.View())
-	for _, want := range []string{"Settings", "Appearance", "Theme", "Space between messages", "Bubble borders", "Notifications", "AI help"} {
+	for _, want := range []string{"Settings", "Appearance", "Theme", "Space between messages", "Bubble borders", "Notifications", "Chats left out of search"} {
 		if !strings.Contains(v, want) {
 			t.Fatalf("%q missing:\n%s", want, v)
 		}
@@ -88,18 +88,6 @@ func TestSettings(t *testing.T) {
 		t.Fatalf("edit row: %q", m.cmdline.Value())
 	}
 	m, _ = keys(t, m, "esc")
-	// AI off and on again, without a restart
-	m.ai = &fakeAI{}
-	m.openSettings()
-	m = selectSetting(t, m, "AI help (local model)")
-	m, _ = keys(t, m, "l")
-	if m.ai != nil {
-		t.Fatal("AI still on")
-	}
-	m, _ = keys(t, m, "l")
-	if m.ai == nil {
-		t.Fatal("AI not back")
-	}
 	// the palette has it
 	m, _ = keys(t, m, "esc")
 	m, _ = press(t, m, tea.KeyF1)
