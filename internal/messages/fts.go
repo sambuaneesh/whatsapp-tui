@@ -205,5 +205,6 @@ func (md *MessageDatabase) dropEmbeddings() {
 	}
 	if _, err := md.db.Exec(`DROP TABLE embeddings`); err == nil {
 		md.db.Exec(`VACUUM`)
+		md.db.Exec(`PRAGMA wal_checkpoint(TRUNCATE)`) // the vacuum went through the log
 	}
 }
